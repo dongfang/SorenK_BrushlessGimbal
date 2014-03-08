@@ -212,7 +212,7 @@ ISR( TIMER1_OVF_vect ) {
     // move roll motor
     MoveMotorPosSpeed(config.motorNumberRoll, rollMotorDrive, pwmSinMotorRoll);
     // update event
-    motorUpdate = true;
+    runMainLoop = true;
   }
 }
 

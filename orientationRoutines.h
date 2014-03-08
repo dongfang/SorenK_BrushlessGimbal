@@ -20,14 +20,12 @@
 //#define GRAVITY 16384.0f
 #define GRAVITY 15500.0f
 
-void initResolutionDevider()
-{
+void initResolutionDevider() {
     if(MPU6050_GYRO_FS == 0x00) resolutionDevider = 131.0;
     if(MPU6050_GYRO_FS == 0x01) resolutionDevider = 65.5;
     if(MPU6050_GYRO_FS == 0x02) resolutionDevider = 32.8;
     if(MPU6050_GYRO_FS == 0x03) resolutionDevider = 16.4;
 }
-
 
 // This functions performs an initial gyro offset calibration
 // INCLUDING motion detection
@@ -40,9 +38,6 @@ void gyroOffsetCalibration() {
   float fp_gyroOffset[3];
   uint8_t tiltDetected = 0;
   int calibGCounter = GYRO_INTERATIONS;
-  
-  // Set voltage on all motor phases to zero 
-  softStart = 0;
   
   // wait 1 second
   for (i=0; i<100; i++) {

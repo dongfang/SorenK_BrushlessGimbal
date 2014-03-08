@@ -85,7 +85,6 @@
     #define DEBUG_PRINTLNF(x, y)
 #endif
 
-
 #ifdef PWM_32KHZ_PHASE
   #define CC_FACTOR 32
 #endif
@@ -98,7 +97,6 @@
 #ifdef NO_PWM_LOOP
   #define CC_FACTOR 1
 #endif
-
 
 #define LEDPIN_PINMODE             pinMode (8, OUTPUT);
 #define LEDPIN_SWITCH              digitalWrite(8,!bitRead(PORTB,0));

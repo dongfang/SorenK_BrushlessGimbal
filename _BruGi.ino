@@ -38,12 +38,9 @@ Anyhow, if you start to commercialize our work, please read on http://code.googl
 - Type in HE 
 -... enjoy
 */
-
-
 #define VERSION_STATUS B // A = Alpha; B = Beta , N = Normal Release
 #define VERSION 49
 #define VERSION_EEPROM 2 // change this number when eeprom data strcuture has changed
-
 
 /*************************/
 /* Include Header Files  */
@@ -57,6 +54,7 @@ Anyhow, if you start to commercialize our work, please read on http://code.googl
 #include "SerialCommand.h"
 #include "EEPROMAnything.h"
 #include "variables.h"
+
 MPU6050 mpu;            // Create MPU object
 SerialCommand sCmd;     // Create SerialCommand object
 
@@ -106,7 +104,8 @@ void setup() {
   wdt_reset();
     
   // Read Config, fill with default settings if versions do not match or CRC fails
-  readEEPROM();;
+  readEEPROM();
+  
   if ((config.vers != VERSION) || (config.versEEPROM != VERSION_EEPROM)) {
     Serial.print(F("EEPROM version mismatch, initialize EEPROM"));
     setDefaultParameters();
@@ -191,7 +190,7 @@ void setup() {
 
   wdt_reset();
 
-  wdt_enable(WDTO_15MS);
+//  wdt_enable(WDTO_15MS);
 
   // CH2_OFF
   // CH3_OFF
@@ -231,11 +230,11 @@ void loop()
   static char pOutCnt = 0;
   static int stateCount = 0;
   
-  if (motorUpdate) // loop runs with motor ISR update rate (1000Hz)
+  if (runMainLoop) // loop runs with motor ISR update rate (1000Hz)
   {
     wdt_reset();
     
-    motorUpdate = false;
+    runMainLoop = false;
     
     // update IMU data            
     readGyros();   // t=386us
@@ -251,10 +250,11 @@ void loop()
       utilLP_float(&pitchAngleSet, PitchPhiSet, rcLPF_tc); // t=16us
       utilLP_float(&rollAngleSet, RollPhiSet, rcLPF_tc); // t=28us
     } else {
-      evaluateRCProportional(); // gives rollRCSpeed, pitchRCSpeed
+      evaluateRCIntegrating(); // gives rollRCSpeed, pitchRCSpeed
       utilLP_float(&pitchAngleSet, PitchPhiSet, 0.01);
       utilLP_float(&rollAngleSet, RollPhiSet, 0.01);
     }
+    
     evaluateRCSwitch();
     
     //****************************
@@ -264,7 +264,8 @@ void loop()
     // t=94us
     pitchPIDVal = ComputePID(DT_INT_MS, angle[PITCH], pitchAngleSet*1000, &pitchErrorSum, &pitchErrorOld, pitchPIDpar.Kp, pitchPIDpar.Ki, pitchPIDpar.Kd);
     // motor control
-    pitchMotorDrive = pitchPIDVal * config.dirMotorPitch;
+    if (switchPos >= 0)
+      pitchMotorDrive = pitchPIDVal * config.dirMotorPitch;
 
     //****************************
     // roll PID
@@ -273,7 +274,8 @@ void loop()
     rollPIDVal = ComputePID(DT_INT_MS, angle[ROLL], rollAngleSet*1000, &rollErrorSum, &rollErrorOld, rollPIDpar.Kp, rollPIDpar.Ki, rollPIDpar.Kd);
 
     // motor control
-    rollMotorDrive = rollPIDVal * config.dirMotorRoll;
+    if (switchPos >= 0)
+      rollMotorDrive = rollPIDVal * config.dirMotorRoll;
  
     //****************************
     // slow rate actions
@@ -301,26 +303,26 @@ void loop()
           }
       }
       
-      // Add switch logic here.
-      if (gimState == GS_LOCKED || gimState == GS_FROZEN) {
-      }
-      
       // gimbal state actions 
       switch (gimState) {
         case GS_IDLE :
           softStart = 0;
           break;
         case GS_LOCKED :
-          if (softStart < 16) softStart++;
-          break;
-        case GS_FROZEN :
-//          enableMotorUpdates = false;
+          if (switchPos >0) {
+            // slask
+            if (softStart > 0) softStart--;
+          } else {
+            // normal
+            if (softStart < 16) softStart++;
+          }
+           
           break;
       }
       break;
     case 7:
       // RC Pitch function
-      if (rcData[RC_DATA_PITCH].valid) {
+      if (rcData[RC_DATA_PITCH].isValid) {
         if(config.rcAbsolute==1) {
             PitchPhiSet = rcData[RC_DATA_PITCH].setpoint;
         }
@@ -340,7 +342,7 @@ void loop()
       break;
     case 8:
       // RC roll function
-      if (rcData[RC_DATA_ROLL].valid){
+      if (rcData[RC_DATA_ROLL].isValid){
         if(config.rcAbsolute==1){
           RollPhiSet = rcData[RC_DATA_ROLL].setpoint;
         } else {

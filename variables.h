@@ -121,7 +121,7 @@ uint8_t pwmSinMotorRoll[256];
 
 int currentStepMotor0 = 0;
 int currentStepMotor1 = 0;
-bool motorUpdate = false; 
+bool runMainLoop = false; 
 
 int8_t pitchDirection = 1;
 int8_t rollDirection = 1;
@@ -153,16 +153,17 @@ int count=0;
 // RC control
 
 struct rcData_t {
- uint32_t microsRisingEdge;
- uint32_t microsLastUpdate;
+ uint16_t microsRisingEdge;
+ uint16_t microsLastUpdate;
  uint16_t rx;
- bool     update;
- bool     valid;
+ bool     isFresh;
+ bool     isValid;
  float    rcSpeed;
  float    setpoint;
 };
 
 rcData_t rcData[RC_DATA_SIZE];
+int8_t switchPos;
 
 float rcLPF_tc = 1.0;
 
@@ -170,7 +171,6 @@ float rcLPF_tc = 1.0;
 enum gimStateType {
  GS_IDLE=0,      // no PID
  GS_LOCKED,      // PID on, slow ACC, motor update on
- GS_FROZEN,      // PID on, fast ACC, motor update off
 };
 
 gimStateType gimState = GS_IDLE;
@@ -215,10 +215,7 @@ typedef struct sensorOrientationDef {
   t_sensorAxisDef Acc[3];
 } t_sensorOrientationDef;
 
-t_sensorOrientationDef sensorDef = { 
-    {{0, 1}, {1, 1}, {2, 1}},    // Gyro
-    {{0, 1}, {1, 1}, {2, 1}}     // Acc
-  };
+t_sensorOrientationDef sensorDef;
 
 // gyro calibration value
 int16_t gyroOffset[3] = {0, 0, 0};

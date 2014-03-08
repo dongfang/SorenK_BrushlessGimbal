@@ -339,56 +339,50 @@ void transmitActiveConfig()
 }
 
 
-void setPitchPID()
-{
+void setPitchPID() {
   config.gyroPitchKp = atol(sCmd.next());
   config.gyroPitchKi = atol(sCmd.next());
   config.gyroPitchKd = atol(sCmd.next());
   initPIDs();
 }
 
-void setRollPID()
-{
+void setRollPID() {
   config.gyroRollKp = atol(sCmd.next());
   config.gyroRollKi = atol(sCmd.next());
   config.gyroRollKd = atol(sCmd.next());
   initPIDs();
 }
 
-void setMotorPWM()
-{
+void setMotorPWM() {
   config.maxPWMmotorPitch = atoi(sCmd.next());
   config.maxPWMmotorRoll = atoi(sCmd.next());
   recalcMotorStuff();
 }
 
-void gyroRecalibrate()
-{
+void gyroRecalibrate() {
+  // Set voltage on all motor phases to zero 
+  softStart = 0;
   mpu.setDLPFMode(MPU6050_DLPF_BW_5);  // experimental AHa: set to slow mode during calibration
   gyroOffsetCalibration();
   initMPUlpf();
   Serial.println(F("recalibration: done"));
 }
 
-void setMotorDirNo()
-{
+void setMotorDirNo() {
   config.dirMotorPitch = atoi(sCmd.next());
   config.dirMotorRoll = atoi(sCmd.next());
   config.motorNumberPitch = atoi(sCmd.next());
   config.motorNumberRoll = atoi(sCmd.next());
 }
 
-void setSensorOrientation()
-{
+void setSensorOrientation() {
   config.axisReverseZ = atoi(sCmd.next());
   config.axisSwapXY = atoi(sCmd.next());
 
   initSensorOrientation();
-  
 }
 
-void printHelpUsage()
-{
+void printHelpUsage() {
   Serial.println(F("This gives you a list of all commands with usage:"));
   Serial.println(F("Explanations are in brackets(), use integer values only !"));
   Serial.println(F(""));
@@ -429,14 +423,11 @@ void printHelpUsage()
   Serial.println(F("Note: command input is case-insensitive, commands are accepted in both upper/lower case"));
 }
 
-void unrecognized(const char *command) 
-{
+void unrecognized(const char *command)  {
   Serial.println(F("What? type in HE for Help ..."));
 }
 
-
-void setSerialProtocol()
-{
+void setSerialProtocol() {
   // Setup callbacks for SerialCommand commands
   sCmd.addCommand("sd", setDefaultParametersAndUpdate);   
   sCmd.addCommand("we", writeEEPROM);   

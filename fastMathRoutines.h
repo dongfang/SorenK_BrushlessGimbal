@@ -68,15 +68,14 @@ int32_t Rajan_FastArcTan2_deg1000(float y, float x) {
   return 180/PI * 1000 * Rajan_FastArcTan2(y, x);
 }
 
-
-/************************/
-/* LP Filter            */
-/************************/
-inline void utilLP_float(float * q, float i, float coeff) {
+/****************************/
+/* LP Filter                */
+/* Coeff=0: *q not changing */
+/* Coeff=1: *q <- i         */
+/****************************/
+inline void utilLP_float(float* q, float i, float coeff) {
   *q += (i-*q)*coeff;
 }
-
-
 
 /************************/
 /* Debugging            */

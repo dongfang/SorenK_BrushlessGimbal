@@ -16,8 +16,8 @@ inline void decodePWM(rcData_t* rcData) {
   if ((pulseInPWMtmp >= MIN_RC) && (pulseInPWMtmp <= MAX_RC)) {
     // update if within expected RC range
     rcData->rx = pulseInPWMtmp;
-    rcData->valid=true;
-    rcData->update=true;
+    rcData->isValid=true;
+    rcData->isFresh=true;
   }
 }
 
@@ -26,16 +26,15 @@ inline void decodePWM(rcData_t* rcData) {
 //******************************************
 
 inline void intDecodePPM() { 
-  CH3_ON
-  uint32_t microsNow = micros();
+  uint32_t ticksNow = micros();
   
-  static int32_t microsPPMLastEdge = 0;
+  static int32_t ticksPPMLastEdge = 0;
   uint16_t pulseInPPM;
 
   static uint8_t channel_idx = 0;
 
-  pulseInPPM = (microsNow - microsPPMLastEdge)/CC_FACTOR;
-  microsPPMLastEdge = microsNow;
+  pulseInPPM = (ticksNow - ticksPPMLastEdge)/CC_FACTOR;
+  ticksPPMLastEdge = ticksNow;
 
   if (pulseInPPM > RC_PPM_GUARD_TIME) {
     channel_idx = 0;
@@ -46,29 +45,23 @@ inline void intDecodePPM() {
     else if (channel_idx == config.rcChannelRoll)
       data = &rcData[RC_DATA_ROLL];
     if (data) {
-      data->microsLastUpdate = microsNow;    
-      if ((pulseInPPM >= MIN_RC) && (pulseInPPM <= MAX_RC)) 
-      {
+      data->microsLastUpdate = ticksNow;    
+      if ((pulseInPPM >= MIN_RC) && (pulseInPPM <= MAX_RC)) {
         data->rx     = pulseInPPM;
-        data->valid  = true;
-        data->update = true;
+        data->isValid  = true;
+        data->isFresh = true;
       }  
     }
     channel_idx++;
   }
-  CH3_ON
 }
 
 //******************************************
 // Interrupts
 //******************************************
-
-void decodePWMs(uint8_t pin, uint8_t change) {
-}
-
 ISR(PCINT1_vect) {
   static uint8_t lastPin;
-  uint32_t frozenTime = micros();
+  uint16_t frozenTime = micros();
   uint8_t pin = PINC;
   uint8_t change = pin ^ lastPin;
   lastPin = pin;
@@ -108,16 +101,14 @@ ISR(PCINT1_vect) {
 void checkRcTimeouts() {
   int32_t microsNow = micros();
   int32_t microsLastUpdate;
-  for (uint8_t id = 0; id < RC_DATA_SIZE; id++)
-  {
+  for (uint8_t id = 0; id < RC_DATA_SIZE; id++) {
     cli();
     microsLastUpdate = rcData[id].microsLastUpdate;
     sei();
-    if (rcData[id].valid && ((microsNow - microsLastUpdate)/CC_FACTOR) > RC_TIMEOUT) 
-    {
+    if (rcData[id].isValid && ((microsNow - microsLastUpdate)/CC_FACTOR) > RC_TIMEOUT){
       rcData[id].rx     = config.rcMid;
-      rcData[id].valid  = false;
-      rcData[id].update = true;
+      rcData[id].isValid  = false;
+      rcData[id].isFresh = true;
     }
   }
 }
@@ -130,10 +121,6 @@ void initRCPins() {
     pinMode(A1, INPUT); digitalWrite(A1, HIGH);
     pinMode(A0, INPUT); digitalWrite(A0, HIGH);
 
-    //PCintPort::attachInterrupt(A2, &intDecodePWM_Ch0, CHANGE);
-    //PCintPort::attachInterrupt(A1, &intDecodePWM_Ch1, CHANGE);
-    //PCintPort::attachInterrupt(A0, &intDecodePWM_Ch2, CHANGE);
-    
     PCMSK1 |= (1<<PCINT8) | (1<<PCINT9) | (1<<PCINT10);
     PCICR |= (1<<PCIE1);
     
@@ -145,8 +132,8 @@ void initRCPins() {
     rcData[id].microsRisingEdge = 0;
     rcData[id].microsLastUpdate = 0;
     rcData[id].rx               = 1500;
-    rcData[id].update           = true;
-    rcData[id].valid            = true;
+    rcData[id].isFresh          = true;
+    rcData[id].isValid          = true;
     rcData[id].rcSpeed          = 0.0;
     rcData[id].setpoint         = 0.0;
     sei();
@@ -161,11 +148,10 @@ void initRCPins() {
 }
 
 //******************************************
-// Proportional
+// Integrating
 //******************************************
-
-void evalRCChannelProportional(rcData_t* rcData, int16_t rcGain, uint16_t rcMid) {
-  if(rcData->update) {
+void evalRCChannelIntegrating(rcData_t* rcData, int16_t rcGain, uint16_t rcMid) {
+  if(rcData->isFresh) {
     if(rcData->rx >= rcMid + RC_DEADBAND) {
       rcData->rcSpeed = rcGain * (float)(rcData->rx - (rcMid + RC_DEADBAND))/ (float)(MAX_RC - (rcMid + RC_DEADBAND)) + 0.9 * rcData->rcSpeed;
     } else if(rcData->rx <= rcMid-RC_DEADBAND){
@@ -174,15 +160,14 @@ void evalRCChannelProportional(rcData_t* rcData, int16_t rcGain, uint16_t rcMid)
       rcData->rcSpeed = 0.0;
     }
     rcData->rcSpeed = constrain(rcData->rcSpeed, -200, +200);  // constrain for max speed
-    rcData->update = false;
+    rcData->isFresh = false;
   }
 }
 
-// Proportional RC control
-
-void evaluateRCProportional() {
-  evalRCChannelProportional(&rcData[RC_DATA_PITCH], config.rcGain, config.rcMid);
-  evalRCChannelProportional(&rcData[RC_DATA_ROLL ], config.rcGain, config.rcMid);
+// Integrating RC control
+void evaluateRCIntegrating() {
+  evalRCChannelIntegrating(&rcData[RC_DATA_PITCH], config.rcGain, config.rcMid);
+  evalRCChannelIntegrating(&rcData[RC_DATA_ROLL ], config.rcGain, config.rcMid);
 }
 
 //******************************************
@@ -194,12 +179,12 @@ inline void evalRCChannelAbsolute(rcData_t* rcData, int16_t rcMin, int16_t rcMax
   float y0;
   int16_t rx;
   
-  if(rcData->update) {
+  if(rcData->isFresh) {
     k = (float)(rcMax - rcMin)/(MAX_RC - MIN_RC);
     y0 = rcMin + k * (MID_RC - MIN_RC);
     rx = rcData->rx - rcMid;
     utilLP_float(&rcData->setpoint, y0 + k * rx, 0.05);
-    rcData->update = false;
+    rcData->isFresh = false;
   }
 }
 
@@ -211,4 +196,19 @@ void evaluateRCAbsolute() {
 }
 
 void evaluateRCSwitch() {
+  if (!rcData[RC_DATA_SWITCH].isFresh)
+    return;
+  uint16_t lThreshold = (MID_RC + MID_RC)/2;
+  if (switchPos < 0) lThreshold += 50; else if (switchPos == 0) lThreshold -= 50;
+  uint16_t hThreshold = (MID_RC + MAX_RC)/2;
+  if (switchPos > 0) lThreshold -= 50; else if (switchPos == 0) lThreshold += 50;
+  uint16_t sp = rcData[RC_DATA_SWITCH].setpoint;
+  if (sp <= lThreshold)
+    switchPos = -1;
+  else if (sp >= hThreshold)
+    switchPos = 1;
+  else 
+    switchPos = 0;
+    
+  switchPos = 0;
 }
