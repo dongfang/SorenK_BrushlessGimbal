@@ -41,14 +41,14 @@ t_configUnion configUnion;
 const t_configDef PROGMEM configListPGM[] = {
   {"vers",             UINT8, &config.vers,             NULL},
 
-  {"gyroPitchKp",      INT32, &config.gyroPitchKp,      &initPIDs},
-  {"gyroPitchKi",      INT32, &config.gyroPitchKi,      &initPIDs},
-  {"gyroPitchKd",      INT32, &config.gyroPitchKd,      &initPIDs},
-  {"gyroRollKp",       INT32, &config.gyroRollKp,       &initPIDs},
-  {"gyroRollKi",       INT32, &config.gyroRollKi,       &initPIDs},
-  {"gyroRollKd",       INT32, &config.gyroRollKd,       &initPIDs},
-  {"accTimeConstant",  INT16, &config.accTimeConstant,  &initIMU},
-  {"mpuLPF",           INT8,  &config.mpuLPF,           &initMPUlpf},
+  {"pitchKp",        INT32, &config.pitchKp,            &initPIDs},
+  {"pitchKi",        INT32, &config.pitchKi,            &initPIDs},
+  {"pitchKd",        INT32, &config.pitchKd,            &initPIDs},
+  {"rollKp",         INT32, &config.rollKp,             &initPIDs},
+  {"rollKi",         INT32, &config.rollKi,             &initPIDs},
+  {"rollKd",         INT32, &config.rollKd,             &initPIDs},
+  {"timeConstant",   INT16, &config.accTimeConstant,    &initIMU},
+  {"mpuLPF",         INT8,  &config.mpuLPF,             &initMPUlpf},
   
   {"angleOffsetPitch", INT16, &config.angleOffsetPitch, NULL},
   {"angleOffsetRoll",  INT16, &config.angleOffsetRoll,  NULL},
@@ -60,25 +60,16 @@ const t_configDef PROGMEM configListPGM[] = {
   {"maxPWMmotorPitch", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff},
   {"maxPWMmotorRoll",  UINT8, &config.maxPWMmotorRoll,  &recalcMotorStuff},
 
-  {"minRCPitch",       INT8,  &config.minRCPitch,        NULL},
-  {"maxRCPitch",       INT8,  &config.maxRCPitch,        NULL},
-  {"minRCRoll",        INT8,  &config.minRCRoll,         NULL},
-  {"maxRCRoll",        INT8,  &config.maxRCRoll,         NULL},
-  {"rcGain",           INT16, &config.rcGain,            NULL},
-  {"rcLPF",            INT16, &config.rcLPF,             &initRC},
+  {"minRCPitch",       INT8,  &config.minRCPitch,       NULL},
+  {"maxRCPitch",       INT8,  &config.maxRCPitch,       NULL},
+  {"minRCRoll",        INT8,  &config.minRCRoll,        NULL},
+  {"maxRCRoll",        INT8,  &config.maxRCRoll,        NULL},
+  {"rcGain",           INT16, &config.rcGain,           NULL},
+  {"rcLPF",            INT16, &config.rcLPF,            &initRC},
 
-  {"rcModePPM",        BOOL,  &config.rcModePPM,         &initRCPins},
-  {"rcChannelPitch",   INT8,  &config.rcChannelPitch,    NULL},
-  {"rcChannelRoll",    INT8,  &config.rcChannelRoll,     NULL},
-  {"rcChannelSwitch",  INT8,  &config.rcChannelSwitch,   NULL},
-  {"rcMid",            INT16, &config.rcMid,             NULL},
-  {"rcAbsolute",       BOOL,  &config.rcAbsolute,        NULL},
+  {"rcMid",            INT16, &config.rcMid,            NULL},
+  {"rcAbsolute",       BOOL,  &config.rcAbsolute,       NULL},
   
-  {"accOutput",        BOOL,  &config.accOutput,         NULL},
-
-  {"enableGyro",       BOOL,  &config.enableGyro,        NULL},
-  {"enableACC",        BOOL,  &config.enableACC,         NULL},
-
   {"majorAxis",        UINT8, &config.majorAxis,        &initSensorOrientation},
 
   {"axisReverseZ",     BOOL,  &config.axisReverseZ,      &initSensorOrientation},
@@ -191,7 +182,6 @@ void parameterMod() {
 }
 //************************************************************************************
 
-
 void updateAllParameters() {
   recalcMotorStuff();
   initPIDs();
@@ -207,110 +197,18 @@ void setDefaultParametersAndUpdate() {
   updateAllParameters();
 }
 
-
-void transmitUseACC()  // TODO: remove obsolete command
-{
-   Serial.println(1);  // dummy for bl_tool compatibility ;-)
-}
-
-void toggleACCOutput()
-{
-  int temp = atoi(sCmd.next());
-  if(temp==1)
-    config.accOutput = true;
-  else
-    config.accOutput = false;
-}
-
-void setUseACC() // TODO: remove obsolete command
-{
-}
-
-void transmitRCConfig()
-{
-  Serial.println(config.minRCPitch);
-  Serial.println(config.maxRCPitch);
-  Serial.println(config.minRCRoll);
-  Serial.println(config.maxRCRoll);
-}
-
-void transmitRCAbsolute()
-{
-  Serial.println(config.rcAbsolute);
-}
-
-void setRCGain()
-{
-    config.rcGain = atoi(sCmd.next());
-}
-
-void transmitRCGain()
-{
-  Serial.println(config.rcGain);
-}
-
-void setRcMode()
-{
-    config.rcModePPM = atoi(sCmd.next());
-    config.rcChannelPitch = atoi(sCmd.next());
-    config.rcChannelRoll = atoi(sCmd.next());
-    initRCPins();
-}
-
-void transmitRcMode()
-{
-  Serial.println(config.rcModePPM);
-  Serial.println(config.rcChannelPitch);
-  Serial.println(config.rcChannelRoll);
-}
-
-void setRCAbsolute()
-{
-  int temp = atoi(sCmd.next());
-  if(temp==1)
-  {
-    config.rcAbsolute = true;
-  }
-  else
-  {
-    config.rcAbsolute = false;
-  }
-  rcData[RC_DATA_PITCH].setpoint = 0.0;
-  rcData[RC_DATA_ROLL].setpoint  = 0.0;
-  rcData[RC_DATA_PITCH].rcSpeed  = 0.0;
-  rcData[RC_DATA_ROLL].rcSpeed   = 0.0;
-}
-
-void setRCConfig()
-{
-  config.minRCPitch = atoi(sCmd.next());
-  config.maxRCPitch = atoi(sCmd.next());
-  config.minRCRoll = atoi(sCmd.next());
-  config.maxRCRoll = atoi(sCmd.next());
-}
-
-void transmitSensorOrientation()
-{
-  Serial.println(config.axisReverseZ);
-  Serial.println(config.axisSwapXY);
-}
-
-void writeEEPROM()
-{
-  bool old = config.accOutput;
-  config.accOutput = false; // do not save enabled OAC output mode 
-  config.crc8 = crcSlow((crc *)&config, sizeof(config)-1); // set proper CRC 
+void writeEEPROM() {
+  config.crc16 = crc16((uint8_t*)&config, sizeof(config)-2); // set proper CRC 
   EEPROM_writeAnything(0, config);
-  config.accOutput = old; 
 }
 
-void readEEPROM()
-{
+void readEEPROM() {
+  wdt_reset();
   EEPROM_readAnything(0, config); 
-  if (config.crc8 == crcSlow((crc *)&config, sizeof(config)-1))
-  { 
+  if (config.crc16 == crc16((uint8_t*)&config, sizeof(config)-2)) { 
     updateAllParameters();
   } else {
+    wdt_reset();
     // crc failed intialize directly here, as readEEPROM is void
     Serial.print(F("EEPROM CRC failed, initialize EEPROM"));
     setDefaultParameters();
@@ -321,12 +219,12 @@ void readEEPROM()
 void transmitActiveConfig()
 {
   Serial.println(config.vers);
-  Serial.println(config.gyroPitchKp);
-  Serial.println(config.gyroPitchKi);
-  Serial.println(config.gyroPitchKd);
-  Serial.println(config.gyroRollKp);
-  Serial.println(config.gyroRollKi);
-  Serial.println(config.gyroRollKd);
+  Serial.println(config.pitchKp);
+  Serial.println(config.pitchKi);
+  Serial.println(config.pitchKd);
+  Serial.println(config.rollKp);
+  Serial.println(config.rollKi);
+  Serial.println(config.rollKd);
   Serial.println(config.accTimeConstant);
   Serial.println(config.nPolesMotorPitch);
   Serial.println(config.nPolesMotorRoll);
@@ -338,27 +236,6 @@ void transmitActiveConfig()
   Serial.println(config.maxPWMmotorRoll);
 }
 
-
-void setPitchPID() {
-  config.gyroPitchKp = atol(sCmd.next());
-  config.gyroPitchKi = atol(sCmd.next());
-  config.gyroPitchKd = atol(sCmd.next());
-  initPIDs();
-}
-
-void setRollPID() {
-  config.gyroRollKp = atol(sCmd.next());
-  config.gyroRollKi = atol(sCmd.next());
-  config.gyroRollKd = atol(sCmd.next());
-  initPIDs();
-}
-
-void setMotorPWM() {
-  config.maxPWMmotorPitch = atoi(sCmd.next());
-  config.maxPWMmotorRoll = atoi(sCmd.next());
-  recalcMotorStuff();
-}
-
 void gyroRecalibrate() {
   // Set voltage on all motor phases to zero 
   softStart = 0;
@@ -368,26 +245,12 @@ void gyroRecalibrate() {
   Serial.println(F("recalibration: done"));
 }
 
-void setMotorDirNo() {
-  config.dirMotorPitch = atoi(sCmd.next());
-  config.dirMotorRoll = atoi(sCmd.next());
-  config.motorNumberPitch = atoi(sCmd.next());
-  config.motorNumberRoll = atoi(sCmd.next());
-}
-
-void setSensorOrientation() {
-  config.axisReverseZ = atoi(sCmd.next());
-  config.axisSwapXY = atoi(sCmd.next());
-
-  initSensorOrientation();
-}
-
 void printHelpUsage() {
   Serial.println(F("This gives you a list of all commands with usage:"));
   Serial.println(F("Explanations are in brackets(), use integer values only !"));
-  Serial.println(F(""));
+  Serial.println();
   Serial.println(F("these are the preferred commands, use them for new GUIs !!"));
-  Serial.println(F(""));
+  Serial.println();
   Serial.println(F("SD    (Set Defaults)"));
   Serial.println(F("WE    (Writes active config to eeprom)"));
   Serial.println(F("RE    (Restores values from eeprom to active config)"));  
@@ -395,31 +258,11 @@ void printHelpUsage() {
   Serial.println(F("par <parName> <parValue>   (general parameter read/set command)"));
   Serial.println(F("    example usage:"));
   Serial.println(F("       par                     ... list all config parameters"));
-  Serial.println(F("       par gyroPitchKi         ... list gyroPitchKi"));
-  Serial.println(F("       par gyroPitchKi 12000   ... set gyroPitchKi to 12000"));
-  Serial.println(F(""));
-  Serial.println(F("these commands are intendend for commandline users and compatibilty with 049 GUI"));
-  Serial.println(F("TC    (transmits all config values in eeprom save order)"));     
-  Serial.println(F("SP gyroPitchKp gyroPitchKi gyroPitchKd    (Set PID for Pitch)"));
-  Serial.println(F("SR gyroRollKp gyroRollKi gyroRollKd    (Set PID for Roll)"));
-  Serial.println(F("SE maxPWMmotorPitch maxPWMmotorRoll     (Used for Power limitiation on each motor 255=high, 1=low)"));
-  Serial.println(F("SM dirMotorPitch dirMotorRoll motorNumberPitch motorNumberRoll"));
-  Serial.println(F("SSO reverseZ swapXY (set sensor orientation)"));
-  Serial.println(F("TSO   (Transmit sensor orientation)"));
-  Serial.println(F("TRC   (transmitts RC Config)"));
-  Serial.println(F("SRC minRCPitch maxRCPitch minRCRoll maxRCRoll (angles -90..90)"));
-  Serial.println(F("SCA rcAbsolute (1 = true, RC control is absolute; 0 = false, RC control is proportional)"));
-  Serial.println(F("SRG rcGain (set RC gain)"));
-  Serial.println(F("SRM modePPM channelPitch channelRoll (set RC mode: modePPM 1=PPM 0=single channels, channelPitch/Roll = channel assignment 0..7)"));
-  Serial.println(F("TCA   (Transmit RC control absolute or not)"));
-  Serial.println(F("TRG   (Transmit RC gain)"));
-  Serial.println(F("TRM   (Transmit RC mode"));
-  Serial.println(F("UAC useACC (1 = true, ACC; 0 = false, DMP)"));
-  Serial.println(F("TAC   (Transmit ACC status)"));
-  Serial.println(F("OAC accOutput (Toggle Angle output in ACC mode: 1 = true, 0 = false)"));
-  Serial.println(F(""));
+  Serial.println(F("       par pitchKi             ... list pitchKi"));
+  Serial.println(F("       par pitchKi 12000       ... set pitchKi to 12000"));
+  Serial.println();
   Serial.println(F("HE     (print this output)"));
-  Serial.println(F(""));
+  Serial.println();
   Serial.println(F("Note: command input is case-insensitive, commands are accepted in both upper/lower case"));
 }
 
@@ -434,25 +277,6 @@ void setSerialProtocol() {
   sCmd.addCommand("re", readEEPROM); 
   sCmd.addCommand("par", parameterMod);
   sCmd.addCommand("gc", gyroRecalibrate);
-
-  sCmd.addCommand("tc", transmitActiveConfig);
-  sCmd.addCommand("sp", setPitchPID);
-  sCmd.addCommand("sr", setRollPID);
-  sCmd.addCommand("se", setMotorPWM);
-  sCmd.addCommand("sm", setMotorDirNo);
-  sCmd.addCommand("sso", setSensorOrientation);
-  sCmd.addCommand("tso", transmitSensorOrientation);
-  sCmd.addCommand("trc", transmitRCConfig);
-  sCmd.addCommand("src", setRCConfig);
-  sCmd.addCommand("srg", setRCGain);
-  sCmd.addCommand("srm", setRcMode);  
-  sCmd.addCommand("trm", transmitRcMode);  
-  sCmd.addCommand("sca", setRCAbsolute);
-  sCmd.addCommand("tca", transmitRCAbsolute);
-  sCmd.addCommand("trg", transmitRCGain);
-  sCmd.addCommand("uac", setUseACC);
-  sCmd.addCommand("tac", transmitUseACC);
-  sCmd.addCommand("oac", toggleACCOutput);
 
   sCmd.addCommand("he", printHelpUsage);
   sCmd.setDefaultHandler(unrecognized);      // Handler for command that isn't matched  (says "What?")

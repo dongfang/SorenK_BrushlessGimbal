@@ -6,7 +6,6 @@
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // Drotek MPU breakout board
 #define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_HIGH
 
-
 // Define Brushless PWM Mode, uncomment ONE setting
 #define PWM_32KHZ_PHASE  // Resolution 8 bit for PWM
 //#define PWM_8KHZ_FAST    // Resolution 8 bit for PWM
@@ -48,9 +47,9 @@
 // #define RC_PIN_PPM_A1
 // #define RC_PIN_PPM_A0
 
-#define MIN_RC 1000
+#define MIN_RC 960
 #define MID_RC 1500
-#define MAX_RC 2000
+#define MAX_RC 2050
 #define RC_DEADBAND 50U
 #define RC_TIMEOUT 100000
 

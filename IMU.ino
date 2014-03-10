@@ -154,9 +154,9 @@ void setACCFastMode (bool fastMode) {
 }
 
 void initIMU() {
-  // resolutionDevider=131, scale = 0.000133
+  // resolutionDivider=131, scale = 0.000133
   // 102us
-  gyroScale =  1.0 / resolutionDevider / 180.0 * 3.14159265359;  // convert to radians
+  gyroScale =  1.0 / resolutionDivider / 180.0 * 3.14159265359;  // convert to radians
   setACCFastMode(false);
   
   uint8_t axis;
@@ -164,28 +164,19 @@ void initIMU() {
   for (axis = 0; axis < 3; axis++) {
     readACC((axisDef)axis);
     accLPF[axis] = accADC[axis];
+    EstG[axis] = accADC[0];
   }
-  
-  /*
-  accLPF[0] = 0;
-  accLPF[1] = 0;
-  accLPF[2] = ACC_1G;
-  */
-
-  EstG.V.X = accADC[0];
-  EstG.V.Y = accADC[1];
-  EstG.V.Z = accADC[2];
 
   accMag = 100;
 }
 
 // Rotate Estimated vector(s) with small angle approximation, according to the gyro data
 // needs angle in radian units !
-void rotateV(struct fp_vector *v,float* delta) {
-  fp_vector v_tmp = *v;
-  v->Z -= delta[ROLL]  * v_tmp.X + delta[PITCH] * v_tmp.Y;
-  v->X += delta[ROLL]  * v_tmp.Z - delta[YAW]   * v_tmp.Y;
-  v->Y += delta[PITCH] * v_tmp.Z + delta[YAW]   * v_tmp.X;
+void rotateV(float* v, float* delta) {
+  float v_tmp[3] = {v[X],v[Y],v[Z]};
+  v[Z] -= delta[ROLL]  * v_tmp[X] + delta[PITCH] * v_tmp[Y];
+  v[X] += delta[ROLL]  * v_tmp[Z]-  delta[YAW]   * v_tmp[Y];
+  v[Y] += delta[PITCH] * v_tmp[Z] + delta[YAW]   * v_tmp[X];
 }
 
 void readGyros() {
@@ -229,7 +220,7 @@ void updateGyroAttitude(){
     deltaGyroAngle[axis] = gyroADC[axis]  * gyroScale * DT_FLOAT;
   }
   // 168 us
-  rotateV(&EstG.V,deltaGyroAngle);
+  rotateV(EstG, deltaGyroAngle);
 }
 
 void updateACC(){
@@ -268,7 +259,7 @@ void updateACCAttitude(){
   if ((36 < accMag && accMag < 196) || flags.SMALL_ANGLES_25) {
     for (axis = 0; axis < 3; axis++) {
       int32_t acc = accSmooth[axis];
-      EstG.A[axis] = EstG.A[axis] * (1.0 - AccComplFilterConst) + acc * AccComplFilterConst; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
+      EstG[axis] = EstG[axis] * (1.0 - AccComplFilterConst) + acc * AccComplFilterConst; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
     } 
   }
 }
@@ -276,8 +267,8 @@ void updateACCAttitude(){
 void getAttitudeAngles() {
   // attitude of the estimated vector  
   // 272 us
-  angle[ROLL]  = (config.angleOffsetRoll * 10) +  Rajan_FastArcTan2_deg1000(EstG.V.X , sqrt(EstG.V.Z*EstG.V.Z+EstG.V.Y*EstG.V.Y));
+  angle[ROLL]  = (config.angleOffsetRoll * 10) +  Rajan_FastArcTan2_deg1000(EstG[X] , sqrt(EstG[Z]*EstG[Z]+EstG[Y]*EstG[Y]));
   // 192 us
-  angle[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_deg1000(EstG.V.Y , EstG.V.Z);  
+  angle[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_deg1000(EstG[Y] , EstG[Z]);  
 }
 

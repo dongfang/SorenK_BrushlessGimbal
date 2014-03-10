@@ -1,6 +1,29 @@
 /*************************/
 /* RC-Decoder            */
 /*************************/
+uint16_t _timer() {
+  uint8_t sreg = SREG;
+  cli();
+  uint8_t fine = TCNT1;
+  uint8_t after;
+  do {
+   after = TCNT1;
+  } while (after==fine);
+  uint8_t mm = microMacro;
+  uint8_t flags = TIFR1;
+  SREG = sreg;
+  if (flags & (1<<TOV1)) {
+// We simulate the interrupt has happened and the fine timer is zero.
+      return (mm+1) << 9;
+  } else {
+    if (after < fine) {
+    // We were downcounting.
+      return ((mm+1)<<9) - after;
+    } else {
+      return (mm<<9) + after;
+    }
+  }
+}
 
 // init RC config variables
 void initRC() {
@@ -12,21 +35,21 @@ void initRC() {
 //******************************************
 inline void decodePWM(rcData_t* rcData) {
   uint16_t pulseInPWMtmp;
-  pulseInPWMtmp = (rcData->microsLastUpdate - rcData->microsRisingEdge)/CC_FACTOR;
+  pulseInPWMtmp = (rcData->microsLastUpdate - rcData->microsRisingEdge)/(CC_FACTOR/2);
+  // update if within expected RC range
+  rcData->rx = pulseInPWMtmp;
+  rcData->isFresh=true;
   if ((pulseInPWMtmp >= MIN_RC) && (pulseInPWMtmp <= MAX_RC)) {
-    // update if within expected RC range
-    rcData->rx = pulseInPWMtmp;
     rcData->isValid=true;
-    rcData->isFresh=true;
   }
 }
 
 //******************************************
 // PPM Decoder
 //******************************************
-
+/*
 inline void intDecodePPM() { 
-  uint32_t ticksNow = micros();
+  uint32_t ticksNow = _timer();
   
   static int32_t ticksPPMLastEdge = 0;
   uint16_t pulseInPPM;
@@ -55,13 +78,14 @@ inline void intDecodePPM() {
     channel_idx++;
   }
 }
+*/
 
 //******************************************
 // Interrupts
 //******************************************
 ISR(PCINT1_vect) {
   static uint8_t lastPin;
-  uint16_t frozenTime = micros();
+  uint16_t frozenTime = _timer();
   uint8_t pin = PINC;
   uint8_t change = pin ^ lastPin;
   lastPin = pin;
@@ -74,7 +98,7 @@ ISR(PCINT1_vect) {
       decodePWM(&rcData[RC_DATA_ROLL]);
     }
   }
-  else if (change & 2) {
+  if (change & 2) {
     if (pin & 2) {
       rcData[RC_DATA_PITCH].microsRisingEdge = frozenTime;
     } else {
@@ -82,11 +106,11 @@ ISR(PCINT1_vect) {
       decodePWM(&rcData[RC_DATA_PITCH]);
     }
   }
-  else if (change & 4) {
+  if (change & 4) {
     if (pin & 4) {
       rcData[RC_DATA_SWITCH].microsRisingEdge = frozenTime;
     } else {
-      rcData[RC_DATA_PITCH].microsLastUpdate = frozenTime;
+      rcData[RC_DATA_SWITCH].microsLastUpdate = frozenTime;
       decodePWM(&rcData[RC_DATA_SWITCH]);
     }
   }
@@ -99,15 +123,15 @@ ISR(PCINT1_vect) {
 // check for RC timout
 
 void checkRcTimeouts() {
-  int32_t microsNow = micros();
-  int32_t microsLastUpdate;
+  uint16_t timerNow = _timer();
+  uint16_t timerLastUpdate;
   for (uint8_t id = 0; id < RC_DATA_SIZE; id++) {
     cli();
-    microsLastUpdate = rcData[id].microsLastUpdate;
+    timerLastUpdate = rcData[id].microsLastUpdate;
     sei();
-    if (rcData[id].isValid && ((microsNow - microsLastUpdate)/CC_FACTOR) > RC_TIMEOUT){
-      rcData[id].rx     = config.rcMid;
-      rcData[id].isValid  = false;
+    if (rcData[id].isValid && ((timerNow - timerLastUpdate)/(CC_FACTOR/2)) > RC_TIMEOUT){
+      rcData[id].rx = config.rcMid;
+      rcData[id].isValid = false;
       rcData[id].isFresh = true;
     }
   }
@@ -131,19 +155,12 @@ void initRCPins() {
     cli();
     rcData[id].microsRisingEdge = 0;
     rcData[id].microsLastUpdate = 0;
-    rcData[id].rx               = 1500;
+    rcData[id].rx               = MID_RC;
     rcData[id].isFresh          = true;
     rcData[id].isValid          = true;
     rcData[id].rcSpeed          = 0.0;
     rcData[id].setpoint         = 0.0;
     sei();
-  }
-
-  if (!config.rcModePPM) {
-    if (config.rcChannelRoll  > 2 || config.rcChannelPitch > 2 || config.rcChannelRoll == config.rcChannelPitch) {
-      config.rcChannelRoll  = 0;
-      config.rcChannelPitch = 1;
-    }
   }
 }
 
@@ -189,7 +206,6 @@ inline void evalRCChannelAbsolute(rcData_t* rcData, int16_t rcMin, int16_t rcMax
 }
 
 // Absolute RC control
-
 void evaluateRCAbsolute() {
   evalRCChannelAbsolute(&rcData[RC_DATA_PITCH], config.minRCPitch, config.maxRCPitch, config.rcMid);
   evalRCChannelAbsolute(&rcData[RC_DATA_ROLL ], config.minRCRoll , config.maxRCRoll,  config.rcMid);
@@ -198,11 +214,11 @@ void evaluateRCAbsolute() {
 void evaluateRCSwitch() {
   if (!rcData[RC_DATA_SWITCH].isFresh)
     return;
-  uint16_t lThreshold = (MID_RC + MID_RC)/2;
-  if (switchPos < 0) lThreshold += 50; else if (switchPos == 0) lThreshold -= 50;
+  uint16_t lThreshold = (MIN_RC + MID_RC)/2;
+  if (switchPos < 0) lThreshold += RC_DEADBAND;
   uint16_t hThreshold = (MID_RC + MAX_RC)/2;
-  if (switchPos > 0) lThreshold -= 50; else if (switchPos == 0) lThreshold += 50;
-  uint16_t sp = rcData[RC_DATA_SWITCH].setpoint;
+  if (switchPos > 0) hThreshold -= RC_DEADBAND;
+  uint16_t sp = rcData[RC_DATA_SWITCH].rx;
   if (sp <= lThreshold)
     switchPos = -1;
   else if (sp >= hThreshold)
@@ -210,5 +226,5 @@ void evaluateRCSwitch() {
   else 
     switchPos = 0;
     
-  switchPos = 0;
+  rcData[RC_DATA_SWITCH].isFresh = false;
 }

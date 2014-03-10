@@ -5,14 +5,24 @@
 struct config_t {
 uint8_t vers;
 uint8_t versEEPROM;
-int32_t gyroPitchKp; 
-int32_t gyroPitchKi;   
-int32_t gyroPitchKd;
-int32_t gyroRollKp;
-int32_t gyroRollKi;
-int32_t gyroRollKd;
+
+// Input settings
 int16_t accTimeConstant;
-int8_t  mpuLPF;             // mpu LPF 0..6, 0=fastest(256Hz) 6=slowest(5Hz)
+int8_t  mpuLPF; // mpu LPF 0..6, 0=fastest(256Hz) 6=slowest(5Hz)
+bool calibrateGyro;        // Else use EEPROM value
+uint8_t majorAxis;
+bool axisReverseZ;
+bool axisSwapXY;
+
+// PID settings
+int32_t pitchKp; 
+int32_t pitchKi;   
+int32_t pitchKd;
+int32_t rollKp;
+int32_t rollKi;
+int32_t rollKd;
+
+// Output settings
 int16_t angleOffsetPitch;   // angle offset, deg*100
 int16_t angleOffsetRoll;
 uint8_t nPolesMotorPitch;
@@ -23,26 +33,27 @@ uint8_t motorNumberPitch;
 uint8_t motorNumberRoll;
 uint8_t maxPWMmotorPitch;
 uint8_t maxPWMmotorRoll;
+
+// RC settings
 int8_t minRCPitch;
 int8_t maxRCPitch;
 int8_t minRCRoll;
 int8_t maxRCRoll;
 int16_t rcGain;
 int16_t rcLPF;             // low pass filter for RC absolute mode, units=1/10 sec
-bool rcModePPM;            // RC mode, true=common RC PPM channel, false=separate RC channels 
-int8_t rcChannelPitch;     // input channel for pitch
-int8_t rcChannelRoll;      // input channel for roll
-int8_t rcChannelSwitch;    // input channel for switch
+
+// RC channels are not configurable. Makes no sense, when it is so easy 
+// to just move the connections around instead.
+// PPM mode is disabled for now (until I get a new interpreter written).
+// Of course for PPM mode, channel settings will be needed.
+// bool rcModePPM;          // RC mode, true=common RC PPM channel, false=separate RC channels 
+// int8_t rcChannelPitch;     // input channel for pitch
+// int8_t rcChannelRoll;      // input channel for roll
+// int8_t rcChannelSwitch;    // input channel for switch
+
 int16_t rcMid;             // rc channel center ms
 bool rcAbsolute;
-bool accOutput;
-bool calibrateGyro;        // Else use EEPROM value
-bool enableGyro;           // enable gyro attitude update
-bool enableACC;            // enable acc attitude update
-uint8_t majorAxis;
-bool axisReverseZ;
-bool axisSwapXY;
-uint8_t crc8;
+uint16_t crc16;
 } config;
 
 void recalcMotorStuff();
@@ -51,12 +62,12 @@ void initPIDs();
 void setDefaultParameters() {
   config.vers = VERSION;
   config.versEEPROM = VERSION_EEPROM;
-  config.gyroPitchKp = 8000;
-  config.gyroPitchKi = 10000;
-  config.gyroPitchKd = 12000;
-  config.gyroRollKp = 20000;
-  config.gyroRollKi = 8000;
-  config.gyroRollKd = 30000;
+  config.pitchKp = 7500;
+  config.pitchKi = 10000;
+  config.pitchKd = 11000;
+  config.rollKp = 20000;
+  config.rollKi = 8000;
+  config.rollKd = 30000;
   config.accTimeConstant = 4;
   config.mpuLPF = 0;
   config.angleOffsetPitch = 0;
@@ -69,26 +80,19 @@ void setDefaultParameters() {
   config.motorNumberRoll = 1;
   config.maxPWMmotorPitch = 100;
   config.maxPWMmotorRoll = 100;
-  config.minRCPitch = -30;
-  config.maxRCPitch = 30;
+  config.minRCPitch = 0;
+  config.maxRCPitch = 90;
   config.minRCRoll = -30;
   config.maxRCRoll = 30;
   config.rcGain = 5;
-  config.rcLPF = 20;              // 2 sec
-  config.rcModePPM = false;
-  config.rcChannelRoll = 0;
-  config.rcChannelPitch = 1;
-  config.rcChannelSwitch = 2;
+  config.rcLPF = 5;              // 0.5 sec
   config.rcMid = MID_RC;
   config.rcAbsolute = true;
-  config.accOutput=false;
   config.calibrateGyro = true;
-  config.enableGyro=true;
-  config.enableACC=true;
   config.axisReverseZ=true;
   config.axisSwapXY=false;  
   config.majorAxis = 2;
-  config.crc8 = 0;  
+  config.crc16 = 0;  
 }
 
 typedef struct PIDdata {
@@ -98,13 +102,13 @@ typedef struct PIDdata {
 PIDdata_t pitchPIDpar,rollPIDpar;
 
 void initPIDs(void) {
-  rollPIDpar.Kp = config.gyroRollKp/10;
-  rollPIDpar.Ki = config.gyroRollKi/1000;
-  rollPIDpar.Kd = config.gyroRollKd/10;
+  rollPIDpar.Kp = config.rollKp/10;
+  rollPIDpar.Ki = config.rollKi/1000;
+  rollPIDpar.Kd = config.rollKd/10;
 
-  pitchPIDpar.Kp = config.gyroPitchKp/10;
-  pitchPIDpar.Ki = config.gyroPitchKi/1000;
-  pitchPIDpar.Kd = config.gyroPitchKd/10;
+  pitchPIDpar.Kp = config.pitchKp/10;
+  pitchPIDpar.Ki = config.pitchKi/1000;
+  pitchPIDpar.Kd = config.pitchKd/10;
 }
 
 // CRC definitions
@@ -126,27 +130,24 @@ bool runMainLoop = false;
 int8_t pitchDirection = 1;
 int8_t rollDirection = 1;
 
-int freqCounter=0; // TODO: back to char later ...
+int freqCounter=0;
 
-int pitchMotorDrive = 0;
-int rollMotorDrive = 0;
-
-// control motor update in ISR
-uint8_t softStart = 0;
+uint8_t motorPhases[2][3];
+uint8_t softStart;
 
 // Variables for MPU6050
 float gyroPitch;
 float gyroRoll; //in deg/s
+float resolutionDivider;
 
-float resolutionDevider;
 int16_t x_val;
 int16_t y_val;
 int16_t z_val;
 
-float PitchPhiSet = 0;
-float RollPhiSet = 0;
-static float pitchAngleSet=0;
-static float rollAngleSet=0;
+float PitchPhiSet;
+float RollPhiSet;
+static float pitchAngleSet;
+static float rollAngleSet;
 
 int count=0;
 
@@ -185,26 +186,21 @@ struct flags_struct {
   uint8_t SMALL_ANGLES_25 : 1;
 } flags;
 
+//********************
+// sensor orientation
+//********************
 enum axisDef {
   ROLL,
   PITCH,
   YAW
 };
 
-typedef struct fp_vector {
-  float X;
-  float Y;
-  float Z;
-} t_fp_vector_def;
+enum baseDef {
+  X,
+  Y,
+  Z
+};
 
-typedef union {
-  float   A[3];
-  t_fp_vector_def V;
-} t_fp_vector;
-
-//********************
-// sensor orientation
-//********************
 typedef struct sensorAxisDef {
   char idx;
   int  dir;
@@ -226,8 +222,7 @@ static int32_t accSmooth[3];
 static int16_t gyroADC[3];
 static int16_t accADC[3];
 
-static t_fp_vector EstG;
-
+static float EstG[3];
 static float accLPF[3] = {0.0,};
 static int32_t accMag = 0;
 
@@ -242,4 +237,6 @@ uint32_t stackBottom = 0;
 
 uint32_t heapTop = 0;
 uint32_t heapBottom = 0xffffffff;
+
+uint8_t microMacro;
 

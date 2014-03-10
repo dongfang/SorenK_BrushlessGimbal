@@ -138,7 +138,7 @@ void setup() {
    // Init BL Controller
   initBlController();
   // Initialize MPU 
-  initResolutionDevider();
+  initResolutionDivider();
 
   wdt_reset();
   
@@ -233,14 +233,13 @@ void loop()
   if (runMainLoop) // loop runs with motor ISR update rate (1000Hz)
   {
     wdt_reset();
-    
     runMainLoop = false;
     
     // update IMU data            
     readGyros();   // t=386us
 
-    if (config.enableGyro) updateGyroAttitude(); // t=260us
-    if (config.enableACC) updateACCAttitude(); // t=146us
+    updateGyroAttitude();  // t=260us
+    updateACCAttitude();   // t=146us
 
     getAttitudeAngles(); // t=468us
     
@@ -258,25 +257,28 @@ void loop()
     evaluateRCSwitch();
     
     //****************************
-    // pitch PID
+    // pitch and roll PIDs
     //****************************
-    
     // t=94us
     pitchPIDVal = ComputePID(DT_INT_MS, angle[PITCH], pitchAngleSet*1000, &pitchErrorSum, &pitchErrorOld, pitchPIDpar.Kp, pitchPIDpar.Ki, pitchPIDpar.Kd);
-    // motor control
-    if (switchPos >= 0)
-      pitchMotorDrive = pitchPIDVal * config.dirMotorPitch;
-
-    //****************************
-    // roll PID
-    //****************************
     // t=94us
     rollPIDVal = ComputePID(DT_INT_MS, angle[ROLL], rollAngleSet*1000, &rollErrorSum, &rollErrorOld, rollPIDpar.Kp, rollPIDpar.Ki, rollPIDpar.Kd);
 
     // motor control
-    if (switchPos >= 0)
-      rollMotorDrive = rollPIDVal * config.dirMotorRoll;
- 
+    if (switchPos >= 0) {
+      int motorDrive = pitchPIDVal * config.dirMotorPitch;
+      uint8_t posStep = motorDrive >> 3;
+      motorPhases[config.motorNumberPitch][0] = pwmSinMotorPitch[posStep] * softStart >> 4;
+      motorPhases[config.motorNumberPitch][1] = pwmSinMotorPitch[(uint8_t)(posStep + 85)] * softStart >> 4;
+      motorPhases[config.motorNumberPitch][2] = pwmSinMotorPitch[(uint8_t)(posStep + 170)] * softStart >> 4;
+
+      motorDrive = rollPIDVal * config.dirMotorRoll;
+      posStep = motorDrive >> 3;
+      motorPhases[config.motorNumberRoll][0] = pwmSinMotorRoll[posStep] * softStart >> 4;
+      motorPhases[config.motorNumberRoll][1] = pwmSinMotorRoll[(uint8_t)(posStep + 85)] * softStart >> 4;
+      motorPhases[config.motorNumberRoll][2] = pwmSinMotorRoll[(uint8_t)(posStep + 170)] * softStart >> 4;
+    }
+
     //****************************
     // slow rate actions
     //****************************
@@ -309,7 +311,7 @@ void loop()
           softStart = 0;
           break;
         case GS_LOCKED :
-          if (switchPos >0) {
+          if (switchPos > 0) {
             // slask
             if (softStart > 0) softStart--;
           } else {
@@ -365,14 +367,9 @@ void loop()
       if (pOutCnt == (LOOPUPDATE_FREQ/10/POUT_FREQ))
       {
         // 600 us
-        if(config.accOutput==1) { 
-        //Serial.print(angle[PITCH]); Serial.print(F(" ACC "));Serial.println(angle[ROLL]);
-      Serial.println(AccComplFilterConst);
-      Serial.println(EstG.A[0]);
-        Serial.println(EstG.A[1]);
-        Serial.println(EstG.A[2]);
-        Serial.println();
-      }
+//        if(config.accOutput==1) { 
+//        Serial.print(angle[PITCH]); Serial.print(F(" ACC "));Serial.println(angle[ROLL]);
+//      }
         pOutCnt = 0;
       }
       break;
@@ -397,10 +394,6 @@ void loop()
     // Evaluate Serial inputs 
     //****************************
     sCmd.readSerial();
-
-    CH2_OFF
   }
-
 }
-
 

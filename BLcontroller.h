@@ -92,33 +92,33 @@ void initBlController() {
   pinMode(11, OUTPUT);
 
 #ifdef PWM_8KHZ_FAST
-  TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM01)| _BV(WGM10); 
-  TCCR0B = _BV(CS01);
-  TCCR1A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM10); 
-  TCCR1B = _BV(WGM12) | _BV(CS11);
-  TCCR2A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM21)| _BV(WGM20);
-  TCCR2B = _BV(CS21);
+  TCCR0A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM01)| (1<<WGM00); 
+  TCCR0B = (1<<CS01);
+  TCCR1A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM10); 
+  TCCR1B = (1<<WGM12)  | (1<<CS11);
+  TCCR2A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM21)| (1<<WGM20);
+  TCCR2B = (1<<CS21);
 #endif
 
 #ifdef PWM_32KHZ_PHASE
-  TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM00); 
-  TCCR0B = _BV(CS00);
-  TCCR1A = _BV(COM1A1) | _BV(COM1B1) | _BV(WGM10);
-  TCCR1B = _BV(CS10);
-  TCCR2A = _BV(COM2A1) | _BV(COM2B1) | _BV(WGM20);
-  TCCR2B = _BV(CS20);
+  TCCR0A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM00); 
+  TCCR0B = (1<<CS00);
+  TCCR1A = (1<<COM1A1) | (1<<COM1B1) | (1<<WGM10);
+  TCCR1B = (1<<CS10);
+  TCCR2A = (1<<COM2A1) | (1<<COM2B1) | (1<<WGM20);
+  TCCR2B = (1<<CS20);
 #endif
 
 #ifdef PWM_4KHZ_PHASE
-  TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM00); 
-  TCCR0B = _BV(CS01);
-  TCCR1A = _BV(COM1A1) | _BV(COM1B1) | _BV(WGM10);
-  TCCR1B = _BV(CS11);
-  TCCR2A = _BV(COM2A1) | _BV(COM2B1) | _BV(WGM20);
-  TCCR2B = _BV(CS21);
+  TCCR0A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM00); 
+  TCCR0B = (1<<CS01);
+  TCCR1A = (1<<COM1A1) | (1<<COM1B1) | (1<<WGM10);
+  TCCR1B = (1<<CS11);
+  TCCR2A = (1<<COM2A1) | (1<<COM2B1) | (1<<WGM20);
+  TCCR2B = (1<<CS21);
 #endif
 
-  TIMSK1 |= _BV(TOIE1);
+  TIMSK1 |= 1<<TOIE1;
   sei();
 
   // Enable Timer1 Interrupt for Motor Control
@@ -128,25 +128,6 @@ void initBlController() {
   OCR1B = 0;  //D10 BPIN
   OCR0A = 0;  //D6
   OCR0B = 0;  //D5 
-}
-
-// 3 lsb of MotorPos still reserved for precision improvement (TBD) 
-inline void MoveMotorPosSpeed(uint8_t motorNumber, int MotorPos, uint8_t* pwmSin) {
-  uint8_t posStep;
-  if (motorNumber == 0) {
-    posStep = MotorPos >> 3;
-    PWM_A_MOTOR0 = pwmSin[posStep] * softStart >> 4;
-    PWM_B_MOTOR0 = pwmSin[(uint8_t)(posStep + 85)] * softStart >> 4;
-    PWM_C_MOTOR0 = pwmSin[(uint8_t)(posStep + 170)] * softStart >> 4;
-  }
- 
-  if (motorNumber == 1) {
-    posStep = MotorPos >> 3;
-    posStep &= 0xff;
-    PWM_A_MOTOR1 = pwmSin[posStep];
-    PWM_B_MOTOR1 = pwmSin[(uint8_t)(posStep + 85)];
-    PWM_C_MOTOR1 = pwmSin[(uint8_t)(posStep + 170)];
-  }
 }
 
 // Only for testing?
@@ -202,15 +183,18 @@ void recalcMotorStuff() {
 /* Motor Control IRQ Routine    */
 /********************************/
 // motor position control
-ISR( TIMER1_OVF_vect ) {
+ISR (TIMER1_OVF_vect) {
   // 0.88us / 8.1us
-  freqCounter++;  
+  microMacro++;
+  freqCounter++;
   if(freqCounter==(CC_FACTOR*1000/MOTORUPDATE_FREQ)) {
     freqCounter=0;
-    // move pitch motor
-    MoveMotorPosSpeed(config.motorNumberPitch, pitchMotorDrive, pwmSinMotorPitch);
-    // move roll motor
-    MoveMotorPosSpeed(config.motorNumberRoll, rollMotorDrive, pwmSinMotorRoll);
+    PWM_A_MOTOR0 = motorPhases[0][0];
+    PWM_B_MOTOR0 = motorPhases[0][1];
+    PWM_C_MOTOR0 = motorPhases[0][2];
+    PWM_A_MOTOR1 = motorPhases[1][0];
+    PWM_B_MOTOR1 = motorPhases[1][1];
+    PWM_C_MOTOR1 = motorPhases[1][2];
     // update event
     runMainLoop = true;
   }
@@ -228,4 +212,5 @@ void motorTest() {
   for(int i=0; i<100; i++) { fastMoveMotor(config.motorNumberRoll, -1,pwmSinMotorRoll); delay(MOT_DEL * CC_FACTOR); }
   sei();  
 }
+
 

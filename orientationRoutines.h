@@ -20,11 +20,11 @@
 //#define GRAVITY 16384.0f
 #define GRAVITY 15500.0f
 
-void initResolutionDevider() {
-    if(MPU6050_GYRO_FS == 0x00) resolutionDevider = 131.0;
-    if(MPU6050_GYRO_FS == 0x01) resolutionDevider = 65.5;
-    if(MPU6050_GYRO_FS == 0x02) resolutionDevider = 32.8;
-    if(MPU6050_GYRO_FS == 0x03) resolutionDevider = 16.4;
+void initResolutionDivider() {
+    if(MPU6050_GYRO_FS == 0x00) resolutionDivider = 131.0;
+    if(MPU6050_GYRO_FS == 0x01) resolutionDivider = 65.5;
+    if(MPU6050_GYRO_FS == 0x02) resolutionDivider = 32.8;
+    if(MPU6050_GYRO_FS == 0x03) resolutionDivider = 16.4;
 }
 
 // This functions performs an initial gyro offset calibration
