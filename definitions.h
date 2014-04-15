@@ -104,15 +104,15 @@
 
 // note: execution time for CH2_ON/CH2_OFF = 4 us
 // Cannot see what this is for, The pin appears NC on the RCTimer board. Diagnosis?
-#define CH2_PINMODE                pinMode (4, OUTPUT);
-#define CH2_OFF                    digitalWrite(4, LOW);
-#define CH2_ON                     digitalWrite(4, HIGH);
+// #define CH2_PINMODE                pinMode (4, OUTPUT);
+// #define CH2_OFF                    digitalWrite(4, LOW);
+// #define CH2_ON                     digitalWrite(4, HIGH);
 
 // Cannot see what this is for, The pin appears NC on the RCTimer board. Diagnosis?
-#define CH3_PINMODE                pinMode (7, OUTPUT);
-#define CH3_OFF                    digitalWrite(7, LOW);
-#define CH3_ON                     digitalWrite(7, HIGH);
+// #define CH3_PINMODE                pinMode (7, OUTPUT);
+// #define CH3_OFF                    digitalWrite(7, LOW);
+// #define CH3_ON                     digitalWrite(7, HIGH);
 
 // enable stack and heapsize check (use just for debugging)
-//#define STACKHEAPCHECK_ENABLE
+// #define STACKHEAPCHECK_ENABLE
 

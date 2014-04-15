@@ -8,6 +8,9 @@ by Ludwig Fäerber, Alexander Rehfeld and Martin Eckart
 Special Contributions:
   Michael Schätzel
 
+Rewrite to non Arduino C++:
+  Soren Kuula
+
 Project homepage: http://brushlessgimbal.de/
 Discussions:
 http://fpv-community.de/showthread.php?20795-Brushless-Gimbal-Controller-SOFTWARE
@@ -27,17 +30,8 @@ Anyhow, if you start to commercialize our work, please read on http://code.googl
 // Updates should (hopefully) always be available at https://github.com/jrowberg/i2cdevlib
 */
 
-
 // FOR CHANGES PLEASE READ: ReleaseHistory.txt
 
-// Serial Programming for Settings!!!
-/* HOWTO:
-- edit setDefaultParameters() in variables.h if you want to.
-- Upload Firmware.
-- Open Arduino Terminal and enable NL in the lower right corner of the window.
-- Type in HE 
--... enjoy
-*/
 #define VERSION_STATUS B // A = Alpha; B = Beta , N = Normal Release
 #define VERSION 49
 #define VERSION_EEPROM 2 // change this number when eeprom data strcuture has changed
@@ -45,12 +39,12 @@ Anyhow, if you start to commercialize our work, please read on http://code.googl
 /*************************/
 /* Include Header Files  */
 /*************************/
-#include <EEPROM.h>
-#include <Wire.h>
+#include <stdio.h>
 #include <avr/wdt.h>
 #include <avr/pgmspace.h>
 #include "definitions.h"
 #include "MPU6050.h"
+#include "UARTStream.h"
 #include "SerialCommand.h"
 #include "EEPROMAnything.h"
 #include "variables.h"
@@ -78,26 +72,41 @@ void initMPUlpf() {
     default: mpu.setDLPFMode(MPU6050_DLPF_BW_256);  break;
   }
 }
-  
+
+
+void initSerial() {
+  uart_init();
+  fdevopen(uart_putchar, uart_getchar);
+}
+
+void calibrateGyro() {
+  // Gyro Offset calibration
+  printf_P(PSTR("Gyro calibration: do not move\r\n"));
+  // mpu.setDLPFMode(MPU6050_DLPF_BW_5);  // experimental AHa: set to slow mode during calibration
+  gyroOffsetCalibration();
+  // initMPUlpf();
+  printf_P(PSTR("Gyro calibration: done\r\n"));
+}
+
 /**********************************************/
 /* Initialization                             */
 /**********************************************/
-void setup() {
+void coldStart() {
+  wdt_disable();
   wdt_reset();
   // just for debugging
 #ifdef STACKHEAPCHECK_ENABLE
   stackCheck();
   heapCheck();
 #endif
-  wdt_disable();
 
-  LEDPIN_PINMODE
-  CH2_PINMODE
-  CH3_PINMODE
-  
-  // Start Serial Port
-  Serial.begin(115200);
+  DDRB |= 1;
 
+  // We don't use this, whatever it was.
+  // CH2_PINMODE
+  // CH3_PINMODE
+
+  initSerial();
   // Set Serial Protocol Commands
   setSerialProtocol();
 
@@ -107,7 +116,7 @@ void setup() {
   readEEPROM();
   
   if ((config.vers != VERSION) || (config.versEEPROM != VERSION_EEPROM)) {
-    Serial.print(F("EEPROM version mismatch, initialize EEPROM"));
+    printf_P(PSTR("EEPROM version mismatch, initialize EEPROM"));
     setDefaultParameters();
     writeEEPROM();
   }
@@ -130,7 +139,7 @@ void setup() {
   wdt_reset();
   
   // Start I2C and Configure Frequency
-  Wire.begin();
+  // Wire.begin();
   TWSR = 0;                                  // no prescaler => prescaler = 1
   TWBR = ((16000000L / I2C_SPEED) - 16) / 2; // change the I2C clock rate
   TWCR = 1<<TWEN;                            // enable twi module, no interrupt
@@ -146,14 +155,14 @@ void setup() {
   mpu.setAddr(MPU6050_ADDRESS_AD0_HIGH);
   mpu.initialize();
   if(mpu.testConnection()) {
-    Serial.println(F("MPU6050 ok (HIGH)"));  
+    printf_P(PSTR("MPU6050 ok (HIGH)\r\n"));
   } else {
     mpu.setAddr(MPU6050_ADDRESS_AD0_LOW);
     mpu.initialize();
     if(mpu.testConnection()) {
-      Serial.println(F("MPU6050 ok (LOW)"));  
+      printf_P(PSTR("MPU6050 ok (LOW)\r\n"));
     } else {
-      Serial.println(F("MPU6050 falied"));  
+        printf_P(PSTR("MPU6050 init FAILED\r\n"));
     }
   }
  
@@ -167,18 +176,11 @@ void setup() {
   mpu.setFullScaleGyroRange(MPU6050_GYRO_FS);           // Set Gyro Sensitivity to config.h
   mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);       //+- 2G
   initMPUlpf();                                         // Set Gyro Low Pass Filter
-  mpu.setRate(0);                                       // 0=1kHz, 1=500Hz, 2=333Hz, 3=250Hz, 4=200Hz
+  mpu.setRate(0);									    // 0=1kHz, 1=500Hz, 2=333Hz, 3=250Hz, 4=200Hz
   mpu.setSleepEnabled(false); 
 
   wdt_reset();
 
-  // Gyro Offset calibration
-  Serial.println(F("Gyro calibration: do not move"));
-  mpu.setDLPFMode(MPU6050_DLPF_BW_5);  // experimental AHa: set to slow mode during calibration
-  gyroOffsetCalibration();
-  initMPUlpf();
-  Serial.println(F("Gyro calibration: done"));
-  
    // Init BL Controller
   initBlController();
   // motorTest();
@@ -218,8 +220,7 @@ int32_t ComputePID(int32_t DTms, int32_t in, int32_t setPoint, int32_t *errorSum
 /**********************************************/
 /* Main Loop                                  */
 /**********************************************/
-void loop() 
-{    
+void loop() {
   int32_t pitchPIDVal;
   int32_t rollPIDVal;
   static int32_t pitchErrorSum;

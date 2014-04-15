@@ -101,19 +101,6 @@ void initSensorOrientationDefault(uint8_t majorAxis) {
   }
 }
 
-// swap two char items
-void swap_char(char * a, char * b) {
-  char tmp = *a;
-  *a = *b;
-  *b = tmp;
-}
-// swap two int items
-void swap_int(int * a, int * b) {
-  int tmp = *a;
-  *a = *b;
-  *b = tmp;
-}
-
 // set sensor orientation according config
 //
 //   config.axisReverseZ
@@ -203,7 +190,7 @@ void readGyros() {
 void readACC(axisDef axis) {
   // get acceleration
   // 382 us
-  char idx;
+  uint8_t idx;
   int16_t val;
   idx = sensorDef.Acc[axis].idx;
   val = mpu.getAccelerationN(idx);  // TODO: 370us 
@@ -264,11 +251,10 @@ void updateACCAttitude(){
   }
 }
 
-void getAttitudeAngles() {
+void updateAttitudeAngles() {
   // attitude of the estimated vector  
   // 272 us
   angle[ROLL]  = (config.angleOffsetRoll * 10) +  Rajan_FastArcTan2_deg1000(EstG[X] , sqrt(EstG[Z]*EstG[Z]+EstG[Y]*EstG[Y]));
   // 192 us
   angle[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_deg1000(EstG[Y] , EstG[Z]);  
 }
-

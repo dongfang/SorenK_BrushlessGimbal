@@ -164,17 +164,26 @@ struct rcData_t {
 };
 
 rcData_t rcData[RC_DATA_SIZE];
-int8_t switchPos;
+
+enum extendSwitchType {
+  RETRACTED_SW,
+  MID_SW,
+  EXTENDED_SW,
+  UNKNOWN_SW
+};
+int8_t switchPos = UNKNOWN_SW;
 
 float rcLPF_tc = 1.0;
 
 // Gimbal State
 enum gimStateType {
- GS_IDLE=0,      // no PID
- GS_LOCKED,      // PID on, slow ACC, motor update on
+ GS_POWERUP=0,
+ GS_RETRACTED,
+ GS_EXTENDING,
+ GS_EXTENDED
 };
 
-gimStateType gimState = GS_IDLE;
+gimStateType gimState = GS_POWERUP;
 int stateCount = 0;
 
 //*************************************

@@ -214,6 +214,7 @@ void evaluateRCAbsolute() {
 void evaluateRCSwitch() {
   if (!rcData[RC_DATA_SWITCH].isFresh)
     return;
+    /*
   uint16_t lThreshold = (MIN_RC + MID_RC)/2;
   if (switchPos < 0) lThreshold += RC_DEADBAND;
   uint16_t hThreshold = (MID_RC + MAX_RC)/2;
@@ -227,4 +228,25 @@ void evaluateRCSwitch() {
     switchPos = 0;
     
   rcData[RC_DATA_SWITCH].isFresh = false;
+  */
+    uint16_t lThreshold = (MIN_RC + MID_RC)/2;
+  if (switchPos == EXTENDED_SW) lThreshold += RC_DEADBAND;
+  
+  uint16_t hThreshold = (MID_RC + MAX_RC)/2;
+  if (switchPos == RETRACTED_SW) hThreshold -= RC_DEADBAND;
+  
+  uint16_t sp = rcData[RC_DATA_SWITCH].rx;
+
+  if (sp <= lThreshold)
+    switchPos = EXTENDED_SW;
+
+  else if (sp >= hThreshold)
+    switchPos = RETRACTED_SW;
+
+  else 
+    switchPos = MID_SW;
+    
+  rcData[RC_DATA_SWITCH].isFresh = false;
+}
+  
 }

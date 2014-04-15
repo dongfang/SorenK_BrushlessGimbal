@@ -33,11 +33,11 @@ void initResolutionDivider() {
 void gyroOffsetCalibration() {
   int i;
   #define TOL 64
-  #define GYRO_INTERATIONS 2000
+  #define GYRO_ITERATIONS 2000
   int16_t prevGyro[3],gyro[3];
   float fp_gyroOffset[3];
   uint8_t tiltDetected = 0;
-  int calibGCounter = GYRO_INTERATIONS;
+  int calibGCounter = GYRO_ITERATIONS;
   
   // wait 1 second
   for (i=0; i<100; i++) {
@@ -47,11 +47,11 @@ void gyroOffsetCalibration() {
   
   while(calibGCounter>0) {
     wdt_reset();
-    if(calibGCounter==GYRO_INTERATIONS) {
+    if(calibGCounter==GYRO_ITERATIONS) {
       for (i=0; i<70; i++) { // wait 0.7sec if calibration failed
         delayMicroseconds(10000); // 10 ms 
       }
-      mpu.getRotation(&gyro[0], &gyro[1], &gyro[2]); 
+      mpu.getRotation(gyro);
       for (i=0; i<3; i++) {
         fp_gyroOffset[i] = 0;
         prevGyro[i]=gyro[i];
@@ -76,14 +76,14 @@ void gyroOffsetCalibration() {
      
     for (i=0; i<3; i++) {
        wdt_reset();
-        fp_gyroOffset[i] += (float)gyro[i]/GYRO_INTERATIONS;
+        fp_gyroOffset[i] += (float)gyro[i]/GYRO_ITERATIONS;
         prevGyro[i]=gyro[i];
     }
       
     calibGCounter--;
     if(tiltDetected>=1) {
       Serial.println(F("Motion detected during Gyro calibration. Starting over!"));
-      calibGCounter=GYRO_INTERATIONS;
+      calibGCounter=GYRO_ITERATIONS;
       tiltDetected=0;
     }
   }
@@ -94,4 +94,3 @@ void gyroOffsetCalibration() {
     //Serial.print(F("gyroOffset="));Serial.println(fp_gyroOffset[i], 3);
   }
 }
-
