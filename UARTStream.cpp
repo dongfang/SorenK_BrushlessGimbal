@@ -1,86 +1,75 @@
-#include "UARTStream.h"
-#include <avr/io.h>
+#include "SerialStream.h"
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 
-#define INBUFSIZ 32
-#define OUTBUFSIZ 128
-#define INMASK (INBUFSIZ-1)
-#define OUTMASK (OUTBUFSIZ-1)
+UARTSerial serial0(128, 128, &UBRR0H, &UBRR0L, &UCSR0A, &UCSR0B, &UDR0);
 
-#define BAUD 57600
+void UARTSerial::put(uint8_t c) {
+	uint8_t next = (_txBuf.head+1) & _txBuf.mask;
+	while (next == _txBuf.tail) { wdt_reset(); }
 
-#include <util/setbaud.h>
-
- struct UART_INBUFFER {
-	volatile uint8_t head;
-	volatile uint8_t tail;
-	volatile uint8_t data[INBUFSIZ];
-};
-
- volatile static struct UART_INBUFFER inbuffer;
-
- struct UART_OUTBUFFER {
-	volatile uint8_t head;
-	volatile uint8_t tail;
-	volatile uint8_t data[OUTBUFSIZ];
-};
-
-volatile static struct UART_OUTBUFFER outbuffer;
-
-int uart_putchar(char c, FILE *stream) {
-	uint8_t next = (outbuffer.head+1) & OUTMASK;
-	while (next == outbuffer.tail) { /*wdt_reset();*/ }
-	outbuffer.data[outbuffer.head] = c;
+	_txBuf.data[_txBuf.head] = c;
 	// Now there definitely is data in the buffer.
-	outbuffer.head = next;
-	UCSR0B |= (1 << UDRIE0);
-	UCSR0A |= (1 << TXC0);
-	return c;
+	_txBuf.head = next;
+	*_ucsrb |= (1 << UDRIE0);
+	*_ucsra |= (1 << TXC0);
 }
 
-ISR(USART_RX_vect) {
-	uint8_t next = (inbuffer.head+1) & INMASK;
-	if (next != inbuffer.tail) {
-		inbuffer.data[inbuffer.head] = UDR0;
-		inbuffer.head = next;
+void UARTSerial::receive(uint8_t c) {
+	uint8_t next = (_rxBuf.head+1) & _rxBuf.mask;
+	if (next != _rxBuf.tail) {
+		_rxBuf.data[_rxBuf.head] = UDR0;
+		_rxBuf.head = next;
 	}
 }
 
-ISR(USART_UDRE_vect) {
-	if (outbuffer.head == outbuffer.tail) {
-		UCSR0B &= ~(1<<UDRIE0);
+void UARTSerial::udre() {
+	if (_txBuf.head == _txBuf.tail) {
+		*_ucsrb &= ~(1<<UDRIE0);
 	} else {
-		uint8_t data = outbuffer.data[outbuffer.tail];
-		outbuffer.tail = (outbuffer.tail+1) & OUTMASK;
-		UDR0 = data;
+		uint8_t data = _txBuf.data[_txBuf.tail];
+		_txBuf.tail = (_txBuf.tail+1) & _txBuf.mask;
+		*_udr = data;
 	}
 }
 
-int uart_getchar(FILE *stream) {
-	if (inbuffer.head == inbuffer.tail)
-		return -1;
-	int result = inbuffer.data[inbuffer.tail];
-	inbuffer.tail = (inbuffer.tail+1) & INMASK;
-	return result;
+size_t Serial::available() {
+	// Example : Tail = 100, head = 2, mask = 127:
+	// head - tail = -98 = 0b10011110
+	// (head - tail) & mask = 0b10011110 & 0b01111111 = 0b00011110 = 30
+	return (/*_rxBuf.mask + 1 + */ _rxBuf.head -_rxBuf.tail) & _rxBuf.mask;
 }
 
-size_t uart_available() {
-	return (inbuffer.head-inbuffer.tail) & INMASK;
+void Serial::waitFlushed() {
+	while (_txBuf.head != _txBuf.tail)
+		wdt_reset();
 }
 
-size_t uart_txSpace() {
-	return (inbuffer.tail-inbuffer.head - 1) & INMASK;
+void UARTSerial::init(uint32_t baud, int direction) {
+	uint16_t ubrr = (baud/8)-1;
+	*_ubrrh = ubrr >> 8;
+	*_ubrrl = ubrr & 0xff;
+	*_ucsra = 1<<1; // That's right, I just assume it runs on a certain type of MCU.
+	*_ucsrb = (1<<RXCIE0)|(1<<RXEN0)|(1<<TXEN0);
+	// This is default anyway, no need to.
+	// UCSR0C = (1<<UCSZ01)|(1<<UCSZ00);
 }
 
-void uart_waitFlushed() {
-	while(outbuffer.head != outbuffer.tail)
-		;
-}
 
-void uart_init() {
-	UBRR0 = UBRR_VALUE;
-	UCSR0A = (USE_2X<<1);
-	UCSR0B = (1<<RXCIE0)|(1<<RXEN0)|(1<<TXEN0);
-	UCSR0C = (1<<UCSZ01)|(1<<UCSZ00);
+#if defined(USART0_RX_vect)
+ISR(USART0_RX_vect) {
+	serial1.receive(UDR1);
 }
+ISR(USART_UDRE0_vect) {
+	serial0.udre();
+}
+#endif
+#if defined(USART_RX_vect)
+ISR(USART_RX_vect) {
+	serial0.receive(UDR0);
+}
+ISR(USART_UDRE_vect) {
+	serial0.udre();
+}
+#endif
+

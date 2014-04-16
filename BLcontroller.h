@@ -1,15 +1,12 @@
 #include "definitions.h"
 #include <avr/io.h>
+#include <avr/interrupt.h>
+#include <util/delay.h>
+#include <math.h>
 
 void initBlController() {
   DDRB |= 1<<1 | 1<<2 | 1<<3;
   DDRD |= 1<<3 | 1<<5 | 1<<6;
-  //pinMode(3, OUTPUT);
-  //pinMode(5, OUTPUT);
-  //pinMode(6, OUTPUT);
-  //pinMode(9, OUTPUT);
-  //pinMode(10, OUTPUT);
-  //pinMode(11, OUTPUT);
 
 #ifdef PWM_8KHZ_FAST
   TCCR0A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM01) | (1<<WGM00); 
@@ -51,6 +48,7 @@ void initBlController() {
 }
 
 // Only for testing?
+/*
 void fastMoveMotor(uint8_t motorNumber, int dirStep, uint8_t* pwmSin) {
   if (motorNumber == 0) {
     currentStepMotor0 += dirStep;
@@ -68,7 +66,7 @@ void fastMoveMotor(uint8_t motorNumber, int dirStep, uint8_t* pwmSin) {
     PWM_C_MOTOR1 = pwmSin[(uint8_t)(currentStepMotor1 + 170)] ;
   }
 }
-
+*/
 // switch off motor power
 // TODO: for some reason motor control gets noisy, if call from ISR
 inline void MotorOff(uint8_t motorNumber, uint8_t* pwmSin) {
@@ -94,8 +92,8 @@ void calcSinusArray(uint8_t maxPWM, uint8_t *array) {
 
 void recalcMotorStuff() {
   cli();
-  calcSinusArray(config.maxPWMmotorPitch,pwmSinMotorPitch);
-  calcSinusArray(config.maxPWMmotorRoll,pwmSinMotorRoll);
+  calcSinusArray(config.maxPWMmotorPitch, pwmSinMotorPitch);
+  calcSinusArray(config.maxPWMmotorRoll, pwmSinMotorRoll);
   sei();
 }
 
@@ -105,10 +103,10 @@ void recalcMotorStuff() {
 // motor position control
 ISR (TIMER1_OVF_vect) {
   // 0.88us / 8.1us
-  microMacro++;
-  freqCounter++;
-  if(freqCounter==(CC_FACTOR*1000/MOTORUPDATE_FREQ)) {
-    freqCounter=0;
+  timer1Extension++;
+  syncCounter++;
+  if(syncCounter==(CC_FACTOR*1000/MOTORUPDATE_FREQ)) {
+	syncCounter=0;
     PWM_A_MOTOR0 = motorPhases[0][0];
     PWM_B_MOTOR0 = motorPhases[0][1];
     PWM_C_MOTOR0 = motorPhases[0][2];
@@ -120,6 +118,7 @@ ISR (TIMER1_OVF_vect) {
   }
 }
 
+/*
 void motorTest() {
   #define MOT_DEL 100
   cli();
@@ -132,5 +131,5 @@ void motorTest() {
   for(int i=0; i<100; i++) { fastMoveMotor(config.motorNumberRoll, -1,pwmSinMotorRoll); _delay_ms(MOT_DEL * CC_FACTOR); }
   sei();  
 }
-
+*/
 

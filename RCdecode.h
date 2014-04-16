@@ -1,3 +1,6 @@
+#include "Globals.h"
+#include <avr/interrupt.h>
+
 /*************************/
 /* RC-Decoder            */
 /*************************/
@@ -6,12 +9,15 @@ uint16_t _timer() {
   cli();
   uint8_t fine = TCNT1;
   uint8_t after;
+  // Get a counter step. That should not take more than 0.1 us at 32kHz.
   do {
    after = TCNT1;
   } while (after==fine);
-  uint8_t mm = microMacro;
+
+  uint8_t mm = timer1Extension;
   uint8_t flags = TIFR1;
   SREG = sreg;
+
   if (flags & (1<<TOV1)) {
 // We simulate the interrupt has happened and the fine timer is zero.
       return (mm+1) << 9;
@@ -27,13 +33,13 @@ uint16_t _timer() {
 
 // init RC config variables
 void initRC() {
-  rcLPF_tc = LOWPASS_K_FLOAT(config.rcLPF*0.1);
+  rcLPF_tc = LOWPASS_K_FLOAT(config.rcLPF * 0.1);
 }
 
 //******************************************
 // PWM Decoder
 //******************************************
-inline void decodePWM(rcData_t* rcData) {
+inline void decodePWM(RCData_t* rcData) {
   uint16_t pulseInPWMtmp;
   pulseInPWMtmp = (rcData->microsLastUpdate - rcData->microsRisingEdge)/(CC_FACTOR/2);
   // update if within expected RC range
@@ -139,17 +145,21 @@ void checkRcTimeouts() {
 
 // initialize RC Pin mode
 void initRCPins() {
-  static bool first = true;
-  if (first) {
-    pinMode(A2, INPUT); digitalWrite(A2, HIGH);
-    pinMode(A1, INPUT); digitalWrite(A1, HIGH);
-    pinMode(A0, INPUT); digitalWrite(A0, HIGH);
+//  static bool first = true;
+//  if (first) {
+
+	// TODO: We need a pin identity abstraction (which is not Arduino :) )
+	//pinMode(A2, INPUT); digitalWrite(A2, HIGH);
+    //pinMode(A1, INPUT); digitalWrite(A1, HIGH);
+    //pinMode(A0, INPUT); digitalWrite(A0, HIGH);
+	DDRC |= 1<<0 | 1<<1 | 1<<2;
+	PORTC |= 1<<0 | 1<<1 | 1<<2;
 
     PCMSK1 |= (1<<PCINT8) | (1<<PCINT9) | (1<<PCINT10);
     PCICR |= (1<<PCIE1);
     
-    first = false;
-  }
+    //first = false;
+  //}
 
   for (uint8_t id = 0; id < RC_DATA_SIZE; id++) {
     cli();
@@ -167,7 +177,7 @@ void initRCPins() {
 //******************************************
 // Integrating
 //******************************************
-void evalRCChannelIntegrating(rcData_t* rcData, int16_t rcGain, uint16_t rcMid) {
+void evalRCChannelIntegrating(RCData_t* rcData, int16_t rcGain, uint16_t rcMid) {
   if(rcData->isFresh) {
     if(rcData->rx >= rcMid + RC_DEADBAND) {
       rcData->rcSpeed = rcGain * (float)(rcData->rx - (rcMid + RC_DEADBAND))/ (float)(MAX_RC - (rcMid + RC_DEADBAND)) + 0.9 * rcData->rcSpeed;
@@ -176,7 +186,7 @@ void evalRCChannelIntegrating(rcData_t* rcData, int16_t rcGain, uint16_t rcMid) 
     } else {
       rcData->rcSpeed = 0.0;
     }
-    rcData->rcSpeed = constrain(rcData->rcSpeed, -200, +200);  // constrain for max speed
+    rcData->rcSpeed = constrain_f(rcData->rcSpeed, -200, +200);  // constrain for max speed
     rcData->isFresh = false;
   }
 }
@@ -191,7 +201,7 @@ void evaluateRCIntegrating() {
 // Absolute
 //******************************************
 
-inline void evalRCChannelAbsolute(rcData_t* rcData, int16_t rcMin, int16_t rcMax, int16_t rcMid) {
+inline void evalRCChannelAbsolute(RCData_t* rcData, int16_t rcMin, int16_t rcMax, int16_t rcMid) {
   float k;
   float y0;
   int16_t rx;
@@ -211,10 +221,13 @@ void evaluateRCAbsolute() {
   evalRCChannelAbsolute(&rcData[RC_DATA_ROLL ], config.minRCRoll , config.maxRCRoll,  config.rcMid);
 }
 
+/*
+ * We don't care what the meanings are of the switch pos's here.
+ * It is simply -1 or 1 after evaluation.
+ */
 void evaluateRCSwitch() {
   if (!rcData[RC_DATA_SWITCH].isFresh)
     return;
-    /*
   uint16_t lThreshold = (MIN_RC + MID_RC)/2;
   if (switchPos < 0) lThreshold += RC_DEADBAND;
   uint16_t hThreshold = (MID_RC + MAX_RC)/2;
@@ -228,25 +241,4 @@ void evaluateRCSwitch() {
     switchPos = 0;
     
   rcData[RC_DATA_SWITCH].isFresh = false;
-  */
-    uint16_t lThreshold = (MIN_RC + MID_RC)/2;
-  if (switchPos == EXTENDED_SW) lThreshold += RC_DEADBAND;
-  
-  uint16_t hThreshold = (MID_RC + MAX_RC)/2;
-  if (switchPos == RETRACTED_SW) hThreshold -= RC_DEADBAND;
-  
-  uint16_t sp = rcData[RC_DATA_SWITCH].rx;
-
-  if (sp <= lThreshold)
-    switchPos = EXTENDED_SW;
-
-  else if (sp >= hThreshold)
-    switchPos = RETRACTED_SW;
-
-  else 
-    switchPos = MID_SW;
-    
-  rcData[RC_DATA_SWITCH].isFresh = false;
-}
-  
 }

@@ -1,23 +1,97 @@
+#ifndef __IMU_H
+#define __IMU_H
 
+#include "MPU6050.h"
 /*
  * IMU is always used like:
  *
     // update IMU data
     readGyros();   // t=386us
-
     updateGyroAttitude();  // t=260us
     updateACCAttitude();   // t=146us
-
     getAttitudeAngles(); // t=468us
  *
  */
 
 class IMU {
+public:
+	struct SensorAxisDef {
+	  char idx;
+	  int  dir;
+	} t_sensorAxisDef;
+
+	struct SensorOrientationDef {
+	  SensorAxisDef Gyro[3];
+	  SensorAxisDef Acc[3];
+	};
+
+// Ctor
+	IMU(MPU6050 mpu) : mpu(mpu) {}
+
+	// Initially set vectors and such.
+	// Do not call from WDT restart.
+	void init();
+
+	// Configure:
+	void initSensorOrientation();
+
+	// Load EEPROM-stored offsets. Return true if success.
+	bool loadGyroCalibration();
+
+	// Do the calibration ritual and store result in EEPROM.
+	void recalibrateGyros();
+
+	void readAcc(uint8_t axis);
+
+	void updateAccVector();
+
+	// Get attitude data
+	void fastUpdateCycle() {
+	    // update IMU data
+	    readGyros();   // t=386us
+	    blendGyrosToAttitude();  // t=260us
+	    blendAccToAttitude();   // t=146us
+	    calculateAttitudeAngles(); // t=468us
+	}
+
+	int32_t angle[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
+
 private:
+	MPU6050 mpu;
+	// TODO: This sensor orientation stuff is hardware related only.
+	// Should that be moved into the MPU class?
+	SensorOrientationDef sensorDef;
+
+	// gyro calibration value
+	int16_t gyroOffset[3];
+
+	float gyroScale;
+	float accComplFilterConstant;
+
+	// Offset and sign-fixed values from MPU data.
+	// TODO: That processing might as will be done by the MPU itself.
+	int16_t gyros[3];
+	int16_t acc[3];
+
+	float EstG[3];
+	float accLPF_f[3];
+	int32_t accLPF_i[3];
+	int32_t accMagnitude_g_100;
+
+	float AccComplFilterConst;  // filter constant for complementary filter
+
+	int16_t acc_25deg = 25;      //** TODO: check
+
+	// TODO: Use transformations instead of the magic constants (not important)
+	void initSensorOrientationFaceUp();
+	void initSensorOrientationChipTextRightSideUp();
+	void initSensorOrientationChipTextStandingOnEnd();
+
 	void readGyros();
-	void updateGyroAttitude();
-	void updateACCAttitude();
-	void updateAttitudeAngles();
+	void blendGyrosToAttitude();
+	void blendAccToAttitude();
+	void calculateAttitudeAngles();
+	void rotateV(float* v, float* delta);
 
 	// swap two char items
 	inline void swap_char(char * a, char * b) {
@@ -33,3 +107,5 @@ private:
 	  *b = tmp;
 	}
 };
+
+#endif
