@@ -9,13 +9,17 @@
  4) Motors
  5) RC in
  */
-
 #include "Util.h"
+//#include "Globals.h"
+#include "Configuration.h"
+#include "RCdecode.h"
+
 #include <string.h>
 #include <avr/eeprom.h>
 #include <avr/wdt.h>
 
-Config_t configInEEPROM EEMEM;
+// Fixme
+extern void recalcMotorStuff();
 
 // types of config parameters
 enum confType {
@@ -40,60 +44,70 @@ union ConfigUnion_t {
 };
 
 ConfigUnion_t configUnion;
-Config_t config;
 
-//
+static inline void fixme_writeEEPROM() {
+	config.writeEEPROM();
+}
+
+static inline void fixme_readEEPROM() {
+	config.readEEPROMOrDefault();
+}
+
+static inline void fixme_initIMU() {
+	imu.init();
+}
+
+static inline void fixme_initSensorOrientation() {
+	imu.initSensorOrientation();
+}
+
 // list of all config parameters
 // to be accessed by par command
 //
 // descriptor is stored in PROGMEN to preserve RAM space
 // see http://www.arduino.cc/en/Reference/PROGMEM
 // and http://jeelabs.org/2011/05/23/saving-ram-space/
-const ConfigDef_t PROGMEM configListPGM[] = { { "vers", UINT8, &config.vers, NULL },
-
-{ "pitchKp", INT32, &config.pitchKp, &initPIDs }, { "pitchKi", INT32, &config.pitchKi, &initPIDs }, { "pitchKd", INT32,
-		&config.pitchKd, &initPIDs }, { "rollKp", INT32, &config.rollKp, &initPIDs }, { "rollKi", INT32, &config.rollKi,
-		&initPIDs }, { "rollKd", INT32, &config.rollKd, &initPIDs }, { "timeConstant", INT16, &config.accTimeConstant,
-		&imu.init }, { "mpuLPF", INT8, &config.mpuLPF, &initMPUlpf },
-
+const ConfigDef_t PROGMEM configListPGM[] = {
+{ "vers", UINT8, &config.vers, NULL },
+{ "pitchKp", INT32, &config.pitchKp, &initPIDs },
+{ "pitchKi", INT32, &config.pitchKi, &initPIDs },
+{ "pitchKd", INT32, &config.pitchKd, &initPIDs },
+{ "rollKp", INT32, &config.rollKp, &initPIDs },
+{ "rollKi", INT32, &config.rollKi, &initPIDs },
+{ "rollKd", INT32, &config.rollKd, &initPIDs },
+{ "timeConstant", INT16, &config.accTimeConstant, &fixme_initIMU },
+{ "mpuLPF", INT8, &config.mpuLPF, &initMPUlpf },
 { "angleOffsetPitch", INT16, &config.angleOffsetPitch, NULL },
-		{ "angleOffsetRoll", INT16, &config.angleOffsetRoll, NULL },
-
-		{ "dirMotorPitch", INT8, &config.dirMotorPitch, NULL }, { "dirMotorRoll", INT8, &config.dirMotorRoll, NULL }, {
-				"motorNumberPitch", UINT8, &config.motorNumberPitch, NULL }, { "motorNumberRoll", UINT8,
-				&config.motorNumberRoll, NULL }, { "maxPWMmotorPitch", UINT8, &config.maxPWMmotorPitch,
-				&recalcMotorStuff }, { "maxPWMmotorRoll", UINT8, &config.maxPWMmotorRoll, &recalcMotorStuff },
-
-		{ "minRCPitch", INT8, &config.minRCPitch, NULL }, { "maxRCPitch", INT8, &config.maxRCPitch, NULL }, {
-				"minRCRoll", INT8, &config.minRCRoll, NULL }, { "maxRCRoll", INT8, &config.maxRCRoll, NULL }, {
-				"rcGain", INT16, &config.rcGain, NULL }, { "rcLPF", INT16, &config.rcLPF, &initRC },
-
-		{ "rcMid", INT16, &config.rcMid, NULL }, { "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
-
-		{ "majorAxis", UINT8, &config.majorAxis, &imu.initSensorOrientation },
-
-		{ "axisReverseZ", BOOL, &config.axisReverseZ, &imu.initSensorOrientation }, { "axisSwapXY", BOOL,
-				&config.axisSwapXY, &imu.initSensorOrientation },
-
-		{ "", BOOL, NULL, NULL } // terminating NULL required !!
+{ "angleOffsetRoll", INT16, &config.angleOffsetRoll, NULL },
+{ "dirMotorPitch", INT8, &config.dirMotorPitch, NULL },
+{ "dirMotorRoll", INT8, &config.dirMotorRoll, NULL },
+{ "motorNumberPitch", UINT8, &config.motorNumberPitch, NULL },
+{ "motorNumberRoll", UINT8, &config.motorNumberRoll, NULL },
+{ "maxPWMmotorPitch", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
+{ "maxPWMmotorRoll", UINT8, &config.maxPWMmotorRoll, &recalcMotorStuff },
+{ "minRCPitch", INT8, &config.minRCPitch, NULL },
+{ "maxRCPitch", INT8, &config.maxRCPitch, NULL },
+{ "minRCRoll", INT8, &config.minRCRoll, NULL },
+{ "maxRCRoll", INT8, &config.maxRCRoll, NULL },
+{ "rcGain", INT16, &config.rcGain, NULL },
+{ "rcLPF", INT16, &config.rcLPF, &initRC },
+{ "rcMid", INT16, &config.rcMid, NULL },
+{ "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
+{ "majorAxis", UINT8, &config.majorAxis, 		&fixme_initSensorOrientation },
+{ "axisReverseZ", BOOL, &config.axisReverseZ, 	&fixme_initSensorOrientation },
+{ "axisSwapXY", BOOL, &config.axisSwapXY, 		&fixme_initSensorOrientation },
+{ "", BOOL, NULL, NULL } // terminating NULL required !!
 };
 
-// read bytes from program memory
-void getPGMstring(PGM_P s, char * d, int numBytes) {
-	for (int i = 0; i < numBytes; i++) {
-		*d++ = pgm_read_byte(s++);
-	}
-}
-
 // find Config Definition for named parameter
-ConfigDef_t * getConfigDef(char * name) {
+ConfigDef_t * getConfigDef(char* name) {
 	bool found = false;
 	ConfigDef_t * p = (ConfigDef_t *) configListPGM;
 
 	while (true) {
 		uint8_t i;
 		for (i = 0; i < sizeof(ConfigDef_t); i++) {
-			configUnion.asBytes[i] = pgm_read_byte(p);
+			configUnion.asBytes[i] = pgm_read_byte((uint8_t*)p + i);
 		}
 		if (configUnion.asConfig.address == NULL)
 			break;
@@ -149,7 +163,6 @@ void printConfig(ConfigDef_t * def) {
 // write single parameter with value
 void writeConfig(ConfigDef_t* def, int32_t val) {
 	if (def != NULL) {
-		/*
 		 switch (def->type) {
 		 case BOOL   : *(bool *)(def->address)     = val; break;
 		 case UINT8  : *(uint8_t *)(def->address)  = val; break;
@@ -159,7 +172,7 @@ void writeConfig(ConfigDef_t* def, int32_t val) {
 		 case INT16  : *(int16_t *)(def->address)  = val; break;
 		 case INT32  : *(int32_t *)(def->address)  = val; break;
 		 }
-		 */def->address = val;
+		 //def->address = (void*)val;
 		// call update function
 		if (def->updateFunction != NULL)
 			def->updateFunction();
@@ -174,7 +187,7 @@ void printConfigAll(ConfigDef_t * p) {
 		// EEPROM can do blocks but not pgmspace.
 		uint8_t i;
 		for (i = 0; i < sizeof(ConfigDef_t); i++) {
-			*configUnion.asBytes[i] = pgm_read_byte(p);
+			configUnion.asBytes[i] = pgm_read_byte((uint8_t*)p+i);
 		}
 
 		if (configUnion.asConfig.address == NULL)
@@ -217,45 +230,14 @@ void updateAllParameters() {
 	imu.init();
 	initMPUlpf();
 	//imu.initSensorOrientation();
-	initRCPins();
+	initRCFilter();
 	initRC();
 }
 
-extern void setDefaultParameters();
-
 void setDefaultParametersAndUpdate() {
-	setDefaultParameters();
+	config.setDefaults();
 	updateAllParameters();
-}
-
-void writeEEPROM() {
-	wdt_reset();
-	config.crc16 = crc16((uint8_t*) &config, sizeof(config) - 2); // set proper CRC
-	eeprom_write_block(&configInEEPROM, &config, sizeof(config));
-}
-
-void readEEPROM() {
-	wdt_reset();
-	eeprom_read_block(&configInEEPROM, &config, sizeof(config));
-	if (config.crc16 == crc16((uint8_t*) &config, sizeof(config) - 2)) {
-		updateAllParameters();
-	} else {
-		wdt_reset();
-		// crc failed intialize directly here, as readEEPROM is void
-		printf_P(PSTR("EEPROM CRC failed, initialize EEPROM\r\n"));
-		setDefaultParameters();
-		writeEEPROM();
-	}
-}
-
-void gyroRecalibrate() {
-	// Set voltage on all motor phases to zero
-	// Nah why not freeze it instead?
-	softStart = 0;
-	mpu.setDLPFMode(MPU6050_DLPF_BW_5); // experimental AHa: set to slow mode during calibration
-	imu.recalibrateGyros();
-	initMPUlpf();
-	printf_P(PSTR("recalibration: done"));
+	printf_P(PSTR("Reverted to defaults.\r\n"));
 }
 
 void printHelpUsage() {
@@ -286,11 +268,10 @@ void unrecognized(const char *command) {
 void setSerialProtocol() {
 	// Setup callbacks for SerialCommand commands
 	sCmd.addCommand("sd", setDefaultParametersAndUpdate);
-	sCmd.addCommand("we", writeEEPROM);
-	sCmd.addCommand("re", readEEPROM);
+	sCmd.addCommand("we", fixme_writeEEPROM);
+	sCmd.addCommand("re", fixme_readEEPROM);
 	sCmd.addCommand("par", parameterMod);
-	sCmd.addCommand("gc", gyroRecalibrate);
+	sCmd.addCommand("gc", calibrateGyro);
 	sCmd.addCommand("he", printHelpUsage);
 	sCmd.setDefaultHandler(unrecognized); // Handler for command that isn't matched  (says "What?")
 }
-

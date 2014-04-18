@@ -25,22 +25,12 @@ public:
 	 */
 	int get();
 	/*
-	 * For stdio compatibility.
-	 */
-	int _getchar(FILE* file) {
-		return get();
-	}
-	/*
 	 * Put a char.
 	 */
 	void put(uint8_t c);
 	/*
 	 * Number of chars available for get.
 	 */
-	int _putchar(char c, FILE* file) {
-		put(c);
-		return c;
-	}
 
 	size_t available();
 	/*
@@ -72,7 +62,6 @@ extern "C"{
 	void USART_RX_vect(void);
 }
 #endif
-
 
 class UARTSerial: public Serial {
 private:

@@ -1,6 +1,11 @@
 /*************************/
 /* Definitions           */
 /*************************/
+// FOR CHANGES PLEASE READ: ReleaseHistory.txt
+#define VERSION_STATUS B // A = Alpha; B = Beta , N = Normal Release
+#define VERSION 49
+#define VERSION_EEPROM 2 // change this number when eeprom data strcuture has changed
+
 // MPU Address Settings
 #define MPU6050_ADDRESS_AD0_LOW     0x68 // default for InvenSense evaluation board
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // Drotek MPU breakout board
@@ -30,6 +35,14 @@
 
 #define SCALE_ACC 10000.0
 #define SCALE_PID_PARAMS 1000.0f
+
+#define LED_DDR			DDRB
+#define LED_PORT		PORTB
+#define LED_PIN			PINB
+
+// Hextronik board : 5
+#define LED_BIT			5
+
 
 // RC data size and channel assigment
 #define RC_DATA_SIZE  3

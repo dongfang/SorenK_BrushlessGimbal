@@ -21,10 +21,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this library.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __SerialCommand_h
-#define __SerialCommand_h
+#ifndef __SERIALCOMMAND_H
+#define __SERIALCOMMAND_H
 
 #include <string.h>
+#include <stdint.h>
 
 // Size of the input buffer in bytes (maximum length of one command plus arguments)
 #define SERIALCOMMAND_BUFFER 32
@@ -64,4 +65,6 @@ class SerialCommand {
     char *last;                         // State variable used by strtok_r during processing
 };
 
+void setSerialProtocol();
+void updateAllParameters();
 #endif //SerialCommand_h

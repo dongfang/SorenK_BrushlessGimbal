@@ -63,7 +63,7 @@ private:
 	SensorOrientationDef sensorDef;
 
 	// gyro calibration value
-	int16_t gyroOffset[3];
+	int16_t gyroOffset[4];
 
 	float gyroScale;
 	float accComplFilterConstant;
@@ -80,7 +80,7 @@ private:
 
 	float AccComplFilterConst;  // filter constant for complementary filter
 
-	int16_t acc_25deg = 25;      //** TODO: check
+	// int16_t acc_25deg;      //** TODO: check
 
 	// TODO: Use transformations instead of the magic constants (not important)
 	void initSensorOrientationFaceUp();
@@ -106,6 +106,14 @@ private:
 	  *a = *b;
 	  *b = tmp;
 	}
+
+	void saveGyroCalibration();
+
+	uint16_t CRC();
 };
+
+void calibrateGyro();
+void initMPUlpf();
+void initPIDs();
 
 #endif

@@ -1,7 +1,7 @@
-#ifndef _MPU6050_H_
-#define _MPU6050_H_
+#ifndef __MPU6050_H
+#define __MPU6050_H
 
-#include "definitions.h"
+#include "Definitions.h"
 #include <avr/pgmspace.h>
 
 
@@ -53,32 +53,60 @@
 #define MPU6050_ACCEL_FS MPU6050_ACCEL_FS_2
 #define MPU6050_DLPF_BW MPU6050_DLPF_BW_256  // 5,10,20,42,98,188,256 Hz
 
+#define MPU6050_RA_WHO_AM_I         	0x75
+#define MPU6050_WHO_AM_I_BIT        	6
+#define MPU6050_WHO_AM_I_LENGTH     	6
+
+#define MPU6050_RA_SMPLRT_DIV       	0x19
+
+#define MPU6050_RA_CONFIG           	0x1A
+#define MPU6050_CFG_DLPF_CFG_BIT    	2
+#define MPU6050_CFG_DLPF_CFG_LENGTH 	3
+
+#define MPU6050_RA_GYRO_CONFIG      	0x1B
+#define MPU6050_GCONFIG_FS_SEL_BIT      4
+#define MPU6050_GCONFIG_FS_SEL_LENGTH   2
+
+#define MPU6050_RA_ACCEL_CONFIG     	0x1C
+#define MPU6050_ACONFIG_AFS_SEL_BIT		4
+#define MPU6050_ACONFIG_AFS_SEL_LENGTH  2
+
+#define MPU6050_RA_PWR_MGMT_1       	0x6B
+#define MPU6050_PWR1_CLKSEL_BIT     	2
+#define MPU6050_PWR1_CLKSEL_LENGTH  	3
+
+#define MPU6050_PWR1_SLEEP_BIT          6
+
+#define MPU6050_RA_ACCEL_XOUT_H     	0x3B
+#define MPU6050_RA_GYRO_XOUT_H      	0x43
+
 /*
  * Except for the address and the configuration sent to the
  * hardware MPU6050, this class is supposed to be stateless.
  */
 class MPU6050 {
 private:
-	uint8_t _address;
+	uint8_t devAddr;
+    uint8_t buffer[6];
 public:
 	// Init the I2C HW but not any configuration.
 	void init();
 
-	void setAddr(uint8_t address) {_address = address;}
+	void setAddr(uint8_t address) {devAddr = address;}
 	bool testConnection();
 
 	// Configure
-	void setClockSource(uint8_t); // Set Clock to ZGyro
-	void setFullScaleGyroRange(uint8_t); // Set Gyro Sensitivity to config.h
+	void setClockSource(uint8_t); 		  // Set Clock to ZGyro
+	void setFullScaleGyroRange(uint8_t);  // Set Gyro Sensitivity to config.h
 	void setFullScaleAccelRange(uint8_t); //
-	void setRate(uint8_t); // 0=1kHz, 1=500Hz, 2=333Hz, 3=250Hz, 4=200Hz
+	void setRate(uint8_t); 				  // 0=1kHz, 1=500Hz, 2=333Hz, 3=250Hz, 4=200Hz
 	void setSleepEnabled(bool);
-	void setDLPFMode(uint8_t); // experimental AHa: set to slow mode during calibration
+	void setDLPFMode(uint8_t); 			  // experimental AHa: set to slow mode during calibration
 
 	// Divide raw values by this to get degrees/sec.
 	float gyroToDeg_s() {
-	    if(MPU6050_GYRO_FS == MPU6050_GYRO_FS_250) return 	131.0;
-	    if(MPU6050_GYRO_FS == MPU6050_GYRO_FS_500) return  	65.5;
+	    if(MPU6050_GYRO_FS == MPU6050_GYRO_FS_250)  return 	131.0;
+	    if(MPU6050_GYRO_FS == MPU6050_GYRO_FS_500)  return 	65.5;
 	    if(MPU6050_GYRO_FS == MPU6050_GYRO_FS_1000) return  32.8;
 	    if(MPU6050_GYRO_FS == MPU6050_GYRO_FS_2000) return  16.4;
 	    return 1; // should never happen
@@ -97,7 +125,6 @@ public:
 	// Get motion data
 	void getRotationRates(int16_t* xyz);
 	int16_t getAcceleration(uint8_t idx);
-	//int16_t getAccelerations(uint8_t idx);
 };
 
 #endif

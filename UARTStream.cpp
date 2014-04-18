@@ -4,15 +4,25 @@
 
 UARTSerial serial0(128, 128, &UBRR0H, &UBRR0L, &UCSR0A, &UCSR0B, &UDR0);
 
-void UARTSerial::put(uint8_t c) {
+void Serial::put(uint8_t c) {
 	uint8_t next = (_txBuf.head+1) & _txBuf.mask;
 	while (next == _txBuf.tail) { wdt_reset(); }
-
 	_txBuf.data[_txBuf.head] = c;
 	// Now there definitely is data in the buffer.
 	_txBuf.head = next;
+}
+
+void UARTSerial::put(uint8_t c) {
+	Serial::put(c);
 	*_ucsrb |= (1 << UDRIE0);
 	*_ucsra |= (1 << TXC0);
+}
+
+int UARTSerial::get() {
+	if (_rxBuf.head == _rxBuf.tail) return -1;
+	uint8_t result = _rxBuf.data[_rxBuf.tail];
+	_rxBuf.tail = (_rxBuf.tail+1) & _rxBuf.mask;
+	return result;
 }
 
 void UARTSerial::receive(uint8_t c) {
@@ -27,9 +37,8 @@ void UARTSerial::udre() {
 	if (_txBuf.head == _txBuf.tail) {
 		*_ucsrb &= ~(1<<UDRIE0);
 	} else {
-		uint8_t data = _txBuf.data[_txBuf.tail];
+		*_udr = _txBuf.data[_txBuf.tail];
 		_txBuf.tail = (_txBuf.tail+1) & _txBuf.mask;
-		*_udr = data;
 	}
 }
 
@@ -46,15 +55,14 @@ void Serial::waitFlushed() {
 }
 
 void UARTSerial::init(uint32_t baud, int direction) {
-	uint16_t ubrr = (baud/8)-1;
+	uint16_t ubrr = F_CPU/(baud*8UL)-1;
 	*_ubrrh = ubrr >> 8;
 	*_ubrrl = ubrr & 0xff;
-	*_ucsra = 1<<1; // That's right, I just assume it runs on a certain type of MCU.
-	*_ucsrb = (1<<RXCIE0)|(1<<RXEN0)|(1<<TXEN0);
+	*_ucsra = 1<<U2X0; // That's right, I just assume it runs on a certain type of MCU.
+	*_ucsrb = 1<<RXCIE0 | 1<<RXEN0 | 1<<TXEN0;
 	// This is default anyway, no need to.
 	// UCSR0C = (1<<UCSZ01)|(1<<UCSZ00);
 }
-
 
 #if defined(USART0_RX_vect)
 ISR(USART0_RX_vect) {
@@ -68,8 +76,8 @@ ISR(USART_UDRE0_vect) {
 ISR(USART_RX_vect) {
 	serial0.receive(UDR0);
 }
+
 ISR(USART_UDRE_vect) {
 	serial0.udre();
 }
 #endif
-

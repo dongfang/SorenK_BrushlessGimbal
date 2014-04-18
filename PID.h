@@ -1,5 +1,8 @@
+#ifndef __PID_H
+#define __PID_H
+
 #include <stdint.h>
-#include "FastMathRoutines.h"
+#include "Util.h"
 
 class PID {
 public:
@@ -35,3 +38,5 @@ public:
 		return out / 4096;
 	}
 };
+
+#endif

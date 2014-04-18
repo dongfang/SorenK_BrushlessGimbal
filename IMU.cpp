@@ -16,9 +16,10 @@
 // **************************************************
 
 #include "IMU.h"
-#include "FastMathRoutines.h"
 #include "Globals.h"
+#include "Configuration.h"
 #include <avr/wdt.h>
+#include <avr/eeprom.h>
 #include <util/delay.h>
 #include <math.h>
 
@@ -33,6 +34,8 @@
 // Small angle approximation
 #define ssin(val) (val)
 #define scos(val) 1.0f
+
+int16_t gyroOffsetInEEPROM[4] EEMEM;
 
 // set default sensor orientation (sensor upside)
 void IMU::initSensorOrientationFaceUp() {
@@ -206,6 +209,8 @@ void IMU::recalibrateGyros() {
 		gyroOffset[i] = (gyroOffsetSums[i] + GYRO_ITERATIONS/2) / GYRO_ITERATIONS;
 		//Serial.print(F("gyroOffset="));Serial.println(fp_gyroOffset[i], 3);
 	}
+
+	saveGyroCalibration();
 }
 
 // Do not run this in hot starts.
@@ -326,4 +331,81 @@ void IMU::calculateAttitudeAngles() {
 			+ Rajan_FastArcTan2_deg1000(EstG[X], sqrt(EstG[Z] * EstG[Z] + EstG[Y] * EstG[Y]));
 	// 192 us
 	angle[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_deg1000(EstG[Y], EstG[Z]);
+}
+
+
+/*
+ * Scrapyard for different recalibrate routines from here and there.
+ */
+void calibrateGyro() {
+	// Gyro Offset calibration
+	printf_P(PSTR("Gyro calibration: do not move\r\n"));
+	// mpu.setDLPFMode(MPU6050_DLPF_BW_5);  // experimental AHa: set to slow mode during calibration
+	imu.recalibrateGyros();
+	// initMPUlpf();
+	printf_P(PSTR("Gyro calibration: done\r\n"));
+}
+/*
+void gyroRecalibrate() {
+	// Set voltage on all motor phases to zero
+	// Nah why not freeze it instead?
+	softStart = 0;
+	mpu.setDLPFMode(MPU6050_DLPF_BW_5); // experimental AHa: set to slow mode during calibration
+	imu.recalibrateGyros();
+	initMPUlpf();
+	printf_P(PSTR("recalibration: done"));
+}
+*/
+
+void initPIDs(void) {
+	rollPID.setCoefficients(config.rollKp / 10, config.rollKi / 1000, config.rollKd / 10);
+	pitchPID.setCoefficients(config.pitchKp / 10, config.pitchKi / 1000, config.pitchKd / 10);
+}
+
+void initMPUlpf() {
+	// Set Gyro Low Pass Filter(0..6, 0=fastest, 6=slowest)
+	switch (config.mpuLPF) {
+	case 0:
+		mpu.setDLPFMode(MPU6050_DLPF_BW_256);
+		break;
+	case 1:
+		mpu.setDLPFMode(MPU6050_DLPF_BW_188);
+		break;
+	case 2:
+		mpu.setDLPFMode(MPU6050_DLPF_BW_98);
+		break;
+	case 3:
+		mpu.setDLPFMode(MPU6050_DLPF_BW_42);
+		break;
+	case 4:
+		mpu.setDLPFMode(MPU6050_DLPF_BW_20);
+		break;
+	case 5:
+		mpu.setDLPFMode(MPU6050_DLPF_BW_10);
+		break;
+	case 6:
+		mpu.setDLPFMode(MPU6050_DLPF_BW_5);
+		break;
+	default:
+		mpu.setDLPFMode(MPU6050_DLPF_BW_256);
+		break;
+	}
+}
+
+uint16_t IMU::CRC() {
+	return ::crc16((uint8_t*)gyroOffset, 6);
+}
+
+void IMU::saveGyroCalibration() {
+	wdt_reset();
+	gyroOffset[3] = CRC();
+	eeprom_write_block(gyroOffset, gyroOffsetInEEPROM, sizeof(gyroOffset));
+}
+
+bool IMU::loadGyroCalibration() {
+	wdt_reset();
+	eeprom_read_block(gyroOffset, gyroOffsetInEEPROM, sizeof(gyroOffset));
+	bool ok = (uint16_t)gyroOffset[3] == CRC();
+	printf_P(PSTR("Reused old gyrocal: %d"), ok);
+	return ok;
 }

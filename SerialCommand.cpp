@@ -25,11 +25,7 @@
 #include "Globals.h"
 #include "Util.h"
 
-void initPIDs(void) {
-	rollPID.setCoefficients(config.rollKp / 10, config.rollKi / 1000, config.rollKd / 10);
-
-	pitchPID.setCoefficients(config.pitchKp / 10, config.pitchKi / 1000, config.pitchKd / 10);
-}
+extern void initPIDs();
 
 /**
  * Constructor makes sure some things are set.

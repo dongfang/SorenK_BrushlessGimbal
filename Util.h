@@ -1,11 +1,19 @@
+#ifndef __UTIL_H
+#define __UTIL_H
+
 /************************/
 /* Debugging            */
 /************************/
 #include <stdlib.h>
 #include <stdio.h>
 #include <avr/pgmspace.h>
+//#include "Globals.h"
 
-#include "Globals.h"
+// DEBUG only
+extern uint32_t stackTop;
+extern uint32_t stackBottom;
+extern uint32_t heapTop;
+extern uint32_t heapBottom;
 
 inline void stackCheck() {
   int localVar;
@@ -39,21 +47,78 @@ inline void stackHeapEval(bool doPrint) {
   }
 }
 
-uint16_t crc16(uint8_t* data, size_t size) {
-  size_t i;
-  uint16_t crc = 23456;
-  for (i=0; i<size; i++) {
-    crc = _crc16_update(crc, data[i]);
-  }
-  return crc;
-}
+uint16_t crc16(uint8_t* data, size_t size);
 
-char tolower(char c) {
+inline char tolower(char c) {
 	if (c >= 'A' && c <= 'Z')
 		return c - 'A' + 'Z';
 	return c;
 }
 
-bool isprint(char c) {
+inline bool isprint(char c) {
 	return c >= 0x20 && c != 0x7f;
 }
+
+// TODO: Proper C++ overloading possible?
+inline int16_t constrain_int16(int16_t x, int16_t l, int16_t h) {
+	if (x <= l) {
+		return l;
+	} else if (x >= h) {
+		return h;
+	} else {
+		return x;
+	}
+}
+
+// TODO: Proper C++ overloading possible?
+inline int32_t constrain_int32(int32_t x, int32_t l, int32_t h) {
+	if (x <= l) {
+		return l;
+	} else if (x >= h) {
+		return h;
+	} else {
+		return x;
+	}
+}
+
+// TODO: Proper C++ overloading possible?
+inline float constrain_f(float x, float l, float h) {
+	if (x <= l) {
+		return l;
+	} else if (x >= h) {
+		return h;
+	} else {
+		return x;
+	}
+}
+
+//***************************************************************
+// “Efficient approximations for the arctangent function”,
+// Rajan, S. Sichun Wang Inkol, R. Joyal, A., May 2006
+//***************************************************************
+float Rajan_FastArcTan(float x);
+
+// atan2 for all quadrants by A. Hahn
+float Rajan_FastArcTan2(float y, float x);
+
+// atan2 returnig degrees * 1000
+int32_t Rajan_FastArcTan2_deg1000(float y, float x);
+
+/****************************/
+/* LP Filter                */
+/* Coeff=0: *q not changing */
+/* Coeff=1: *q <- i         */
+/****************************/
+inline void utilLP_float(float* q, float i, float coeff) {
+	*q += (i - *q) * coeff;
+}
+
+inline uint16_t abs16(int16_t z) {
+	return z < 0 ? -z : z;
+}
+
+inline uint32_t abs32(int32_t z) {
+	return z < 0 ? -z : z;
+}
+
+#endif

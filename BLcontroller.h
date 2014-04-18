@@ -1,4 +1,4 @@
-#include "definitions.h"
+#include "Definitions.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -36,7 +36,6 @@ void initBlController() {
 #endif
 
   TIMSK1 |= 1<<TOIE1;
-  sei();
 
   // Enable Timer1 Interrupt for Motor Control
   OCR2A = 0;  //11  APIN
