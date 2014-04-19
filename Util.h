@@ -51,7 +51,7 @@ uint16_t crc16(uint8_t* data, size_t size);
 
 inline char tolower(char c) {
 	if (c >= 'A' && c <= 'Z')
-		return c - 'A' + 'Z';
+		return c - 'A' + 'a';
 	return c;
 }
 
@@ -120,5 +120,47 @@ inline uint16_t abs16(int16_t z) {
 inline uint32_t abs32(int32_t z) {
 	return z < 0 ? -z : z;
 }
+
+uint16_t time();
+
+enum BENCHMARKING_ITEMS {
+	BM_OTHER,
+	BM_READ_GYROS,
+    BM_BLEND_GYROS,
+    BM_BLEND_ACC,
+    BM_CALCULATE_AA,
+    BM_RC_DECODE,
+    BM_PIDS,
+    BM_MOTORPHASES,
+    BM_SLOWLOOP,
+    BM_TIMEOUTS,
+    BM_SERIAL,
+    BM_END
+};
+
+#define DO_BENCHMARK 1
+
+#ifdef DO_BENCHMARK
+extern uint32_t benchmarkTimers[];
+extern uint8_t nowBenchmarking;
+/*
+ * This method will be reliable if: Timer runs af full blast (16MHz)
+ * and nothing is benchmarked that takes longer than 4ms.
+ */
+inline void _doBenchmark(uint8_t item) {
+	static uint16_t then;
+	uint16_t now = time();
+	benchmarkTimers[nowBenchmarking] += now - then;
+	nowBenchmarking = item;
+}
+#endif
+
+// Maybe this macro circus is a waste of (my) time, as the compiler would optimize away
+// an empty impl. anyway. Especially if inline.
+#ifdef DO_BENCHMARK
+#define BENCHMARK(item) _doBenchmark(item)
+#else
+#define BENCHMARK(item)
+#endif
 
 #endif

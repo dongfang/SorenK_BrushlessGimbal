@@ -2,6 +2,7 @@
 #define __CONFIGURATION_H
 
 #include <stdint.h>
+#include "Definitions.h"
 
 class Configuration {
 public:
@@ -29,8 +30,8 @@ public:
 	int16_t angleOffsetRoll;
 	uint8_t nPolesMotorPitch;
 	uint8_t nPolesMotorRoll;
-	int8_t dirMotorPitch;
-	int8_t dirMotorRoll;
+	int8_t  dirMotorPitch;
+	int8_t  dirMotorRoll;
 	uint8_t motorNumberPitch;
 	uint8_t motorNumberRoll;
 	uint8_t maxPWMmotorPitch;
@@ -64,5 +65,35 @@ public:
 private:
 	uint16_t CRC();
 };
+
+// types of config parameters
+enum confType {
+	BOOL, INT8, INT16, INT32, UINT8, UINT16, UINT32
+};
+
+struct ConfigDef_t {
+	char name[CONFIGNAME_MAX_LEN]; // name of config parameter
+	confType type; // type of config parameters
+	void * address; // address of config parameter
+	void (*updateFunction)(void); // function is called when parameter update happens
+};
+
+// access descriptor as array of bytes as well
+union ConfigUnion_t {
+	ConfigDef_t asConfig;
+	uint8_t asBytes[sizeof(ConfigDef_t)];
+};
+
+extern ConfigDef_t configDef;
+extern ConfigUnion_t configUnion;
+extern const ConfigDef_t configListPGM[];
+
+// find Config Definition for named parameter
+ConfigDef_t * getConfigDef(char* name);
+
+// write single parameter with value
+void writeConfig(ConfigDef_t* def, int32_t val);
+
+void updateAllParameters();
 
 #endif

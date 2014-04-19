@@ -18,7 +18,6 @@ extern PID rollPID;
 extern UARTSerial serial0;
 extern bool runMainLoop;
 
-extern uint8_t timer1Extension;
 extern uint8_t syncCounter;
 
 extern uint8_t motorPhases[2][3];
@@ -43,4 +42,6 @@ extern RCData_t rcData[RC_DATA_SIZE];
 extern int8_t switchPos;
 
 extern float rcLPF_tc;
+
+
 #endif

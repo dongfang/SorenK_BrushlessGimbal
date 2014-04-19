@@ -22,8 +22,8 @@
 #define DT_FLOAT (1.0/LOOPUPDATE_FREQ)      // loop controller sample period dT
 #define DT_INT_MS (1000/MOTORUPDATE_FREQ)
 
-#define POUT_FREQ 1      // rate of ACC print output in Hz, 25 Hz is default
-#define LOCK_TIME_SEC 1  // gimbal fast lock time at startup 
+#define POUT_FREQ 4      // rate of ACC print output in Hz, 25 Hz is default
+#define LOCK_TIME_SEC 0  // gimbal fast lock time at startup
 
 // LP filter coefficient
 #define LOWPASS_K_FLOAT(TAU) (DT_FLOAT/(TAU+DT_FLOAT))
@@ -112,3 +112,5 @@
 #define SW_UNKNOWN 0
 #define SW_RETRACTED -1
 #define SW_EXTENDED 1
+
+#define CONFIGNAME_MAX_LEN 17

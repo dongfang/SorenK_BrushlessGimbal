@@ -1,5 +1,6 @@
 #include "Globals.h"
-#include "RCdecode.h"             // RC Decoder to move camera by servo signal input
+#include "RCdecode.h"
+#include "Util.h"
 
 #include <avr/wdt.h>
 #include <avr/io.h>
@@ -14,7 +15,11 @@ float rollAngleSet;
 float pitchAngleSet;
 
 void flashLED() {
-	LED_PIN |= (1<<LED_BIT);
+	static uint8_t count;
+	count++;
+	if (count > 15) count = 0;
+	if (count <= softStart)
+		LED_PIN |= (1<<LED_BIT);
 }
 
 /**********************************************/
@@ -37,13 +42,17 @@ void mainLoop() {
 
 		// Evaluate RC-Signals
 		if (config.rcAbsolute == 1) {
+			BENCHMARK(BM_RC_DECODE);
 			evaluateRCAbsolute(); // t=30/142us,  returns rollRCSetPoint, pitchRCSetpoint
 			utilLP_float(&pitchAngleSet, pitchPhiSet, rcLPF_tc); // t=16us
 			utilLP_float(&rollAngleSet, rollPhiSet, rcLPF_tc); // t=28us
+			BENCHMARK(BM_NOTHING);
 		} else {
+			BENCHMARK(BM_RC_DECODE);
 			evaluateRCIntegrating(); // gives rollRCSpeed, pitchRCSpeed
 			utilLP_float(&pitchAngleSet, pitchPhiSet, 0.01);
 			utilLP_float(&rollAngleSet, rollPhiSet, 0.01);
+			BENCHMARK(BM_NOTHING);
 		}
 
 		evaluateRCSwitch();
@@ -53,14 +62,17 @@ void mainLoop() {
 		// pitch and roll PIDs
 		//****************************
 		// t=94us
+		BENCHMARK(BM_PIDS);
 		pitchPIDVal = //ComputePID(DT_INT_MS, angle[PITCH], pitchAngleSet*1000, &pitchErrorSum, &pitchErrorOld, pitchPIDpar.Kp, pitchPIDpar.Ki, pitchPIDpar.Kd);
 				pitchPID.compute(DT_INT_MS, imu.angle[PITCH], pitchAngleSet * 1000);
 		// t=94us
 		rollPIDVal = //ComputePID(DT_INT_MS, angle[ROLL], rollAngleSet*1000, &rollErrorSum, &rollErrorOld, rollPIDpar.Kp, rollPIDpar.Ki, rollPIDpar.Kd);
 				rollPID.compute(DT_INT_MS, imu.angle[ROLL], rollAngleSet * 1000);
+		BENCHMARK(BM_NOTHING);
 
 		// motor control
 		if (switchPos >= 0) {
+			BENCHMARK(BM_MOTORPHASES);
 			int motorDrive = pitchPIDVal * config.dirMotorPitch;
 			uint8_t posStep = motorDrive >> 3;
 			motorPhases[config.motorNumberPitch][0] = pwmSinMotorPitch[posStep] * softStart >> 4;
@@ -72,11 +84,13 @@ void mainLoop() {
 			motorPhases[config.motorNumberRoll][0] = pwmSinMotorRoll[posStep] * softStart >> 4;
 			motorPhases[config.motorNumberRoll][1] = pwmSinMotorRoll[(uint8_t) (posStep + 85)] * softStart >> 4;
 			motorPhases[config.motorNumberRoll][2] = pwmSinMotorRoll[(uint8_t) (posStep + 170)] * softStart >> 4;
+			BENCHMARK(BM_NOTHING);
 		}
 
 		//****************************
 		// slow rate actions
 		//****************************
+		BENCHMARK(BM_SLOWLOOP);
 		switch (loopCount) {
 		case 1:
 			imu.readAcc(0);
@@ -113,7 +127,7 @@ void mainLoop() {
 				softStart = 0;
 				break;
 			case GIMBAL_RUNNING:
-				if (switchPos > 0) {
+				if (switchPos <= 0) {
 					// slask
 					if (softStart > 0)
 						softStart--;
@@ -164,14 +178,11 @@ void mainLoop() {
 			}
 			break;
 		case 9:
-			// regular ACC output
+			// regular debug output
 			pOutCnt++;
 			if (pOutCnt == (LOOPUPDATE_FREQ / 10 / POUT_FREQ)) {
-				// 600 us
-//        if(config.accOutput==1) {
-//        Serial.print(angle[PITCH]); Serial.print(F(" ACC "));Serial.println(angle[ROLL]);
-//      }
 				pOutCnt = 0;
+				debug();
 			}
 			break;
 		case 10:
@@ -185,16 +196,21 @@ void mainLoop() {
 		}
 
 		loopCount++;
+		BENCHMARK(BM_NOTHING);
 
 		//****************************
 		// check RC channel timeouts
 		//****************************
 
+		BENCHMARK(BM_TIMEOUTS);
 		checkRcTimeouts();
+		BENCHMARK(BM_NOTHING);
 
 		//****************************
 		// Evaluate Serial inputs
 		//****************************
+		BENCHMARK(BM_SERIAL);
 		sCmd.readSerial();
+		BENCHMARK(BM_NOTHING);
 	}
 }

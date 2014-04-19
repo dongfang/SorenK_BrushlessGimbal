@@ -218,7 +218,7 @@ void IMU::init() {
 	// 102us
 	initSensorOrientation();
 
-	gyroScale = 1.0 / mpu.gyroToDeg_s() / 180.0 * 3.14159265359; // convert to radians/s
+	gyroScale = 1.0 / mpu.gyroToDeg_s() / 180.0 * M_PI; // convert to radians/s
 	accComplFilterConstant = (float) DT_FLOAT / (config.accTimeConstant + DT_FLOAT);
 
 	uint8_t axis;
@@ -250,23 +250,23 @@ void IMU::readGyros() {
 	// read gyros
 	mpu.getRotationRates(axisRot);
 	idx = sensorDef.Gyro[0].idx;
-	gyros[ROLL] = axisRot[idx] - gyroOffset[idx];
-	gyros[ROLL] *= sensorDef.Gyro[0].dir;
+	gyro[ROLL] = axisRot[idx] - gyroOffset[idx];
+	gyro[ROLL] *= sensorDef.Gyro[0].dir;
 
 	idx = sensorDef.Gyro[1].idx;
-	gyros[PITCH] = axisRot[idx] - gyroOffset[idx];
-	gyros[PITCH] *= sensorDef.Gyro[1].dir;
+	gyro[PITCH] = axisRot[idx] - gyroOffset[idx];
+	gyro[PITCH] *= sensorDef.Gyro[1].dir;
 
 	idx = sensorDef.Gyro[2].idx;
-	gyros[YAW] = axisRot[idx] - gyroOffset[idx];
-	gyros[YAW] *= sensorDef.Gyro[2].dir;
+	gyro[YAW] = axisRot[idx] - gyroOffset[idx];
+	gyro[YAW] *= sensorDef.Gyro[2].dir;
 }
 
 void IMU::blendGyrosToAttitude() {
 	uint8_t axis;
 	float deltaGyroAngle[3];
 	for (axis = 0; axis < 3; axis++) {
-		deltaGyroAngle[axis] = gyros[axis] * gyroScale * DT_FLOAT;
+		deltaGyroAngle[axis] = gyro[axis] * gyroScale * DT_FLOAT;
 	}
 	// 168 us
 	rotateV(EstG, deltaGyroAngle);

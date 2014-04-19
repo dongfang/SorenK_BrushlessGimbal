@@ -30,7 +30,7 @@
 // Size of the input buffer in bytes (maximum length of one command plus arguments)
 #define SERIALCOMMAND_BUFFER 32
 // Maximum length of a command including the terminating null
-#define SERIALCOMMAND_MAXCOMMANDLENGTH 4
+#define SERIALCOMMAND_MAXCOMMANDLENGTH 6
 
 // Uncomment the next line to run the library in debug mode (verbose messages)
 //#define SERIALCOMMAND_DEBUG
@@ -67,4 +67,5 @@ class SerialCommand {
 
 void setSerialProtocol();
 void updateAllParameters();
+void debug();
 #endif //SerialCommand_h

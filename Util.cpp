@@ -1,12 +1,22 @@
+#include "Util.h"
 #include <math.h>
 #include <stdlib.h>
 #include <util/crc16.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 
 // DEBUG only
 uint32_t stackTop = 0xffffffff;
 uint32_t stackBottom = 0;
 uint32_t heapTop = 0;
 uint32_t heapBottom = 0xffffffff;
+uint8_t timer1Extension;
+
+#ifdef DO_BENCHMARK
+uint32_t benchmarkTimers[BM_END];
+uint8_t nowBenchmarking;
+#endif
 
 uint16_t crc16(uint8_t* data, size_t size) {
   size_t i;
@@ -72,3 +82,47 @@ float Rajan_FastArcTan2(float y, float x) {
 int32_t Rajan_FastArcTan2_deg1000(float y, float x) {
   return 180/M_PI * 1000 * Rajan_FastArcTan2(y, x);
 }
+
+uint16_t time() {
+  uint8_t sreg = SREG;
+  cli();
+  uint8_t fine = TCNT1;
+  uint8_t after;
+  // Get a counter step. That should not take more than 0.1 us at 32kHz.
+  do {
+   after = TCNT1;
+  } while (after==fine);
+
+  uint8_t ext = timer1Extension;
+  uint8_t flags = TIFR1;
+  SREG = sreg;
+
+  if (flags & (1<<TOV1)) {
+// We simulate the interrupt has happened and the fine timer is zero.
+      return (ext+1) << 9;
+  } else {
+    if (after < fine) {
+    // We were downcounting.
+      return ((ext+1)<<9) - after;
+    } else {
+      return (ext<<9) + after;
+    }
+  }
+}
+
+#ifdef DO_BENCHMARK
+PGM_P const benchmarkItemNames[] PROGMEM = {
+	"OTHER",
+	"READ_GYROS",
+	"BLEND_GYROS",
+	"BLEND_ACC",
+	"CALCULATE_AA",
+	"RC_DECODE",
+	"PIDS",
+	"MOTORPHASES",
+	"SLOWLOOP",
+	"TIMEOUTS",
+	"SERIAL",
+	"END"
+};
+#endif

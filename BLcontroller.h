@@ -4,6 +4,8 @@
 #include <util/delay.h>
 #include <math.h>
 
+extern uint8_t timer1Extension;
+
 void initBlController() {
   DDRB |= 1<<1 | 1<<2 | 1<<3;
   DDRD |= 1<<3 | 1<<5 | 1<<6;
@@ -66,9 +68,25 @@ void fastMoveMotor(uint8_t motorNumber, int dirStep, uint8_t* pwmSin) {
   }
 }
 */
+
+void calcSinusArray(uint8_t maxPWM, uint8_t *array) {
+  for(int i=0; i<N_SIN; i++) {
+//    array[i] = maxPWM / 2.0 + sin(2.0 * i / N_SIN * 3.14159265) * maxPWM / 2.0;
+    array[i] = 128 + sin(2.0 * i / N_SIN * M_PI) * maxPWM / 2.0;
+  }
+}
+
+void recalcMotorStuff() {
+  cli();
+  calcSinusArray(config.maxPWMmotorPitch, pwmSinMotorPitch);
+  calcSinusArray(config.maxPWMmotorRoll, pwmSinMotorRoll);
+  sei();
+}
+
+/*
 // switch off motor power
 // TODO: for some reason motor control gets noisy, if call from ISR
-inline void MotorOff(uint8_t motorNumber, uint8_t* pwmSin) {
+inline void motorOff(uint8_t motorNumber, uint8_t* pwmSin) {
   if (motorNumber == 0) {
     PWM_A_MOTOR0 = pwmSin[0];
     PWM_B_MOTOR0 = pwmSin[0];
@@ -81,20 +99,7 @@ inline void MotorOff(uint8_t motorNumber, uint8_t* pwmSin) {
     PWM_C_MOTOR1 = pwmSin[0];
   }
 }
-
-void calcSinusArray(uint8_t maxPWM, uint8_t *array) {
-  for(int i=0; i<N_SIN; i++) {
-//    array[i] = maxPWM / 2.0 + sin(2.0 * i / N_SIN * 3.14159265) * maxPWM / 2.0;
-    array[i] = 128 + sin(2.0 * i / N_SIN * 3.14159265) * maxPWM / 2.0;
-  }  
-}
-
-void recalcMotorStuff() {
-  cli();
-  calcSinusArray(config.maxPWMmotorPitch, pwmSinMotorPitch);
-  calcSinusArray(config.maxPWMmotorRoll, pwmSinMotorRoll);
-  sei();
-}
+*/
 
 /********************************/
 /* Motor Control IRQ Routine    */

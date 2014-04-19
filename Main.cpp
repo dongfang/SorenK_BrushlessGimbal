@@ -51,10 +51,7 @@ PID rollPID;
 
 uint8_t mcusr_mirror  __attribute__ ((section (".noinit")));
 
-Configuration config;
-
 bool runMainLoop;
-uint8_t timer1Extension;
 uint8_t syncCounter;
 
 uint8_t motorPhases[2][3];

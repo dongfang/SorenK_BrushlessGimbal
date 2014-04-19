@@ -6,32 +6,6 @@ float rcLPF_tc = 1.0;
 /*************************/
 /* RC-Decoder            */
 /*************************/
-uint16_t _timer() {
-  uint8_t sreg = SREG;
-  cli();
-  uint8_t fine = TCNT1;
-  uint8_t after;
-  // Get a counter step. That should not take more than 0.1 us at 32kHz.
-  do {
-   after = TCNT1;
-  } while (after==fine);
-
-  uint8_t mm = timer1Extension;
-  uint8_t flags = TIFR1;
-  SREG = sreg;
-
-  if (flags & (1<<TOV1)) {
-// We simulate the interrupt has happened and the fine timer is zero.
-      return (mm+1) << 9;
-  } else {
-    if (after < fine) {
-    // We were downcounting.
-      return ((mm+1)<<9) - after;
-    } else {
-      return (mm<<9) + after;
-    }
-  }
-}
 
 //******************************************
 // PWM Decoder
@@ -88,7 +62,7 @@ inline void intDecodePPM() {
 //******************************************
 ISR(PCINT1_vect) {
   static uint8_t lastPin;
-  uint16_t frozenTime = _timer();
+  uint16_t frozenTime = time();
   uint8_t pin = PINC;
   uint8_t change = pin ^ lastPin;
   lastPin = pin;
@@ -126,7 +100,7 @@ ISR(PCINT1_vect) {
 // check for RC timout
 
 void checkRcTimeouts() {
-  uint16_t timerNow = _timer();
+  uint16_t timerNow = time();
   uint16_t timerLastUpdate;
   for (uint8_t id = 0; id < RC_DATA_SIZE; id++) {
     cli();

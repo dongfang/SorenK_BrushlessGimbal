@@ -10,40 +10,16 @@
  5) RC in
  */
 #include "Util.h"
-//#include "Globals.h"
 #include "Configuration.h"
 #include "RCdecode.h"
 
 #include <string.h>
+#include <math.h>
 #include <avr/eeprom.h>
+#include <avr/pgmspace.h>
 #include <avr/wdt.h>
 
-// Fixme
-extern void recalcMotorStuff();
-
-// types of config parameters
-enum confType {
-	BOOL, INT8, INT16, INT32, UINT8, UINT16, UINT32
-};
-
-#define CONFIGNAME_MAX_LEN 17
-
-struct ConfigDef_t {
-	char name[CONFIGNAME_MAX_LEN]; // name of config parameter
-	confType type; // type of config parameters
-	void * address; // address of config parameter
-	void (*updateFunction)(void); // function is called when parameter update happens
-};
-
-ConfigDef_t configDef;
-
-// access descriptor as array of bytes as well
-union ConfigUnion_t {
-	ConfigDef_t asConfig;
-	uint8_t asBytes[sizeof(ConfigDef_t)];
-};
-
-ConfigUnion_t configUnion;
+uint8_t _debug;
 
 static inline void fixme_writeEEPROM() {
 	config.writeEEPROM();
@@ -51,76 +27,6 @@ static inline void fixme_writeEEPROM() {
 
 static inline void fixme_readEEPROM() {
 	config.readEEPROMOrDefault();
-}
-
-static inline void fixme_initIMU() {
-	imu.init();
-}
-
-static inline void fixme_initSensorOrientation() {
-	imu.initSensorOrientation();
-}
-
-// list of all config parameters
-// to be accessed by par command
-//
-// descriptor is stored in PROGMEN to preserve RAM space
-// see http://www.arduino.cc/en/Reference/PROGMEM
-// and http://jeelabs.org/2011/05/23/saving-ram-space/
-const ConfigDef_t PROGMEM configListPGM[] = {
-{ "vers", UINT8, &config.vers, NULL },
-{ "pitchKp", INT32, &config.pitchKp, &initPIDs },
-{ "pitchKi", INT32, &config.pitchKi, &initPIDs },
-{ "pitchKd", INT32, &config.pitchKd, &initPIDs },
-{ "rollKp", INT32, &config.rollKp, &initPIDs },
-{ "rollKi", INT32, &config.rollKi, &initPIDs },
-{ "rollKd", INT32, &config.rollKd, &initPIDs },
-{ "timeConstant", INT16, &config.accTimeConstant, &fixme_initIMU },
-{ "mpuLPF", INT8, &config.mpuLPF, &initMPUlpf },
-{ "angleOffsetPitch", INT16, &config.angleOffsetPitch, NULL },
-{ "angleOffsetRoll", INT16, &config.angleOffsetRoll, NULL },
-{ "dirMotorPitch", INT8, &config.dirMotorPitch, NULL },
-{ "dirMotorRoll", INT8, &config.dirMotorRoll, NULL },
-{ "motorNumberPitch", UINT8, &config.motorNumberPitch, NULL },
-{ "motorNumberRoll", UINT8, &config.motorNumberRoll, NULL },
-{ "maxPWMmotorPitch", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
-{ "maxPWMmotorRoll", UINT8, &config.maxPWMmotorRoll, &recalcMotorStuff },
-{ "minRCPitch", INT8, &config.minRCPitch, NULL },
-{ "maxRCPitch", INT8, &config.maxRCPitch, NULL },
-{ "minRCRoll", INT8, &config.minRCRoll, NULL },
-{ "maxRCRoll", INT8, &config.maxRCRoll, NULL },
-{ "rcGain", INT16, &config.rcGain, NULL },
-{ "rcLPF", INT16, &config.rcLPF, &initRC },
-{ "rcMid", INT16, &config.rcMid, NULL },
-{ "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
-{ "majorAxis", UINT8, &config.majorAxis, 		&fixme_initSensorOrientation },
-{ "axisReverseZ", BOOL, &config.axisReverseZ, 	&fixme_initSensorOrientation },
-{ "axisSwapXY", BOOL, &config.axisSwapXY, 		&fixme_initSensorOrientation },
-{ "", BOOL, NULL, NULL } // terminating NULL required !!
-};
-
-// find Config Definition for named parameter
-ConfigDef_t * getConfigDef(char* name) {
-	bool found = false;
-	ConfigDef_t * p = (ConfigDef_t *) configListPGM;
-
-	while (true) {
-		uint8_t i;
-		for (i = 0; i < sizeof(ConfigDef_t); i++) {
-			configUnion.asBytes[i] = pgm_read_byte((uint8_t*)p + i);
-		}
-		if (configUnion.asConfig.address == NULL)
-			break;
-		if (strncmp(configUnion.asConfig.name, name, CONFIGNAME_MAX_LEN) == 0) {
-			found = true;
-			break;
-		}
-		p++;
-	}
-	if (found)
-		return &configUnion.asConfig;
-	else
-		return NULL;
 }
 
 // print single parameter value
@@ -155,27 +61,6 @@ void printConfig(ConfigDef_t * def) {
 			break;
 		}
 		printf_P(PSTR("\r\n"));
-	} else {
-		printf_P(PSTR("ERROR: illegal parameter\r\n"));
-	}
-}
-
-// write single parameter with value
-void writeConfig(ConfigDef_t* def, int32_t val) {
-	if (def != NULL) {
-		 switch (def->type) {
-		 case BOOL   : *(bool *)(def->address)     = val; break;
-		 case UINT8  : *(uint8_t *)(def->address)  = val; break;
-		 case UINT16 : *(uint16_t *)(def->address) = val; break;
-		 case UINT32 : *(uint32_t *)(def->address) = val; break;
-		 case INT8   : *(int8_t *)(def->address)   = val; break;
-		 case INT16  : *(int16_t *)(def->address)  = val; break;
-		 case INT32  : *(int32_t *)(def->address)  = val; break;
-		 }
-		 //def->address = (void*)val;
-		// call update function
-		if (def->updateFunction != NULL)
-			def->updateFunction();
 	} else {
 		printf_P(PSTR("ERROR: illegal parameter\r\n"));
 	}
@@ -224,15 +109,6 @@ void parameterMod() {
 }
 //************************************************************************************
 
-void updateAllParameters() {
-	recalcMotorStuff();
-	initPIDs();
-	imu.init();
-	initMPUlpf();
-	//imu.initSensorOrientation();
-	initRCFilter();
-	initRC();
-}
 
 void setDefaultParametersAndUpdate() {
 	config.setDefaults();
@@ -265,6 +141,69 @@ void unrecognized(const char *command) {
 	printf_P(PSTR("What? type in HE for Help ..."));
 }
 
+
+#define DEBUG_OFF 0
+#define DEBUG_ACCVALUES 1
+#define DEBUG_GYROVALUES 2
+#define DEBUG_ATTITUDE 3
+
+static const char DEBUG_OFF_CMD[] PROGMEM = "off";
+static const char DEBUG_ACCVALUES_CMD[] PROGMEM = "acc";
+static const char DEBUG_GYROVALUES_CMD[] PROGMEM = "gyros";
+static const char DEBUG_ATTITUDE_CMD[] PROGMEM = "att";
+
+static PGM_P const DEBUG_COMMANDS[] PROGMEM = {
+	DEBUG_OFF_CMD, DEBUG_ACCVALUES_CMD, DEBUG_GYROVALUES_CMD, DEBUG_ATTITUDE_CMD
+};
+
+void debugControl() {
+	char * itemName = NULL;
+	if ((itemName = sCmd.next()) == NULL) {
+		// no command parameter, print all config parameters
+		printf_P(PSTR("Debug off.\r\n"));
+		_debug = 0;
+		return;
+	}
+	bool found = false;
+	uint8_t i;
+	for (i=0; i<sizeof(DEBUG_COMMANDS)/2 && !found; i++) {
+		PGM_P ptr = (PGM_P)pgm_read_word(&DEBUG_COMMANDS[i]);
+		if (strncmp_P(itemName, ptr, 6) == 0) found = true;
+	}
+	if (found) {
+		_debug = i;
+	} else {
+		printf_P(PSTR("Huh? Use \"off\", \"acc\", \"gyros\" or \"att\".\r\n"));
+	}
+}
+
+void insertComma(char* temp) {
+	uint8_t end = strlen(temp);
+	uint8_t ip = end - 2;
+	for (uint8_t i=end; i>=ip; i--) {
+		temp[i+1] = temp[i];
+	}
+	temp[ip] = '.';
+}
+
+void debug() {
+	char temp[10];
+	switch(_debug) {
+	case DEBUG_ATTITUDE:
+		// This stunt is to avoid having to draw in the printf_flt stuff which is a pain.
+		sprintf_P(temp, PSTR("%ld"), imu.angle[0]);
+		insertComma(temp);
+		printf_P(PSTR("roll:%s"), temp);
+		sprintf_P(temp, PSTR("%ld"), imu.angle[1]);
+		insertComma(temp);
+		printf_P(PSTR("pitch:%f\r\n"), temp);
+		break;
+	case DEBUG_ACCVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.acc[X], imu.acc[Y], imu.acc[Z]); break;
+	case DEBUG_GYROVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.gyro[X], imu.gyro[Y], imu.gyro[Z]); break;
+	default: break;
+	}
+}
+
 void setSerialProtocol() {
 	// Setup callbacks for SerialCommand commands
 	sCmd.addCommand("sd", setDefaultParametersAndUpdate);
@@ -273,5 +212,7 @@ void setSerialProtocol() {
 	sCmd.addCommand("par", parameterMod);
 	sCmd.addCommand("gc", calibrateGyro);
 	sCmd.addCommand("he", printHelpUsage);
+	sCmd.addCommand("debug", debugControl);
+
 	sCmd.setDefaultHandler(unrecognized); // Handler for command that isn't matched  (says "What?")
 }

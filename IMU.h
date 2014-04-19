@@ -47,13 +47,16 @@ public:
 
 	// Get attitude data
 	void fastUpdateCycle() {
-	    // update IMU data
 	    readGyros();   // t=386us
 	    blendGyrosToAttitude();  // t=260us
 	    blendAccToAttitude();   // t=146us
 	    calculateAttitudeAngles(); // t=468us
 	}
 
+	// Offset and sign-fixed values from MPU data.
+	// TODO: That processing might as will be done by the MPU itself.
+	int16_t gyro[3];
+	int16_t acc[3];
 	int32_t angle[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
 
 private:
@@ -67,11 +70,6 @@ private:
 
 	float gyroScale;
 	float accComplFilterConstant;
-
-	// Offset and sign-fixed values from MPU data.
-	// TODO: That processing might as will be done by the MPU itself.
-	int16_t gyros[3];
-	int16_t acc[3];
 
 	float EstG[3];
 	float accLPF_f[3];
