@@ -13,9 +13,12 @@ uint32_t heapTop = 0;
 uint32_t heapBottom = 0xffffffff;
 uint8_t timer1Extension;
 
-#ifdef DO_BENCHMARK
-uint32_t benchmarkTimers[BM_END];
-uint8_t nowBenchmarking;
+#ifdef DO_PERFORMANCE
+uint16_t lastCycleTime;
+uint16_t cycleStartTime;
+uint16_t performanceTimers[BM_END];
+uint16_t slowLoopPerformanceTimers[15];
+uint8_t nowPerformanceTiming;
 #endif
 
 uint16_t crc16(uint8_t* data, size_t size) {
@@ -110,19 +113,59 @@ uint16_t time() {
   }
 }
 
-#ifdef DO_BENCHMARK
-PGM_P const benchmarkItemNames[] PROGMEM = {
-	"OTHER",
-	"READ_GYROS",
-	"BLEND_GYROS",
-	"BLEND_ACC",
-	"CALCULATE_AA",
-	"RC_DECODE",
-	"PIDS",
-	"MOTORPHASES",
-	"SLOWLOOP",
-	"TIMEOUTS",
-	"SERIAL",
-	"END"
+#ifdef DO_PERFORMANCE
+static const char BMS00[] PROGMEM = "Idle   ";
+static const char BMS01[] PROGMEM = "ReadGyros";
+static const char BMS02[] PROGMEM = "BlendGyros";
+static const char BMS03[] PROGMEM = "BlendAcc";
+static const char BMS04[] PROGMEM = "Calc AA";
+static const char BMS05[] PROGMEM = "RCDecode";
+static const char BMS06[] PROGMEM = "PIDs   ";
+static const char BMS07[] PROGMEM = "MotorPhases";
+static const char BMS08[] PROGMEM = "SlowLoop";
+static const char BMS09[] PROGMEM = "Timeouts";
+static const char BMS10[] PROGMEM = "Serial ";
+static const char BMS11[] PROGMEM = "This   ";	// The task of printing this benchmark info.
+static const char BMS12[] PROGMEM = "Other  ";
+static const char BMS13[] PROGMEM = "END";
+
+static PGM_P const performanceItemNames[] PROGMEM = {
+	BMS00,BMS01,BMS02,BMS03,BMS04,BMS05,BMS06,BMS07,BMS08,BMS09,BMS10,BMS11,BMS12,BMS13
 };
+
+static const char BMSLS00[] PROGMEM = "ReadAcc0";
+static const char BMSLS01[] PROGMEM = "ReadAcc1";
+static const char BMSLS02[] PROGMEM = "ReadAcc2";
+static const char BMSLS03[] PROGMEM = "UpdAccVect";
+static const char BMSLS04[] PROGMEM = "FlashLED";
+static const char BMSLS05[] PROGMEM = "GimState";
+static const char BMSLS06[] PROGMEM = "RCPitch ";
+static const char BMSLS07[] PROGMEM = "RCRoll  ";
+static const char BMSLS08[] PROGMEM = "Debug   ";
+static const char BMSLS09[] PROGMEM = "Restart ";
+
+static PGM_P const performaceSlowLoopSubitemNames[] PROGMEM = {
+		BMSLS00,BMSLS01,BMSLS02,BMSLS03,BMSLS04,BMSLS05,BMSLS06,BMSLS07,BMSLS08,BMSLS09
+};
+ void reportPerformance() {
+	 uint8_t save = nowPerformanceTiming;
+	 doPerformance(BM_PRINTBM);
+	 for (uint8_t i=0; i<BM_END; i++) {
+		 uint16_t t = performanceTimers[i];
+		 //uint32_t percent = benchmarkTimers[i]*100/benchmarkSum;
+		 PGM_P const sprt = (PGM_P)pgm_read_word(&performanceItemNames[i]);
+		 printf_P(PSTR("%S:\t%u\t\r\n"), sprt, t);
+	 }
+//	 printf_P(PSTR("\r\nSlow loop task: %u\r\n"), slowLoopTask-1);
+	 printf_P(PSTR("\r\nSlow loop:\r\n"));
+	 for (uint8_t i=0; i<10; i++) {
+		 uint32_t t = slowLoopPerformanceTimers[i];
+		 //uint32_t percent = benchmarkTimers[i]*100/benchmarkSum;
+		 PGM_P const sprt = (PGM_P)pgm_read_word(&performaceSlowLoopSubitemNames[i]);
+		 printf_P(PSTR("%S:\t%lu\t\r\n"), sprt, t);
+	 }
+
+	 printf_P(PSTR("Cycle time %u CPU cycles (%u us)\r\n"), lastCycleTime, lastCycleTime/(F_CPU/1000000UL));
+	 doPerformance(save);
+ }
 #endif

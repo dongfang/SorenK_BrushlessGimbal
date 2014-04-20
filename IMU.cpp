@@ -251,15 +251,18 @@ void IMU::readGyros() {
 	mpu.getRotationRates(axisRot);
 	idx = sensorDef.Gyro[0].idx;
 	gyro[ROLL] = axisRot[idx] - gyroOffset[idx];
-	gyro[ROLL] *= sensorDef.Gyro[0].dir;
+	if (sensorDef.Gyro[ROLL].dir == -1)
+		gyro[ROLL] = -gyro[ROLL];
 
 	idx = sensorDef.Gyro[1].idx;
 	gyro[PITCH] = axisRot[idx] - gyroOffset[idx];
-	gyro[PITCH] *= sensorDef.Gyro[1].dir;
+	if (sensorDef.Gyro[PITCH].dir == -1)
+		gyro[PITCH] = -gyro[PITCH];
 
 	idx = sensorDef.Gyro[2].idx;
 	gyro[YAW] = axisRot[idx] - gyroOffset[idx];
-	gyro[YAW] *= sensorDef.Gyro[2].dir;
+	if (sensorDef.Gyro[YAW].dir == -1)
+		gyro[YAW] = -gyro[YAW];
 }
 
 void IMU::blendGyrosToAttitude() {
@@ -281,8 +284,10 @@ void IMU::readAcc(uint8_t axis) {
 	int16_t val;
 	idx = sensorDef.Acc[axis].idx;
 	val = mpu.getAcceleration(idx); // TODO: 370us
-	val *= sensorDef.Acc[axis].dir;
-	acc[axis] = val;
+	if (sensorDef.Acc[axis].dir==-1)
+		acc[axis] = -val;
+	else
+		acc[axis] = val;
 }
 
 // Called from slow-loop in main.

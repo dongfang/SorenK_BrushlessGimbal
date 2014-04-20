@@ -34,6 +34,7 @@
 #include <avr/wdt.h>
 #include <avr/pgmspace.h>
 
+#include "Board.h"
 #include "Globals.h"
 #include "SerialStream.h"
 #include "SerialCommand.h"

@@ -36,14 +36,6 @@
 #define SCALE_ACC 10000.0
 #define SCALE_PID_PARAMS 1000.0f
 
-#define LED_DDR			DDRB
-#define LED_PORT		PORTB
-#define LED_PIN			PINB
-
-// Hextronik board : 5
-#define LED_BIT			5
-
-
 // RC data size and channel assigment
 #define RC_DATA_SIZE  3
 #define RC_DATA_PITCH 0
@@ -65,10 +57,6 @@
 // #define RC_PPM_GUARD_TIME 4000
 // #define RC_PPM_RX_MAX_CHANNELS 32
 
-// I2C Frequency
-//#define I2C_SPEED 100000L     //100kHz normal mode
-//#define I2C_SPEED 400000L   //400kHz fast mode
-#define I2C_SPEED 800000L   //800kHz ultra fast mode
 
 // Hardware Abstraction for Motor connectors,
 // DO NOT CHANGE UNLES YOU KNOW WHAT YOU ARE DOING !!!

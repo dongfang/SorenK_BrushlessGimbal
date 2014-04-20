@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include "Board.h"
 
 extern uint8_t i2c_errors_count;
 

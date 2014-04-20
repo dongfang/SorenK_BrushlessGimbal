@@ -2,6 +2,7 @@
 #define __IMU_H
 
 #include "MPU6050.h"
+#include "Util.h"
 /*
  * IMU is always used like:
  *
@@ -47,10 +48,15 @@ public:
 
 	// Get attitude data
 	void fastUpdateCycle() {
+		PERFORMANCE(BM_READ_GYROS);
 	    readGyros();   // t=386us
+	    PERFORMANCE(BM_BLEND_GYROS);
 	    blendGyrosToAttitude();  // t=260us
+	    PERFORMANCE(BM_BLEND_ACC);
 	    blendAccToAttitude();   // t=146us
+	    PERFORMANCE(BM_CALCULATE_AA);
 	    calculateAttitudeAngles(); // t=468us
+	    PERFORMANCE(BM_OTHER);
 	}
 
 	// Offset and sign-fixed values from MPU data.

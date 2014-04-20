@@ -120,27 +120,35 @@ void printHelpUsage() {
 	printf_P(PSTR("This gives you a list of all commands with usage.\r\n"));
 	printf_P(PSTR("Explanations are in brackets(), use integer values only !\r\n"));
 	printf_P(PSTR("\r\n"));
-	printf_P(PSTR("these are the preferred commands, use them for new GUIs.\r\n"));
+	printf_P(PSTR("These are the preferred commands, use them for new GUIs.\r\n"));
 	printf_P(PSTR("\r\n"));
-	printf_P(PSTR("SD    (Set Defaults)\r\n"));
-	printf_P(PSTR("WE    (Writes active config to eeprom)\r\n"));
-	printf_P(PSTR("RE    (Restores values from eeprom to active config)\r\n"));
-	printf_P(PSTR("GC    (Recalibrates the Gyro Offsets)\r\n"));
-	printf_P(PSTR("par <parName> <parValue>   (general parameter read/set command)\r\n"));
-	printf_P(PSTR("    example usage:\r\n"));
-	printf_P(PSTR("       par                     ... list all config parameters\r\n"));
-	printf_P(PSTR("       par pitchKi             ... list pitchKi\r\n"));
-	printf_P(PSTR("       par pitchKi 12000       ... set pitchKi to 12000\r\n"));
+	printf_P(PSTR("sd    Set Defaults\r\n"));
+	printf_P(PSTR("we    Writes active config to eeprom\r\n"));
+	printf_P(PSTR("re    Restores values from eeprom to active config\r\n"));
+	printf_P(PSTR("cal   Recalibrates the Gyro Offsets\r\n"));
+	printf_P(PSTR("debug <category> Prints troubleshooting info\r\n"));
+	printf_P(PSTR("        debug usage:\r\n"));
+	printf_P(PSTR("        debug off               ... turns off debug\r\n"));
+	printf_P(PSTR("        debug acc               ... prints accelerometer values\r\n"));
+	printf_P(PSTR("        debug gyro              ... prints gyro values\r\n"));
+	printf_P(PSTR("        debug att               ... prints attitude\r\n"));
+	printf_P(PSTR("par   <parName> <parValue>   General parameter read/set command\r\n"));
+	printf_P(PSTR("        example usage:\r\n"));
+	printf_P(PSTR("        par                     ... list all config parameters\r\n"));
+	printf_P(PSTR("        par pitchKi             ... list pitchKi\r\n"));
+	printf_P(PSTR("        par pitchKi 12000       ... set pitchKi to 12000\r\n"));
+#ifdef DO_PERFORMANCE
+	printf_P(PSTR("perf	 Prints performace info\r\n"));
+#endif
 	printf_P(PSTR("\r\n"));
-	printf_P(PSTR("HE     (print this output)\r\n"));
+	printf_P(PSTR("help   (print this output)\r\n"));
 	printf_P(PSTR("\r\n"));
 	printf_P(PSTR("Note: command input is case-insensitive, commands are accepted in both upper/lower case\r\n"));
 }
 
 void unrecognized(const char *command) {
-	printf_P(PSTR("What? type in HE for Help ..."));
+	printf_P(PSTR("Huh? type \"help\" for help ...\r\n"));
 }
-
 
 #define DEBUG_OFF 0
 #define DEBUG_ACCVALUES 1
@@ -149,7 +157,7 @@ void unrecognized(const char *command) {
 
 static const char DEBUG_OFF_CMD[] PROGMEM = "off";
 static const char DEBUG_ACCVALUES_CMD[] PROGMEM = "acc";
-static const char DEBUG_GYROVALUES_CMD[] PROGMEM = "gyros";
+static const char DEBUG_GYROVALUES_CMD[] PROGMEM = "gyro";
 static const char DEBUG_ATTITUDE_CMD[] PROGMEM = "att";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = {
@@ -166,18 +174,20 @@ void debugControl() {
 	}
 	bool found = false;
 	uint8_t i;
-	for (i=0; i<sizeof(DEBUG_COMMANDS)/2 && !found; i++) {
+	for (i=0; i<sizeof(DEBUG_COMMANDS)/2; i++) {
 		PGM_P ptr = (PGM_P)pgm_read_word(&DEBUG_COMMANDS[i]);
-		if (strncmp_P(itemName, ptr, 6) == 0) found = true;
+		if (strcmp_P(itemName, ptr) == 0) found = true;
+		if (found) break;
 	}
 	if (found) {
 		_debug = i;
 	} else {
-		printf_P(PSTR("Huh? Use \"off\", \"acc\", \"gyros\" or \"att\".\r\n"));
+		printf_P(PSTR("Huh? Use \"off\", \"acc\", \"gyro\" or \"att\".\r\n"));
 	}
 }
 
 void insertComma(char* temp) {
+	// index of the \0
 	uint8_t end = strlen(temp);
 	uint8_t ip = end - 2;
 	for (uint8_t i=end; i>=ip; i--) {
@@ -187,16 +197,17 @@ void insertComma(char* temp) {
 }
 
 void debug() {
-	char temp[10];
+	char temp[15];
+	// printf_P(PSTR("debug %d\r\n"), _debug);
 	switch(_debug) {
 	case DEBUG_ATTITUDE:
 		// This stunt is to avoid having to draw in the printf_flt stuff which is a pain.
-		sprintf_P(temp, PSTR("%ld"), imu.angle[0]);
-		insertComma(temp);
+		sprintf_P(temp, PSTR("%ld"), imu.angle[ROLL]);
+		//insertComma(temp);
 		printf_P(PSTR("roll:%s"), temp);
-		sprintf_P(temp, PSTR("%ld"), imu.angle[1]);
-		insertComma(temp);
-		printf_P(PSTR("pitch:%f\r\n"), temp);
+		sprintf_P(temp, PSTR("%ld"), imu.angle[PITCH]);
+		//insertComma(temp);
+		printf_P(PSTR("\tpitch:%s\r\n"), temp);
 		break;
 	case DEBUG_ACCVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.acc[X], imu.acc[Y], imu.acc[Z]); break;
 	case DEBUG_GYROVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.gyro[X], imu.gyro[Y], imu.gyro[Z]); break;
@@ -210,9 +221,11 @@ void setSerialProtocol() {
 	sCmd.addCommand("we", fixme_writeEEPROM);
 	sCmd.addCommand("re", fixme_readEEPROM);
 	sCmd.addCommand("par", parameterMod);
-	sCmd.addCommand("gc", calibrateGyro);
-	sCmd.addCommand("he", printHelpUsage);
+	sCmd.addCommand("cal", calibrateGyro);
+	sCmd.addCommand("help", printHelpUsage);
+#ifdef DO_PERFORMANCE
+	sCmd.addCommand("perf", reportPerformance);
+#endif
 	sCmd.addCommand("debug", debugControl);
-
 	sCmd.setDefaultHandler(unrecognized); // Handler for command that isn't matched  (says "What?")
 }

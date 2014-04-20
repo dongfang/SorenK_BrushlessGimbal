@@ -29,7 +29,7 @@
  * Constructor makes sure some things are set.
  */
 SerialCommand::SerialCommand() :
-		commandList(NULL), commandCount(0), defaultHandler(NULL), term('\n'), // default terminator for commands, newline character
+		commandList(NULL), commandCount(0), defaultHandler(NULL), wasCRLF(false), // default terminator for commands, newline character
 		last(NULL) {
 	strcpy(delim, " "); // strtok_r needs a null-terminated string
 	clearBuffer();
@@ -63,7 +63,9 @@ void SerialCommand::setDefaultHandler(void (*function)(const char *)) {
 void SerialCommand::readSerial() {
 	while (serial0.available() > 0) {
 		char inChar = serial0.get(); // Read single available character, there may be more waiting
-		if (inChar == term) { // Check for the terminator (default '\r') meaning end of command
+		if (inChar == '\r' || inChar == '\n') { // Check for the terminator (default '\r') meaning end of command
+			if (wasCRLF) continue;
+			else wasCRLF = true;
 			char *command = strtok_r(buffer, delim, &last); // Search for command at start of buffer
 			if (command != NULL) {
 				bool matched = false;
@@ -84,11 +86,13 @@ void SerialCommand::readSerial() {
 			}
 			// Serial.println(F("BruGi> ")); // TODO: BruGi prompt string
 			clearBuffer();
-		} else if (isprint(inChar)) { // Only printable characters into the buffer
-			if (bufPos < SERIALCOMMAND_BUFFER) {
-				buffer[bufPos++] = inChar; // Put character into buffer
-				buffer[bufPos] = '\0'; // Null terminate
-			} else {
+		} else {
+			wasCRLF = false;
+			if (isprint(inChar)) { // Only printable characters into the buffer
+				if (bufPos < SERIALCOMMAND_BUFFER) {
+					buffer[bufPos++] = inChar; // Put character into buffer
+					buffer[bufPos] = '\0'; // Null terminate
+				}
 			}
 		}
 	}

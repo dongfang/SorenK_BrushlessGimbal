@@ -124,7 +124,7 @@ inline uint32_t abs32(int32_t z) {
 uint16_t time();
 
 enum BENCHMARKING_ITEMS {
-	BM_OTHER,
+	BM_IDLE,
 	BM_READ_GYROS,
     BM_BLEND_GYROS,
     BM_BLEND_ACC,
@@ -135,32 +135,60 @@ enum BENCHMARKING_ITEMS {
     BM_SLOWLOOP,
     BM_TIMEOUTS,
     BM_SERIAL,
+    BM_PRINTBM,
+	BM_OTHER,
     BM_END
 };
 
-#define DO_BENCHMARK 1
+#define DO_PERFORMANCE 1
 
-#ifdef DO_BENCHMARK
-extern uint32_t benchmarkTimers[];
-extern uint8_t nowBenchmarking;
+#ifdef DO_PERFORMANCE
+//extern uint8_t hitCounters[];
+extern uint16_t lastCycleTime;
+extern uint16_t cycleStartTime;
+extern uint16_t performanceTimers[];
+extern uint16_t slowLoopPerformanceTimers[];
+extern uint8_t nowPerformanceTiming;
+extern uint8_t slowLoopTaskPerformanceTimed;
 /*
  * This method will be reliable if: Timer runs af full blast (16MHz)
  * and nothing is benchmarked that takes longer than 4ms.
  */
-inline void _doBenchmark(uint8_t item) {
+inline void doPerformance(uint8_t item) {
 	static uint16_t then;
 	uint16_t now = time();
-	benchmarkTimers[nowBenchmarking] += now - then;
-	nowBenchmarking = item;
+	uint16_t t = now - then;
+	// The "other" item is multiple. All others single per cycle.
+	if (nowPerformanceTiming == BM_OTHER)
+		performanceTimers[nowPerformanceTiming] += t;
+	else
+		performanceTimers[nowPerformanceTiming] = t;
+	if(nowPerformanceTiming == BM_SLOWLOOP)
+		slowLoopPerformanceTimers[slowLoopTaskPerformanceTimed] = t;
+	nowPerformanceTiming = item;
+	then = now;
 }
+
+inline void performanceNewCycle() {
+	uint16_t now = time();
+	// Special multiple case.
+	performanceTimers[BM_OTHER] = 0;
+	lastCycleTime = cycleStartTime - now;
+	cycleStartTime = now;
+}
+
+void reportPerformance();
+
 #endif
 
 // Maybe this macro circus is a waste of (my) time, as the compiler would optimize away
 // an empty impl. anyway. Especially if inline.
-#ifdef DO_BENCHMARK
-#define BENCHMARK(item) _doBenchmark(item)
+#ifdef DO_PERFORMANCE
+#define PERFORMANCE(item) doPerformance(item)
+#define PERFORMANCE_NEW_CYCLE performanceNewCycle()
 #else
-#define BENCHMARK(item)
+#define PERFORMANCE(item)
+#define PERFORMANCE_NEW_CYCLE
 #endif
 
 #endif
