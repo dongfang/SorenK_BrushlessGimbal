@@ -19,7 +19,7 @@ uint8_t timer1Extension;
 uint16_t lastCycleTime;
 uint16_t cycleStartTime;
 uint16_t performanceTimers[BM_END];
-uint16_t slowLoopPerformanceTimers[15];
+uint16_t slowLoopPerformanceTimers[10];
 uint8_t nowPerformanceTiming;
 uint8_t performanceStack;
 #endif
@@ -116,6 +116,33 @@ uint16_t time() {
   }
 }
 
+uint8_t selectBits(uint8_t data, uint8_t bitStart, uint8_t length) {
+    // 01101001 read byte
+    // 76543210 bit numbers
+    //    xxx   args: bitStart=4, length=3
+    //    010   masked
+    //   -> 010 shifted
+    uint8_t mask = ((1 << length) - 1) << (bitStart - length + 1);
+    data &= mask;
+    data >>= (bitStart - length + 1);
+    return data;
+}
+
+void setBits(uint8_t* writtenTo, uint8_t bitStart, uint8_t length, uint8_t newBits) {
+    //      010 value to write
+    // 76543210 bit numbers
+    //    xxx   args: bitStart=4, length=3
+    // 00011100 mask byte
+    // 10101111 original value (sample)
+    // 10100011 original & ~mask
+    // 10101011 masked | value
+	uint8_t mask = ((1 << length) - 1) << (bitStart - length + 1);
+	newBits <<= (bitStart - length + 1); // shift data into correct position
+	newBits &= mask; // zero all non-important bits in data
+	*writtenTo &= ~(mask); // zero all important bits in existing byte
+	*writtenTo |= newBits; // combine data with existing byte
+}
+
 #ifdef DO_PERFORMANCE
 static const char BMS00[] PROGMEM = "Idle   ";
 static const char BMS01[] PROGMEM = "ReadGyros";
@@ -130,26 +157,22 @@ static const char BMS09[] PROGMEM = "Timeouts";
 static const char BMS10[] PROGMEM = "Serial ";
 static const char BMS11[] PROGMEM = "This   ";	// The task of printing this benchmark info.
 static const char BMS12[] PROGMEM = "Other  ";
-static const char BMS13[] PROGMEM = "I2C    ";
-static const char BMS14[] PROGMEM = "END";
+static const char BMS13[] PROGMEM = "END";
 
 static PGM_P const performanceItemNames[] PROGMEM = {
-	BMS00,BMS01,BMS02,BMS03,BMS04,BMS05,BMS06,BMS07,BMS08,BMS09,BMS10,BMS11,BMS12,BMS13,BMS14
+	BMS00,BMS01,BMS02,BMS03,BMS04,BMS05,BMS06,BMS07,BMS08,BMS09,BMS10,BMS11,BMS12,BMS13
 };
 
-static const char BMSLS00[] PROGMEM = "ReadAcc0";
-static const char BMSLS01[] PROGMEM = "ReadAcc1";
-static const char BMSLS02[] PROGMEM = "ReadAcc2";
-static const char BMSLS03[] PROGMEM = "UpdAccVect";
-static const char BMSLS04[] PROGMEM = "FlashLED";
-static const char BMSLS05[] PROGMEM = "GimState";
-static const char BMSLS06[] PROGMEM = "RCPitch ";
-static const char BMSLS07[] PROGMEM = "RCRoll  ";
-static const char BMSLS08[] PROGMEM = "Debug   ";
-static const char BMSLS09[] PROGMEM = "Restart ";
+static const char BMSLS00[] PROGMEM = "UpdAccVect";
+static const char BMSLS01[] PROGMEM = "FlashLED";
+static const char BMSLS02[] PROGMEM = "GimState";
+static const char BMSLS03[] PROGMEM = "RCPitch ";
+static const char BMSLS04[] PROGMEM = "RCRoll  ";
+static const char BMSLS05[] PROGMEM = "Debug   ";
+static const char BMSLS06[] PROGMEM = "Restart ";
 
 static PGM_P const performaceSlowLoopSubitemNames[] PROGMEM = {
-		BMSLS00,BMSLS01,BMSLS02,BMSLS03,BMSLS04,BMSLS05,BMSLS06,BMSLS07,BMSLS08,BMSLS09
+		BMSLS00,BMSLS01,BMSLS02,BMSLS03,BMSLS04,BMSLS05,BMSLS06
 };
 
 void reportPerformance() {
@@ -161,7 +184,7 @@ void reportPerformance() {
 		 printf_P(PSTR("%S:\t%u\t\r\n"), sprt, t);
 	 }
 	 printf_P(PSTR("\r\nSlow loop:\r\n"));
-	 for (uint8_t i=0; i<10; i++) {
+	 for (uint8_t i=0; i<sizeof(performaceSlowLoopSubitemNames)/2; i++) {
 		 uint32_t t = slowLoopPerformanceTimers[i];
 		 PGM_P const sprt = (PGM_P)pgm_read_word(&performaceSlowLoopSubitemNames[i]);
 		 printf_P(PSTR("%S:\t%lu\t\r\n"), sprt, t);
@@ -173,3 +196,4 @@ void reportPerformance() {
 	 doPerformance(save);
  }
 #endif
+

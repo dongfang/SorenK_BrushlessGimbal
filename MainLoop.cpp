@@ -20,10 +20,10 @@ float pitchAngleSet;
 void flashLED() {
 	static uint8_t count;
 	count++;
-	if (count > 15)
+	if (count >= 50) {
 		count = 0;
-	if (count <= softStart)
 		LED_PIN |= (1 << LED_BIT);
+	}
 }
 
 /**********************************************/
@@ -103,21 +103,12 @@ void mainLoop() {
 	switch (slowLoopTask++) {
 
 	case 0:
-		imu.readAcc(0);
-		break;
-	case 1:
-		imu.readAcc(1);
-		break;
-	case 2:
-		imu.readAcc(2);
-		break;
-	case 3:
 		imu.updateAccVector();
 		break;
-	case 4:
+	case 1:
 		flashLED();
 		break;
-	case 5:
+	case 2:
 		// gimbal state transitions
 		if (gimbalState == GIMBAL_OFF) {
 			// wait 2 sec to settle ACC, before PID controller becomes active
@@ -149,7 +140,7 @@ void mainLoop() {
 			break;
 		}
 		break;
-	case 6:
+	case 3:
 		// RC Pitch function
 		if (rcData[RC_DATA_PITCH].isValid) {
 			if (config.rcAbsolute == 1) {
@@ -168,7 +159,7 @@ void mainLoop() {
 			pitchPhiSet = constrain_f(pitchPhiSet, config.maxRCPitch, config.minRCPitch);
 		}
 		break;
-	case 7:
+	case 4:
 		// RC roll function
 		if (rcData[RC_DATA_ROLL].isValid) {
 			if (config.rcAbsolute == 1) {
@@ -187,7 +178,7 @@ void mainLoop() {
 			rollPhiSet = constrain_f(rollPhiSet, config.maxRCRoll, config.minRCRoll);
 		}
 		break;
-	case 8:
+	case 5:
 		// regular debug output
 		pOutCnt++;
 		if (pOutCnt == (LOOPUPDATE_FREQ / 10 / POUT_FREQ)) {
@@ -195,7 +186,7 @@ void mainLoop() {
 			debug();
 		}
 		break;
-	case 9:
+	case 6:
 #ifdef STACKHEAPCHECK_ENABLE
 		stackHeapEval(false);
 #endif

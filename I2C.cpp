@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include "Board.h"
 #include "I2C.h"
 #include "Util.h"
@@ -9,6 +10,17 @@
 
 uint8_t i2c_errors_count;
 
+uint8_t i2c_interrupt_hits[8];
+
+// Okay this is not pretty.
+// We could make a struct representing this and let caller pass a pointer to one, if we need to.
+uint8_t i2c_buffer[6];
+static volatile uint8_t i2c_async_status;
+static volatile uint8_t i2c_async_sladr;
+static volatile uint8_t i2c_async_reg;
+static volatile uint8_t i2c_async_datacnt;
+static volatile uint8_t i2c_async_bufidx;
+
 void i2c_init(void) {
   #if defined(INTERNAL_I2C_PULLUPS)
     I2C_PULLUPS_ENABLE
@@ -16,48 +28,13 @@ void i2c_init(void) {
     I2C_PULLUPS_DISABLE
   #endif
   TWSR = 0;                                 // no prescaler => prescaler = 1
-  TWBR = ((F_CPU / 100000) - 16) / 2;       // set the I2C clock rate to 100kHz
+  TWBR = ((F_CPU / I2C_SPEED) - 16) / 2;       // set the I2C clock rate to 100kHz
   TWCR = 1<<TWEN;							// enable twi module, possiblhy also interrupt
 }
 
-void i2c_rep_start(uint8_t address) {
-  TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN) ; // send REPEAT START condition
-  waitTransmissionI2C();                       // wait until transmission completed
-  TWDR = address;                              // send device address
-  TWCR = (1<<TWINT) | (1<<TWEN);
-  waitTransmissionI2C();                       // wail until transmission completed
-}
-
-void i2c_stop(void) {
-  TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO);
-  //  while(TWCR & (1<<TWSTO));                // <- can produce a blocking state with some WMP clones
-}
-
-void i2c_write(uint8_t data) {
-  TWDR = data;                                 // send data to the previously addressed device
-  TWCR = (1<<TWINT) | (1<<TWEN);
-  waitTransmissionI2C();
-}
-
-uint8_t i2c_read(uint8_t ack) {
-  TWCR = (1<<TWINT) | (1<<TWEN) | (ack? (1<<TWEA) : 0);
-  waitTransmissionI2C();
-  uint8_t r = TWDR;
-  if (!ack) i2c_stop();
-  return r;
-}
-
-uint8_t i2c_readAck() {
-  return i2c_read(1);
-}
-
-uint8_t i2c_readNak(void) {
-  return i2c_read(0);
-}
-
-void waitTransmissionI2C() {
+// Synchronized (blocking till done).
+void i2c_busy_wait() {
   uint16_t count = 255;
-  //LED_PORT |= (1 << LED_BIT);
   while (!(TWCR & (1<<TWINT))) {
     count--;
     if (count==0) {              //we are in a blocking state => we don't insist
@@ -67,98 +44,115 @@ void waitTransmissionI2C() {
       break;
     }
   }
-  //LED_PORT &= ~(1 << LED_BIT);
-  }
+}
+// Synchronized (blocking till done).
+void i2c_rep_start(uint8_t address) {
+  TWCR = 1<<TWINT | 1<<TWSTA | 1<<TWEN ; // send REPEAT START condition
+  i2c_busy_wait();                       // wait until transmission completed
+  TWDR = address;                              // send device address
+  TWCR = 1<<TWINT | 1<<TWEN;
+  i2c_busy_wait();                       // wail until transmission completed
+}
 
-void i2c_read_regs_to_buf(uint8_t add, uint8_t reg, uint8_t *buf, uint8_t size) {
+void i2c_stop(void) {
+  TWCR = 1<<TWINT | 1<<TWEN | 1<<TWSTO;
+  //  while(TWCR & (1<<TWSTO));                // <- can produce a blocking state with some WMP clones
+}
+
+// Synchronized (blocking till done).
+void i2c_write(uint8_t data) {
+  TWDR = data;                                 // send data to the previously addressed device
+  TWCR = 1<<TWINT | 1<<TWEN;
+  i2c_busy_wait();
+}
+
+// Synchronized (blocking till done).
+uint8_t i2c_read(uint8_t ack) {
+  TWCR = 1<<TWINT | 1<<TWEN | (ack? (1<<TWEA) : 0);
+  i2c_busy_wait();
+  uint8_t r = TWDR;
+  if (!ack) i2c_stop();
+  return r;
+}
+
+// Synchronized (blocking till done).
+void i2c_read_regs(uint8_t add, uint8_t reg, uint8_t size) {
   i2c_rep_start(add<<1); // I2C write direction
   i2c_write(reg);        // register selection
   i2c_rep_start((add<<1) | 1);  // I2C read direction
-  uint8_t *b = buf;
+  uint8_t* b = i2c_buffer;
   while (size--) {
     /* acknowledge all but the final byte */
     *b++ = i2c_read(size > 0);
   }
 }
 
-void i2c_writeRegs(uint8_t add, uint8_t reg, uint8_t* values, uint8_t length) {
+// Synchronized (blocking till done).
+void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val) {
   i2c_rep_start(add<<1); // I2C write direction
   i2c_write(reg);        // register selection
-  for (uint8_t i=0; i<length; i++) {
-	  i2c_write(values[i]);        // value to write in register
-  }
+  i2c_write(val);        // value to write in register
   i2c_stop();
 }
 
-/* transform a series of bytes from big endian to little
-   endian and vice versa. */
-void swap_endianness6(uint8_t *buf) {
-  /* we swap in-place, so we only have to
-  * place _one_ element on a temporary tray
-  */
-  uint8_t tray;
-  tray = buf[0];
-  buf[0] = buf[1];
-  buf[1] = tray;
-  tray = buf[2];
-  buf[2] = buf[3];
-  buf[3] = tray;
-  tray = buf[4];
-  buf[4] = buf[5];
-  buf[5] = tray;
+ISR(TWI_vect) {
+	if (i2c_async_status != I2C_ASYNC_DATA || i2c_async_bufidx == 0)
+		i2c_interrupt_hits[i2c_async_status] = TWSR;
+	switch(i2c_async_status) {
+	case I2C_ASYNC_STARTED_1:
+		TWDR = i2c_async_sladr<<1;
+		// TWCR = 1<<TWINT | 1<<TWEN | 1<<TWIE; // this kills it! Why?
+		TWCR |= 1<<TWINT;
+		i2c_async_status++;
+		break;
+	case I2C_DEVADDR_SENT_1:
+		TWDR = i2c_async_reg;
+		TWCR = 1<<TWINT | 1<<TWEN | 1<<TWIE;
+		//TWCR |= 1<<TWINT;
+		i2c_async_status++;
+		break;
+	case I2C_REGADDR_SENT:
+		TWCR = 1<<TWINT | 1<<TWSTA | 1<<TWEN | 1<<TWIE; // send REPEAT START condition
+		i2c_async_status++;
+		break;
+	case I2C_ASYNC_STARTED_2:
+		TWDR = (i2c_async_sladr<<1) | 1;
+		TWCR = 1<<TWINT | 1<<TWEN | 1<<TWIE;
+		//TWCR |= 1<<TWINT;
+		i2c_async_status++;
+		break;
+	case I2C_DEVADR_SENT_2:
+		// Nothing? Or first data byte? Dunno.
+		TWCR = 1<<TWINT | 1<<TWEN | 1<<TWIE | 1<<TWEA;
+		i2c_async_status++;
+		break;
+	case I2C_ASYNC_DATA:
+		i2c_buffer[i2c_async_bufidx] = TWDR;
+		i2c_async_bufidx++;
+		if (i2c_async_bufidx == i2c_async_datacnt) {
+			i2c_async_status++;
+			TWCR = 1<<TWEN | 1<<TWIE | 1<<TWINT; // send nak
+		} else {
+			TWCR = 1<<TWEN | 1<<TWIE | 1<<TWINT | 1<<TWEA; // send ack
+		}
+		break;
+	default:
+		i2c_stop();
+		break;
+	}
 }
 
-void swap_endianness2(uint8_t *buf) {
-  /* we swap in-place, so we only have to
-  * place _one_ element on a temporary tray
-  */
-  uint8_t tray;
-  tray = buf[0];
-  buf[0] = buf[1];
-  buf[1] = tray;
+void i2c_read_regs_async(uint8_t add, uint8_t reg, uint8_t size) {
+	i2c_async_datacnt = size;
+	i2c_async_bufidx = 0;
+	i2c_async_sladr = add;
+	i2c_async_reg = reg;
+	i2c_async_status = I2C_ASYNC_STARTED_1;
+	TWCR = 1<<TWINT | 1<<TWSTA | 1<<TWEN | 1<<TWIE; // send REPEAT START condition
 }
 
-void i2c_getSixRawADC(uint8_t add, uint8_t reg, uint8_t* buf) {
-  i2c_read_regs_to_buf(add, reg, buf, 6);
-}
-
-void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val) {
-	i2c_writeRegs(add, reg, &val, 1);
-}
-
-uint8_t i2c_readReg(uint8_t add, uint8_t reg) {
-  uint8_t val;
-  i2c_read_regs_to_buf(add, reg, &val, 1);
-  return val;
-}
-
-uint8_t i2c_readBits(uint8_t add, uint8_t regAddr, uint8_t bitStart, uint8_t length) {
-    // 01101001 read byte
-    // 76543210 bit numbers
-    //    xxx   args: bitStart=4, length=3
-    //    010   masked
-    //   -> 010 shifted
-    uint8_t b;
-    b = i2c_readReg(add, regAddr);
-    uint8_t mask = ((1 << length) - 1) << (bitStart - length + 1);
-    b &= mask;
-    b >>= (bitStart - length + 1);
-    return b;
-}
-
-void i2c_writeBits(uint8_t add, uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t data) {
-    //      010 value to write
-    // 76543210 bit numbers
-    //    xxx   args: bitStart=4, length=3
-    // 00011100 mask byte
-    // 10101111 original value (sample)
-    // 10100011 original & ~mask
-    // 10101011 masked | value
-    uint8_t b = i2c_readReg(add, regAddr);
-	uint8_t mask = ((1 << length) - 1) << (bitStart - length + 1);
-    data <<= (bitStart - length + 1); // shift data into correct position
-    data &= mask; // zero all non-important bits in data
-    b &= ~(mask); // zero all important bits in existing byte
-    b |= data; // combine data with existing byte
-    i2c_writeReg(add, regAddr, b);
+// This will wait till the async handling it completed but not reset the watchdog timer.
+// If it takes too long (glitch), bang, watchdog reboot.
+void i2c_wait_async_done() {
+	while(i2c_async_status != I2C_ASYNC_DONE);
 }

@@ -82,7 +82,7 @@ static inline void fixme_initIMU() {
 }
 
 static inline void fixme_initSensorOrientation() {
-	imu.initSensorOrientation();
+	mpu.initSensorOrientation();
 }
 
 static inline void fixme_initMPUlpf() {
@@ -199,6 +199,6 @@ void updateAllParameters() {
 	recalcMotorStuff();
 	initPIDs();
 	mpu.setDLPFMode(config.mpuLPF);
-	imu.initSensorOrientation();
+	mpu.initSensorOrientation();
 	initRCFilter();
 }

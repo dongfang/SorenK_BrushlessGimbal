@@ -12,6 +12,7 @@
 #include "Util.h"
 #include "Configuration.h"
 #include "RCdecode.h"
+#include "I2C.h" // debug only
 
 #include <string.h>
 #include <math.h>
@@ -173,15 +174,17 @@ void unrecognized(const char *command) {
 #define DEBUG_GYROVALUES 2
 #define DEBUG_ESTG 3
 #define DEBUG_ATTITUDE 4
+#define DEBUG_I2C 5
 
 static const char DEBUG_OFF_ARG[] PROGMEM = "off";
 static const char DEBUG_ACCVALUES_ARG[] PROGMEM = "acc";
 static const char DEBUG_GYROVALUES_ARG[] PROGMEM = "gyro";
 static const char DEBUG_ESTG_ARG[] PROGMEM = "estg";
 static const char DEBUG_ATTITUDE_ARG[] PROGMEM = "att";
+static const char DEBUG_I2C_ARG[] PROGMEM = "i2c";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = {
-	DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG, DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG
+	DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG, DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_I2C_ARG
 };
 
 /*
@@ -198,11 +201,18 @@ void debugControl() {
 		_debug = 0;
 		return;
 	}
-	bool found = false;
+	bool found;
 	uint8_t i;
 	for (i=0; i<sizeof(DEBUG_COMMANDS)/2; i++) {
 		PGM_P ptr = (PGM_P)pgm_read_word(&DEBUG_COMMANDS[i]);
-		if (strcmp_P(itemName, ptr) == 0) found = true;
+		uint8_t j = 0;
+		found = true;
+		char stored;
+		do {
+			stored = pgm_read_byte(ptr + j++);
+			char given = itemName[i];
+			if (tolower(stored) != tolower(given)) { found = false; break; }
+		} while (stored);
 		if (found) break;
 	}
 	if (found) {
@@ -233,6 +243,7 @@ void insertComma(char* temp) {
 
 void debug() {
 	char temp[15];
+	uint8_t i;
 	// printf_P(PSTR("debug %d\r\n"), _debug);
 	switch(_debug) {
 	case DEBUG_ATTITUDE:
@@ -253,6 +264,11 @@ void debug() {
 			imu.accMagnitude_g_100
 			);
 	break;
+	case DEBUG_I2C:
+		for (i=0; i<sizeof(i2c_interrupt_hits); i++) {
+			printf_P(PSTR("%d: %x\r\n"), i, i2c_interrupt_hits[i]);
+		}
+		break;
 	default: break;
 	}
 }
@@ -264,7 +280,7 @@ void reset() {
 }
 
 void showGyroCal() {
-	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), imu.gyroOffset[0], imu.gyroOffset[1], imu.gyroOffset[2]);
+	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), mpu.gyroOffset[0], mpu.gyroOffset[1], mpu.gyroOffset[2]);
 }
 
 void setSerialProtocol() {

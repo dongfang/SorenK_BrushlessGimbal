@@ -54,6 +54,7 @@ PID rollPID;
 
 uint8_t mcusr_mirror  __attribute__ ((section (".noinit")));
 bool watchdogResetWasIntended __attribute__ ((section (".noinit")));
+bool doubleFault __attribute__ ((section (".noinit")));
 
 volatile bool runMainLoop;
 uint8_t syncCounter;
@@ -165,48 +166,16 @@ void initState() {
 	// This needs a working acc. sensor.
 	imu.init();
 
-	if (!imu.loadGyroCalibration())
+	if (!mpu.loadGyroCalibration())
 		calibrateGyro();
 
 	printf_P(PSTR("GO! Type \"help\" for help.\r\n"));
 }
 
-void i2cTrouble() {
-	//HW
-	initSerial();
-
-	mpu.setAddr(0x68);
-
-	i2c_init();
-
-	mpu.unjam();
-	mpu.init();
-
-	int16_t gyro[3];
-
-	_delay_ms(100);
-
-	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
-
-	mpu.getRotationRates(gyro);
-
-	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
-	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), gyro[0], gyro[1], gyro[2]);
-	mpu.getRotationRates(gyro);
-
-	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
-	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), gyro[0], gyro[1], gyro[2]);
-	mpu.getRotationRates(gyro);
-
-	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
-	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), gyro[0], gyro[1], gyro[2]);
-
-	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
-
-}
-
 void checkwatchdog(void) __attribute__((naked))
 __attribute__((section(".init3")));
+
+int main();
 
 void checkwatchdog(void) {
 	mcusr_mirror = MCUSR;
@@ -214,7 +183,10 @@ void checkwatchdog(void) {
 
 	// Set it to what we want while the system is up and running.
 	wdt_enable(WDTO_1S);
-	//wdt_disable();
+
+	// Skip init
+	if ((mcusr_mirror & (1<<3)) && !watchdogResetWasIntended && !doubleFault)
+		main();
 }
 
 int main() {
@@ -226,14 +198,20 @@ int main() {
 	LED_PORT |= (1 << LED_BIT);
 
 	// If it was not a WDT reset
-	if (watchdogResetWasIntended || !(mcusr_mirror & (1<<3)))
+	if (watchdogResetWasIntended || doubleFault || !(mcusr_mirror & (1<<3))) {
 		initState();
-
-	watchdogResetWasIntended = false;
+		watchdogResetWasIntended = false;
+		doubleFault = false;
+	} else {
+		printf_P(PSTR("WDT restart!\r\n"));
+		doubleFault = true;
+	}
 
 	wdt_enable(WDT_TIMEOUT);
 
 	LED_PORT &= ~(1 << LED_BIT);
+
+	mpu.startRotationRatesAsync();
 
 	while(1) {
 		mainLoop();

@@ -48,7 +48,7 @@
 #define MPU6050_CLOCK_DIV_364       0xF
 
 // Do not change for now
-#define MPU6050_GYRO_FS MPU6050_GYRO_FS_250  // +-250,500,1000,2000 deg/s
+#define MPU6050_GYRO_FS MPU6050_GYRO_FS_500  // +-250,500,1000,2000 deg/s
 #define MPU6050_ACCEL_FS MPU6050_ACCEL_FS_2
 #define MPU6050_DLPF_BW MPU6050_DLPF_BW_256  // 5,10,20,42,98,188,256 Hz
 #define MPU6050_RA_WHO_AM_I         	0x75
@@ -85,8 +85,18 @@
 class MPU6050 {
 private:
 	uint8_t devAddr;
-	uint8_t buffer[6];
+//	uint8_t buffer[6];
 public:
+	struct SensorAxisDef {
+	  char idx;
+	  int  dir;
+	} t_sensorAxisDef;
+
+	struct SensorOrientationDef {
+	  SensorAxisDef Gyro[3];
+	  SensorAxisDef Acc[3];
+	};
+
 	// Reset signal paths. Often jammed at startup.
 	void unjam();
 
@@ -134,9 +144,50 @@ public:
 	// Shit .. this depends on acc.meter settings!!
 //#define ACC_1G 16384.0f
 
+	void initSensorOrientationFaceUp();
+	void initSensorOrientationChipTextRightSideUp();
+	void initSensorOrientationChipTextStandingOnEnd();
+	void initSensorOrientation();
+
+	// Load EEPROM-stored offsets. Return true if success.
+	bool loadGyroCalibration();
+	// Do the calibration ritual and store result in EEPROM.
+	void recalibrateGyros();
+
 	// Get motion data
-	void getRotationRates(int16_t* xyz);
-	int16_t getAcceleration(uint8_t idx);
+	void getAccelerations(int16_t* acc);
+
+	void startRotationRatesAsync();
+	void startAccelerationsAsync();
+	void getRotationRatesAsync(int16_t* gyro);
+	void getAccelerationsAsync(int16_t* acc);
+
+	// gyro calibration value. Only public for debug's sake.
+	int16_t gyroOffset[4];
+
+private:
+	uint16_t CRC();
+	void getRotationRates11(int16_t* gyro);
+	void saveGyroCalibration();
+	void transformRotationRates(int16_t* gyro);
+	void transformAccelerations(int16_t* acc);
+
+	// swap two char items
+	inline void swap_char(char * a, char * b) {
+	  char tmp = *a;
+	  *a = *b;
+	  *b = tmp;
+	}
+
+	// swap two int items
+	inline void swap_int(int * a, int * b) {
+	  int tmp = *a;
+	  *a = *b;
+	  *b = tmp;
+	}
+	SensorOrientationDef sensorDef;
 };
+
+void calibrateGyro();
 
 #endif

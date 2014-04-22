@@ -123,7 +123,10 @@ inline uint32_t abs32(int32_t z) {
 
 uint16_t time();
 
-enum BENCHMARKING_ITEMS {
+uint8_t selectBits(uint8_t data, uint8_t bitStart, uint8_t length);
+void setBits(uint8_t* writtenTo, uint8_t bitStart, uint8_t length, uint8_t newBits);
+
+enum PERFORMANCE_ITEMS {
 	BM_IDLE,
 	BM_READ_GYROS,
     BM_BLEND_GYROS,
@@ -137,9 +140,9 @@ enum BENCHMARKING_ITEMS {
     BM_SERIAL,
     BM_PRINTBM,
 	BM_OTHER,
-	BM_I2C,
     BM_END
 };
+
 
 #define DO_PERFORMANCE 1
 
@@ -191,7 +194,7 @@ inline void performanceNewCycle() {
 	uint16_t now = time();
 	// Special multiple case.
 	performanceTimers[BM_OTHER] = 0;
-	lastCycleTime = cycleStartTime - now;
+	lastCycleTime = now - cycleStartTime;
 	cycleStartTime = now;
 }
 
