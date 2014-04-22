@@ -12,8 +12,8 @@
 // #define LED_BIT			0
 
 // I2C Frequency
-#define I2C_SPEED 100000L     //100kHz normal mode
-//#define I2C_SPEED 400000L   //400kHz fast mode
+//#define I2C_SPEED 100000L     //100kHz normal mode
+#define I2C_SPEED 400000L   //400kHz fast mode
 //#define I2C_SPEED 800000L   //800kHz ultra fast mode
 
 #endif

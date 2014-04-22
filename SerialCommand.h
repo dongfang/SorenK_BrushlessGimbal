@@ -45,6 +45,9 @@ class SerialCommand {
     void clearBuffer();   // Clears the input buffer.
     char *next();         // Returns pointer to next token found in command buffer (for getting arguments to commands).
 
+    //void setEcho(bool echo) { this->echo = echo; }
+    //bool getEcho() { return echo; }
+
   private:
     // Command/handler dictionary
     struct SerialCommandCallback {
@@ -60,6 +63,7 @@ class SerialCommand {
     char delim[2]; // null-terminated list of character to be used as delimeters for tokenizing (default " ")
     //char term;     // Character that signals end of command (default '\n')
     bool wasCRLF;
+    //bool echo;
 
     char buffer[SERIALCOMMAND_BUFFER + 1]; // Buffer of stored characters while waiting for terminator character
     uint8_t bufPos;                        // Current position in the buffer

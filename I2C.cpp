@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <avr/io.h>
+#include "Board.h"
 #include "I2C.h"
+#include "Util.h"
 
 #define I2C_PULLUPS_ENABLE         PORTC |= 1<<4; PORTC |= 1<<5;   // PIN A4&A5 (SDA&SCL)
 #define I2C_PULLUPS_DISABLE        PORTC &= ~(1<<4); PORTC &= ~(1<<5);
@@ -13,9 +15,9 @@ void i2c_init(void) {
   #else
     I2C_PULLUPS_DISABLE
   #endif
-  TWSR = 0;                                    // no prescaler => prescaler = 1
-  TWBR = ((F_CPU / I2C_SPEED) - 16) / 2;       // set the I2C clock rate to 100kHz
-  TWCR = 1<<TWEN;                              // enable twi module, no interrupt
+  TWSR = 0;                                 // no prescaler => prescaler = 1
+  TWBR = ((F_CPU / 100000) - 16) / 2;       // set the I2C clock rate to 100kHz
+  TWCR = 1<<TWEN;							// enable twi module, possiblhy also interrupt
 }
 
 void i2c_rep_start(uint8_t address) {
@@ -55,6 +57,7 @@ uint8_t i2c_readNak(void) {
 
 void waitTransmissionI2C() {
   uint16_t count = 255;
+  //LED_PORT |= (1 << LED_BIT);
   while (!(TWCR & (1<<TWINT))) {
     count--;
     if (count==0) {              //we are in a blocking state => we don't insist
@@ -64,7 +67,8 @@ void waitTransmissionI2C() {
       break;
     }
   }
-}
+  //LED_PORT &= ~(1 << LED_BIT);
+  }
 
 void i2c_read_regs_to_buf(uint8_t add, uint8_t reg, uint8_t *buf, uint8_t size) {
   i2c_rep_start(add<<1); // I2C write direction
@@ -86,8 +90,40 @@ void i2c_writeRegs(uint8_t add, uint8_t reg, uint8_t* values, uint8_t length) {
   i2c_stop();
 }
 
+/* transform a series of bytes from big endian to little
+   endian and vice versa. */
+void swap_endianness6(uint8_t *buf) {
+  /* we swap in-place, so we only have to
+  * place _one_ element on a temporary tray
+  */
+  uint8_t tray;
+  tray = buf[0];
+  buf[0] = buf[1];
+  buf[1] = tray;
+  tray = buf[2];
+  buf[2] = buf[3];
+  buf[3] = tray;
+  tray = buf[4];
+  buf[4] = buf[5];
+  buf[5] = tray;
+}
+
+void swap_endianness2(uint8_t *buf) {
+  /* we swap in-place, so we only have to
+  * place _one_ element on a temporary tray
+  */
+  uint8_t tray;
+  tray = buf[0];
+  buf[0] = buf[1];
+  buf[1] = tray;
+}
+
 void i2c_getSixRawADC(uint8_t add, uint8_t reg, uint8_t* buf) {
   i2c_read_regs_to_buf(add, reg, buf, 6);
+}
+
+void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val) {
+	i2c_writeRegs(add, reg, &val, 1);
 }
 
 uint8_t i2c_readReg(uint8_t add, uint8_t reg) {
@@ -110,10 +146,6 @@ uint8_t i2c_readBits(uint8_t add, uint8_t regAddr, uint8_t bitStart, uint8_t len
     return b;
 }
 
-void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val) {
-	i2c_writeRegs(add, reg, &val, 1);
-}
-
 void i2c_writeBits(uint8_t add, uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t data) {
     //      010 value to write
     // 76543210 bit numbers
@@ -130,4 +162,3 @@ void i2c_writeBits(uint8_t add, uint8_t regAddr, uint8_t bitStart, uint8_t lengt
     b |= data; // combine data with existing byte
     i2c_writeReg(add, regAddr, b);
 }
-

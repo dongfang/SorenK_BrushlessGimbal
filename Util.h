@@ -102,7 +102,7 @@ float Rajan_FastArcTan(float x);
 float Rajan_FastArcTan2(float y, float x);
 
 // atan2 returnig degrees * 1000
-int32_t Rajan_FastArcTan2_deg1000(float y, float x);
+int32_t Rajan_FastArcTan2_scaled(float y, float x);
 
 /****************************/
 /* LP Filter                */
@@ -137,6 +137,7 @@ enum BENCHMARKING_ITEMS {
     BM_SERIAL,
     BM_PRINTBM,
 	BM_OTHER,
+	BM_I2C,
     BM_END
 };
 
@@ -149,6 +150,8 @@ extern uint16_t cycleStartTime;
 extern uint16_t performanceTimers[];
 extern uint16_t slowLoopPerformanceTimers[];
 extern uint8_t nowPerformanceTiming;
+// singleton stack only right now.
+// extern uint8_t performanceStack;
 extern uint8_t slowLoopTaskPerformanceTimed;
 /*
  * This method will be reliable if: Timer runs af full blast (16MHz)
@@ -159,15 +162,30 @@ inline void doPerformance(uint8_t item) {
 	uint16_t now = time();
 	uint16_t t = now - then;
 	// The "other" item is multiple. All others single per cycle.
-	if (nowPerformanceTiming == BM_OTHER)
-		performanceTimers[nowPerformanceTiming] += t;
-	else
-		performanceTimers[nowPerformanceTiming] = t;
-	if(nowPerformanceTiming == BM_SLOWLOOP)
-		slowLoopPerformanceTimers[slowLoopTaskPerformanceTimed] = t;
+	if (nowPerformanceTiming != -1) {
+		if (nowPerformanceTiming == BM_OTHER)
+			performanceTimers[nowPerformanceTiming] += t;
+		else
+			performanceTimers[nowPerformanceTiming] = t;
+		if(nowPerformanceTiming == BM_SLOWLOOP)
+			slowLoopPerformanceTimers[slowLoopTaskPerformanceTimed] = t;
+	}
 	nowPerformanceTiming = item;
 	then = now;
 }
+
+// singleton stack only right now.
+/*
+inline void performancePush(uint8_t item) {
+	performanceStack = nowPerformanceTiming;
+	doPerformance(item);
+}
+
+inline void performancePop() {
+	if (performanceStack != -1)
+		doPerformance(performanceStack);
+}
+*/
 
 inline void performanceNewCycle() {
 	uint16_t now = time();
@@ -186,9 +204,13 @@ void reportPerformance();
 #ifdef DO_PERFORMANCE
 #define PERFORMANCE(item) doPerformance(item)
 #define PERFORMANCE_NEW_CYCLE performanceNewCycle()
+//#define PERFORMANCE_PUSH(item) performancePush(item)
+//#define PERFORMANCE_POP performancePop()
 #else
 #define PERFORMANCE(item)
 #define PERFORMANCE_NEW_CYCLE
+//#define PERFORMANCE_PUSH(item)
+//#define PERFORMANCE_POP
 #endif
 
 #endif

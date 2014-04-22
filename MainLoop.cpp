@@ -3,6 +3,7 @@
 #include "Util.h"
 #include "Board.h"
 
+#include <avr/interrupt.h>
 #include <avr/wdt.h>
 #include <avr/io.h>
 #include <math.h>
@@ -36,8 +37,7 @@ void mainLoop() {
 	static int stateCount = 0;
 
 	PERFORMANCE(BM_IDLE);
-	while (!runMainLoop)
-		;
+	while (!runMainLoop); // wdt_reset();
 	PERFORMANCE(BM_OTHER);
 
 	wdt_reset();
@@ -69,12 +69,13 @@ void mainLoop() {
 	// pitch and roll PIDs
 	//****************************
 	// t=94us
+
 	PERFORMANCE(BM_PIDS);
 	pitchPIDVal = //ComputePID(DT_INT_MS, angle[PITCH], pitchAngleSet*1000, &pitchErrorSum, &pitchErrorOld, pitchPIDpar.Kp, pitchPIDpar.Ki, pitchPIDpar.Kd);
-			pitchPID.compute(DT_INT_MS, imu.angle[PITCH], pitchAngleSet * 1000);
+			pitchPID.compute(DT_INT_MS, imu.angle_md[PITCH], pitchAngleSet * 1000);
 	// t=94us
 	rollPIDVal = //ComputePID(DT_INT_MS, angle[ROLL], rollAngleSet*1000, &rollErrorSum, &rollErrorOld, rollPIDpar.Kp, rollPIDpar.Ki, rollPIDpar.Kd);
-			rollPID.compute(DT_INT_MS, imu.angle[ROLL], rollAngleSet * 1000);
+			rollPID.compute(DT_INT_MS, imu.angle_md[ROLL], rollAngleSet * 1000);
 	PERFORMANCE(BM_OTHER);
 
 	// motor control
@@ -100,6 +101,7 @@ void mainLoop() {
 	PERFORMANCE(BM_SLOWLOOP);
 	slowLoopTaskPerformanceTimed = slowLoopTask;
 	switch (slowLoopTask++) {
+
 	case 0:
 		imu.readAcc(0);
 		break;

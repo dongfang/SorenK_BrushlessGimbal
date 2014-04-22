@@ -62,7 +62,7 @@ void SerialCommand::setDefaultHandler(void (*function)(const char *)) {
  */
 void SerialCommand::readSerial() {
 	while (serial0.available() > 0) {
-		char inChar = serial0.get(); // Read single available character, there may be more waiting
+		char inChar = getchar(); // Read single available character, there may be more waiting
 		if (inChar == '\r' || inChar == '\n') { // Check for the terminator (default '\r') meaning end of command
 			if (wasCRLF) continue;
 			else wasCRLF = true;
@@ -93,6 +93,7 @@ void SerialCommand::readSerial() {
 					buffer[bufPos++] = inChar; // Put character into buffer
 					buffer[bufPos] = '\0'; // Null terminate
 				}
+				//if (echo) putchar(inChar);
 			}
 		}
 	}

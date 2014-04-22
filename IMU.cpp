@@ -26,7 +26,6 @@
 //******  advanced users settings *******************
 /* Set the Low Pass Filter factor for ACC */
 /* Increasing this value would reduce ACC noise (visible in GUI), but would increase ACC lag time*/
-/* Comment this if  you do not want filter at all.*/
 #ifndef ACC_LPF_FACTOR
 #define ACC_LPF_FACTOR 40
 #endif
@@ -167,14 +166,14 @@ void IMU::recalibrateGyros() {
 			for (i = 0; i < 70; i++) { // wait 0.7sec if calibration failed
 				_delay_ms(10);
 			}
-			mpu.getRotationRates(gyro);
+			mpu->getRotationRates(gyro);
 			for (i = 0; i < 3; i++) {
 				gyroOffsetSums[i] = 0;
 				prevGyro[i] = gyro[i];
 			}
 		}
 
-		mpu.getRotationRates(gyro);
+		mpu->getRotationRates(gyro);
 
 		wdt_reset();
 
@@ -218,7 +217,7 @@ void IMU::init() {
 	// 102us
 	initSensorOrientation();
 
-	gyroScale = 1.0 / mpu.gyroToDeg_s() / 180.0 * M_PI; // convert to radians/s
+	gyroADCToRad_s = 1.0 / mpu->gyroToDeg_s() / 180.0 * M_PI; // convert to radians/s
 	accComplFilterConstant = (float) DT_FLOAT / (config.accTimeConstant + DT_FLOAT);
 
 	uint8_t axis;
@@ -226,7 +225,7 @@ void IMU::init() {
 	// Take gravity vector directly from acc. meter
 	for (axis = 0; axis < 3; axis++) {
 		readAcc(axis);
-		EstG[axis] = accLPF_f[axis] = acc[axis];
+		estG[axis] = accLPF_f[axis] = acc[axis];
 		accLPF_i[axis] = acc[axis];
 	}
 
@@ -248,7 +247,7 @@ void IMU::readGyros() {
 	// 414 us
 
 	// read gyros
-	mpu.getRotationRates(axisRot);
+	mpu->getRotationRates(axisRot);
 	idx = sensorDef.Gyro[0].idx;
 	gyro[ROLL] = axisRot[idx] - gyroOffset[idx];
 	if (sensorDef.Gyro[ROLL].dir == -1)
@@ -269,10 +268,10 @@ void IMU::blendGyrosToAttitude() {
 	uint8_t axis;
 	float deltaGyroAngle[3];
 	for (axis = 0; axis < 3; axis++) {
-		deltaGyroAngle[axis] = gyro[axis] * gyroScale * DT_FLOAT;
+		deltaGyroAngle[axis] = gyro[axis] * gyroADCToRad_s * DT_FLOAT;
 	}
 	// 168 us
-	rotateV(EstG, deltaGyroAngle);
+	rotateV(estG, deltaGyroAngle);
 }
 
 // Called from slow-loop in main.
@@ -283,7 +282,7 @@ void IMU::readAcc(uint8_t axis) {
 	uint8_t idx;
 	int16_t val;
 	idx = sensorDef.Acc[axis].idx;
-	val = mpu.getAcceleration(idx); // TODO: 370us
+	val = mpu->getAcceleration(idx); // TODO: 370us
 	if (sensorDef.Acc[axis].dir==-1)
 		acc[axis] = -val;
 	else
@@ -302,7 +301,7 @@ void IMU::updateAccVector() {
 		accMagnitude_g_100 += (int32_t) accLPF_i[axis] * accLPF_i[axis];
 	}
 
-	uint16_t scale = mpu.accToG();
+	uint16_t scale = mpu->accToG();
 
 	// accMag = accMag*100/((int32_t)ACC_1G*ACC_1G);
 	// 130 us
@@ -321,7 +320,7 @@ void IMU::blendAccToAttitude() {
 	if ((36 < accMagnitude_g_100 && accMagnitude_g_100 < 196)) {
 		for (axis = 0; axis < 3; axis++) {
 			int32_t acc = accLPF_i[axis];
-			EstG[axis] = EstG[axis] * (1.0 - AccComplFilterConst) + acc * AccComplFilterConst; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
+			estG[axis] = estG[axis] * (1.0 - AccComplFilterConst) + acc * AccComplFilterConst; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
 		}
 	}
 }
@@ -332,10 +331,10 @@ void IMU::calculateAttitudeAngles() {
 	// Here, the traditional meanings of pitch and roll are reversed.
 	// That is ultimately okay! In an airframe, it is first pitch then roll.
 	// On the typical gimbal frame, it is opposite.
-	angle[ROLL] = (config.angleOffsetRoll * 10)
-			+ Rajan_FastArcTan2_deg1000(EstG[X], sqrt(EstG[Z] * EstG[Z] + EstG[Y] * EstG[Y]));
+	angle_md[ROLL] = (config.angleOffsetRoll * 10)
+			+ Rajan_FastArcTan2_scaled(estG[X], sqrt(estG[Z] * estG[Z] + estG[Y] * estG[Y]));
 	// 192 us
-	angle[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_deg1000(EstG[Y], EstG[Z]);
+	angle_md[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_scaled(estG[Y], estG[Z]);
 }
 
 
@@ -367,36 +366,6 @@ void initPIDs(void) {
 	pitchPID.setCoefficients(config.pitchKp / 10, config.pitchKi / 1000, config.pitchKd / 10);
 }
 
-void initMPUlpf() {
-	// Set Gyro Low Pass Filter(0..6, 0=fastest, 6=slowest)
-	switch (config.mpuLPF) {
-	case 0:
-		mpu.setDLPFMode(MPU6050_DLPF_BW_256);
-		break;
-	case 1:
-		mpu.setDLPFMode(MPU6050_DLPF_BW_188);
-		break;
-	case 2:
-		mpu.setDLPFMode(MPU6050_DLPF_BW_98);
-		break;
-	case 3:
-		mpu.setDLPFMode(MPU6050_DLPF_BW_42);
-		break;
-	case 4:
-		mpu.setDLPFMode(MPU6050_DLPF_BW_20);
-		break;
-	case 5:
-		mpu.setDLPFMode(MPU6050_DLPF_BW_10);
-		break;
-	case 6:
-		mpu.setDLPFMode(MPU6050_DLPF_BW_5);
-		break;
-	default:
-		mpu.setDLPFMode(MPU6050_DLPF_BW_256);
-		break;
-	}
-}
-
 uint16_t IMU::CRC() {
 	return ::crc16((uint8_t*)gyroOffset, 6);
 }
@@ -411,6 +380,6 @@ bool IMU::loadGyroCalibration() {
 	wdt_reset();
 	eeprom_read_block(gyroOffset, gyroOffsetInEEPROM, sizeof(gyroOffset));
 	bool ok = (uint16_t)gyroOffset[3] == CRC();
-	printf_P(PSTR("Reused old gyrocal: %d"), ok);
+	// printf_P(PSTR("Reused old gyrocal: %d\r\n"), ok);
 	return ok;
 }

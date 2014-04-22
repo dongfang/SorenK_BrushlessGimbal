@@ -27,7 +27,7 @@ public:
 	};
 
 // Ctor
-	IMU(MPU6050 mpu) : mpu(mpu) {}
+	IMU(MPU6050* mpu) : mpu(mpu) {}
 
 	// Initially set vectors and such.
 	// Do not call from WDT restart.
@@ -63,24 +63,30 @@ public:
 	// TODO: That processing might as will be done by the MPU itself.
 	int16_t gyro[3];
 	int16_t acc[3];
-	int32_t angle[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
+
+	// Apparently the accelerations and estG have the same scale, and divided by
+	// accMagnitude_g_100 should yield 1/100 g units.
+	float estG[3];
+	int32_t accMagnitude_g_100;
+
+	int32_t angle_md[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
+
+	// TODO move back to private!
+	// gyro calibration value
+	int16_t gyroOffset[4];
+
 
 private:
-	MPU6050 mpu;
+	MPU6050* mpu;
 	// TODO: This sensor orientation stuff is hardware related only.
 	// Should that be moved into the MPU class?
 	SensorOrientationDef sensorDef;
 
-	// gyro calibration value
-	int16_t gyroOffset[4];
-
-	float gyroScale;
+	float gyroADCToRad_s;
 	float accComplFilterConstant;
 
-	float EstG[3];
 	float accLPF_f[3];
 	int32_t accLPF_i[3];
-	int32_t accMagnitude_g_100;
 
 	float AccComplFilterConst;  // filter constant for complementary filter
 

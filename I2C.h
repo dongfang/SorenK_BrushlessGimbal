@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include "Board.h"
 
 extern uint8_t i2c_errors_count;
 
@@ -21,6 +20,9 @@ uint8_t i2c_readReg(uint8_t add, uint8_t reg);
 uint8_t i2c_readAck();
 uint8_t i2c_readNak();
 void i2c_getSixRawADC(uint8_t add, uint8_t reg, uint8_t* buf);
+
+void swap_endianness6(uint8_t *buf);
+void swap_endianness2(uint8_t *buf);
 
 uint8_t i2c_readBits(uint8_t add, uint8_t regAddr, uint8_t bitStart, uint8_t length);
 void i2c_writeBits(uint8_t add, uint8_t regAddr, uint8_t bitStart, uint8_t length, uint8_t data);

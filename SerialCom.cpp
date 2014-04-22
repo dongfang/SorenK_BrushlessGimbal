@@ -19,10 +19,12 @@
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
 
-uint8_t _debug;
+static uint8_t _debug;
 
-static inline void fixme_writeEEPROM() {
+static inline void writeEEPROM() {
+	wdt_enable(WDTO_1S);
 	config.writeEEPROM();
+	wdt_enable(WDT_TIMEOUT);
 }
 
 static inline void fixme_readEEPROM() {
@@ -99,12 +101,27 @@ void parameterMod() {
 		// no command parameter, print all config parameters
 		printConfigAll((ConfigDef_t *) configListPGM);
 	} else if ((paraValue = sCmd.next()) == NULL) {
+		ConfigDef_t * def = getConfigDef(paraName);
+		if (def != NULL) {
+			printConfig(def);
+		} else {
+			printf_P(PSTR("ERROR: illegal parameter\r\n"));
+		}
 		// one parameter, print single parameter
-		printConfig(getConfigDef(paraName));
 	} else {
 		// two parameters, set specified parameter
-		val = atol(paraValue);
-		writeConfig(getConfigDef(paraName), val);
+		ConfigDef_t * def = getConfigDef(paraName);
+		if (def != NULL) {
+			if (def->type == BOOL) {
+				val = strcmp_P(paraValue, PSTR("true")) == 0;
+			} else {
+				val = atol(paraValue);
+			}
+			writeConfig(def, val);
+			printConfig(def);
+		} else {
+			printf_P(PSTR("ERROR: illegal parameter\r\n"));
+		}
 	}
 }
 //************************************************************************************
@@ -141,7 +158,8 @@ void printHelpUsage() {
 	printf_P(PSTR("perf	 Prints performace info\r\n"));
 #endif
 	printf_P(PSTR("\r\n"));
-	printf_P(PSTR("help   (print this output)\r\n"));
+	printf_P(PSTR("reset  Reboot system\r\n"));
+	printf_P(PSTR("help   print this output\r\n"));
 	printf_P(PSTR("\r\n"));
 	printf_P(PSTR("Note: command input is case-insensitive, commands are accepted in both upper/lower case\r\n"));
 }
@@ -153,16 +171,24 @@ void unrecognized(const char *command) {
 #define DEBUG_OFF 0
 #define DEBUG_ACCVALUES 1
 #define DEBUG_GYROVALUES 2
-#define DEBUG_ATTITUDE 3
+#define DEBUG_ESTG 3
+#define DEBUG_ATTITUDE 4
 
-static const char DEBUG_OFF_CMD[] PROGMEM = "off";
-static const char DEBUG_ACCVALUES_CMD[] PROGMEM = "acc";
-static const char DEBUG_GYROVALUES_CMD[] PROGMEM = "gyro";
-static const char DEBUG_ATTITUDE_CMD[] PROGMEM = "att";
+static const char DEBUG_OFF_ARG[] PROGMEM = "off";
+static const char DEBUG_ACCVALUES_ARG[] PROGMEM = "acc";
+static const char DEBUG_GYROVALUES_ARG[] PROGMEM = "gyro";
+static const char DEBUG_ESTG_ARG[] PROGMEM = "estg";
+static const char DEBUG_ATTITUDE_ARG[] PROGMEM = "att";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = {
-	DEBUG_OFF_CMD, DEBUG_ACCVALUES_CMD, DEBUG_GYROVALUES_CMD, DEBUG_ATTITUDE_CMD
+	DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG, DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG
 };
+
+/*
+void toggleEcho() {
+	sCmd.setEcho(!sCmd.getEcho());
+}
+*/
 
 void debugControl() {
 	char * itemName = NULL;
@@ -182,14 +208,23 @@ void debugControl() {
 	if (found) {
 		_debug = i;
 	} else {
-		printf_P(PSTR("Huh? Use \"off\", \"acc\", \"gyro\" or \"att\".\r\n"));
+		printf_P(PSTR("Huh? Use "));//\"off\", \"acc\", \"gyro\" or \"att\".\r\n"));
+		for (i=0; i<sizeof(DEBUG_COMMANDS)/2; i++) {
+			PGM_P ptr = (PGM_P)pgm_read_word(&DEBUG_COMMANDS[i]);
+			printf_P(PSTR("\"%S\""), ptr);
+			if (i<sizeof(DEBUG_COMMANDS)/2-2)
+				printf_P(PSTR(", "));
+			else if (i == sizeof(DEBUG_COMMANDS)/2-2)
+				printf_P(PSTR(" or "));
+		}
+		printf_P(PSTR("\r\n"));
 	}
 }
 
 void insertComma(char* temp) {
 	// index of the \0
 	uint8_t end = strlen(temp);
-	uint8_t ip = end - 2;
+	uint8_t ip = end - LOG_ANGLE_SCALING;
 	for (uint8_t i=end; i>=ip; i--) {
 		temp[i+1] = temp[i];
 	}
@@ -202,30 +237,50 @@ void debug() {
 	switch(_debug) {
 	case DEBUG_ATTITUDE:
 		// This stunt is to avoid having to draw in the printf_flt stuff which is a pain.
-		sprintf_P(temp, PSTR("%ld"), imu.angle[ROLL]);
-		//insertComma(temp);
+		sprintf_P(temp, PSTR("%ld"), imu.angle_md[ROLL]);
+		insertComma(temp);
 		printf_P(PSTR("roll:%s"), temp);
-		sprintf_P(temp, PSTR("%ld"), imu.angle[PITCH]);
-		//insertComma(temp);
+		sprintf_P(temp, PSTR("%ld"), imu.angle_md[PITCH]);
+		insertComma(temp);
 		printf_P(PSTR("\tpitch:%s\r\n"), temp);
 		break;
 	case DEBUG_ACCVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.acc[X], imu.acc[Y], imu.acc[Z]); break;
 	case DEBUG_GYROVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.gyro[X], imu.gyro[Y], imu.gyro[Z]); break;
+	case DEBUG_ESTG:		printf_P(PSTR("x:%d, y:%d, z:%d (mag: %ld)\r\n"),
+			(int)(imu.estG[X]/imu.accMagnitude_g_100),
+			(int)(imu.estG[Y]/imu.accMagnitude_g_100),
+			(int)(imu.estG[Z]/imu.accMagnitude_g_100),
+			imu.accMagnitude_g_100
+			);
+	break;
 	default: break;
 	}
+}
+
+void reset() {
+	watchdogResetWasIntended = true;
+	wdt_enable(WDTO_15MS);
+	while(1);
+}
+
+void showGyroCal() {
+	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), imu.gyroOffset[0], imu.gyroOffset[1], imu.gyroOffset[2]);
 }
 
 void setSerialProtocol() {
 	// Setup callbacks for SerialCommand commands
 	sCmd.addCommand("sd", setDefaultParametersAndUpdate);
-	sCmd.addCommand("we", fixme_writeEEPROM);
+	sCmd.addCommand("we", writeEEPROM);
 	sCmd.addCommand("re", fixme_readEEPROM);
 	sCmd.addCommand("par", parameterMod);
 	sCmd.addCommand("cal", calibrateGyro);
+	// sCmd.addCommand("echo", toggleEcho);
 	sCmd.addCommand("help", printHelpUsage);
 #ifdef DO_PERFORMANCE
 	sCmd.addCommand("perf", reportPerformance);
 #endif
 	sCmd.addCommand("debug", debugControl);
+	sCmd.addCommand("reset", reset);
+	sCmd.addCommand("gcal", showGyroCal);
 	sCmd.setDefaultHandler(unrecognized); // Handler for command that isn't matched  (says "What?")
 }

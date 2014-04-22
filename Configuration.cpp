@@ -47,18 +47,17 @@ void Configuration::setDefaults() {
 }
 
 uint16_t Configuration::CRC() {
-	return ::crc16((uint8_t*)this, sizeof(this) - 2);
+	return ::crc16((uint8_t*)this, sizeof(Configuration) - 2);
 }
 
 void Configuration::writeEEPROM() {
-	wdt_reset();
 	crc16 = CRC();
-	eeprom_write_block(this, &configInEEPROM, sizeof(this));
+	eeprom_write_block(this, &configInEEPROM, sizeof(Configuration));
 }
 
 void Configuration::readEEPROMOrDefault() {
 	wdt_reset();
-	eeprom_read_block(this, &configInEEPROM, sizeof(this));
+	eeprom_read_block(this, &configInEEPROM, sizeof(Configuration));
 	if (crc16 == CRC()) {
 		if ((vers != VERSION) || (versEEPROM != VERSION_EEPROM)) {
 			printf_P(PSTR("EEPROM version mismatch, initialize EEPROM"));
@@ -86,6 +85,10 @@ static inline void fixme_initSensorOrientation() {
 	imu.initSensorOrientation();
 }
 
+static inline void fixme_initMPUlpf() {
+	mpu.setDLPFMode(config.mpuLPF);
+}
+
 const ConfigDef_t PROGMEM configListPGM[] = {
 { "vers", UINT8, &config.vers, NULL },
 { "pitchKp", INT32, &config.pitchKp, &initPIDs },
@@ -94,8 +97,8 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "rollKp", INT32, &config.rollKp, &initPIDs },
 { "rollKi", INT32, &config.rollKi, &initPIDs },
 { "rollKd", INT32, &config.rollKd, &initPIDs },
-{ "timeConstant", INT16, &config.accTimeConstant, &fixme_initIMU },
-{ "mpuLPF", INT8, &config.mpuLPF, &initMPUlpf },
+{ "accTimeConstant", INT16, &config.accTimeConstant, &fixme_initIMU },
+{ "mpuLPF", INT8, &config.mpuLPF, &fixme_initMPUlpf },
 { "angleOffsetPitch", INT16, &config.angleOffsetPitch, NULL },
 { "angleOffsetRoll", INT16, &config.angleOffsetRoll, NULL },
 { "dirMotorPitch", INT8, &config.dirMotorPitch, NULL },
@@ -177,30 +180,25 @@ ConfigDef_t * getConfigDef(char* name) {
 
 // write single parameter with value
 void writeConfig(ConfigDef_t* def, int32_t val) {
-	if (def != NULL) {
-		 switch (def->type) {
-		 case BOOL   : *(bool *)(def->address)     = val; break;
-		 case UINT8  : *(uint8_t *)(def->address)  = val; break;
-		 case UINT16 : *(uint16_t *)(def->address) = val; break;
-		 case UINT32 : *(uint32_t *)(def->address) = val; break;
-		 case INT8   : *(int8_t *)(def->address)   = val; break;
-		 case INT16  : *(int16_t *)(def->address)  = val; break;
-		 case INT32  : *(int32_t *)(def->address)  = val; break;
-		 }
-		 //def->address = (void*)val;
-		// call update function
-		if (def->updateFunction != NULL)
-			def->updateFunction();
-	} else {
-		printf_P(PSTR("ERROR: illegal parameter\r\n"));
-	}
+	 switch (def->type) {
+	 case BOOL   : *(bool *)(def->address)     = val; break;
+	 case UINT8  : *(uint8_t *)(def->address)  = val; break;
+	 case UINT16 : *(uint16_t *)(def->address) = val; break;
+	 case UINT32 : *(uint32_t *)(def->address) = val; break;
+	 case INT8   : *(int8_t *)(def->address)   = val; break;
+	 case INT16  : *(int16_t *)(def->address)  = val; break;
+	 case INT32  : *(int32_t *)(def->address)  = val; break;
+	 }
+	 //def->address = (void*)val;
+	// call update function
+	if (def->updateFunction != NULL)
+		def->updateFunction();
 }
 
 void updateAllParameters() {
 	recalcMotorStuff();
 	initPIDs();
-	imu.init();
-	initMPUlpf();
-	//imu.initSensorOrientation();
+	mpu.setDLPFMode(config.mpuLPF);
+	imu.initSensorOrientation();
 	initRCFilter();
 }

@@ -1,4 +1,6 @@
 #include "Util.h"
+#include "I2C.h"
+#include "Definitions.h"
 #include <math.h>
 #include <stdlib.h>
 #include <util/crc16.h>
@@ -19,6 +21,7 @@ uint16_t cycleStartTime;
 uint16_t performanceTimers[BM_END];
 uint16_t slowLoopPerformanceTimers[15];
 uint8_t nowPerformanceTiming;
+uint8_t performanceStack;
 #endif
 
 uint16_t crc16(uint8_t* data, size_t size) {
@@ -82,8 +85,8 @@ float Rajan_FastArcTan2(float y, float x) {
 }
 
 // atan2 returning degrees * 1000
-int32_t Rajan_FastArcTan2_deg1000(float y, float x) {
-  return 180/M_PI * 1000 * Rajan_FastArcTan2(y, x);
+int32_t Rajan_FastArcTan2_scaled(float y, float x) {
+  return 180/M_PI * ANGLE_SCALING * Rajan_FastArcTan2(y, x);
 }
 
 uint16_t time() {
@@ -127,10 +130,11 @@ static const char BMS09[] PROGMEM = "Timeouts";
 static const char BMS10[] PROGMEM = "Serial ";
 static const char BMS11[] PROGMEM = "This   ";	// The task of printing this benchmark info.
 static const char BMS12[] PROGMEM = "Other  ";
-static const char BMS13[] PROGMEM = "END";
+static const char BMS13[] PROGMEM = "I2C    ";
+static const char BMS14[] PROGMEM = "END";
 
 static PGM_P const performanceItemNames[] PROGMEM = {
-	BMS00,BMS01,BMS02,BMS03,BMS04,BMS05,BMS06,BMS07,BMS08,BMS09,BMS10,BMS11,BMS12,BMS13
+	BMS00,BMS01,BMS02,BMS03,BMS04,BMS05,BMS06,BMS07,BMS08,BMS09,BMS10,BMS11,BMS12,BMS13,BMS14
 };
 
 static const char BMSLS00[] PROGMEM = "ReadAcc0";
@@ -147,23 +151,23 @@ static const char BMSLS09[] PROGMEM = "Restart ";
 static PGM_P const performaceSlowLoopSubitemNames[] PROGMEM = {
 		BMSLS00,BMSLS01,BMSLS02,BMSLS03,BMSLS04,BMSLS05,BMSLS06,BMSLS07,BMSLS08,BMSLS09
 };
- void reportPerformance() {
+
+void reportPerformance() {
 	 uint8_t save = nowPerformanceTiming;
 	 doPerformance(BM_PRINTBM);
 	 for (uint8_t i=0; i<BM_END; i++) {
 		 uint16_t t = performanceTimers[i];
-		 //uint32_t percent = benchmarkTimers[i]*100/benchmarkSum;
 		 PGM_P const sprt = (PGM_P)pgm_read_word(&performanceItemNames[i]);
 		 printf_P(PSTR("%S:\t%u\t\r\n"), sprt, t);
 	 }
-//	 printf_P(PSTR("\r\nSlow loop task: %u\r\n"), slowLoopTask-1);
 	 printf_P(PSTR("\r\nSlow loop:\r\n"));
 	 for (uint8_t i=0; i<10; i++) {
 		 uint32_t t = slowLoopPerformanceTimers[i];
-		 //uint32_t percent = benchmarkTimers[i]*100/benchmarkSum;
 		 PGM_P const sprt = (PGM_P)pgm_read_word(&performaceSlowLoopSubitemNames[i]);
 		 printf_P(PSTR("%S:\t%lu\t\r\n"), sprt, t);
 	 }
+	 //printf_P(PSTR("I2C success count: %u\r\n"), i2c_success_count);
+	 printf_P(PSTR("I2C error count: %u\r\n"), i2c_errors_count);
 
 	 printf_P(PSTR("Cycle time %u CPU cycles (%u us)\r\n"), lastCycleTime, lastCycleTime/(F_CPU/1000000UL));
 	 doPerformance(save);

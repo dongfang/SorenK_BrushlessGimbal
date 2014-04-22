@@ -43,16 +43,19 @@
 #include "RCdecode.h"             // RC Decoder to move camera by servo signal input
 #include "BLcontroller.h"         // Motor Movement Functions and Timer Config
 
+#include "I2C.h"
+
 // The globals
 MPU6050 mpu; // Create MPU object
-IMU imu(mpu);
+IMU imu(&mpu);
 SerialCommand sCmd; // Create SerialCommand object
 PID pitchPID;
 PID rollPID;
 
 uint8_t mcusr_mirror  __attribute__ ((section (".noinit")));
+bool watchdogResetWasIntended __attribute__ ((section (".noinit")));
 
-bool runMainLoop;
+volatile bool runMainLoop;
 uint8_t syncCounter;
 
 uint8_t motorPhases[2][3];
@@ -71,10 +74,14 @@ int _putchar(char c, FILE* f) {
 	serial0.put(c);
 	return c;
 }
+int _getchar(FILE* f) {
+	return serial0.get();
+}
+
 
 void initSerial() {
-	serial0.init(115200, _FDEV_SETUP_WRITE);
-	fdevopen(_putchar, NULL);
+	serial0.init(115200, _FDEV_SETUP_RW);
+	fdevopen(_putchar, _getchar);
 }
 
 /**********************************************/
@@ -83,6 +90,21 @@ void initSerial() {
  * Stuff that inits state (ram memory things)
  * should not go here.
  **********************************************/
+
+// Auto detect MPU address
+/*
+mpu.setAddr(MPU6050_ADDRESS_AD0_HIGH);
+if (mpu.testConnection()) {
+	printf_P(PSTR("MPU6050 ok (HIGH)\r\n"));
+} else {
+	mpu.setAddr(MPU6050_ADDRESS_AD0_LOW);
+	if (mpu.testConnection()) {
+		printf_P(PSTR("MPU6050 ok (LOW)\r\n"));
+	} else {
+		printf_P(PSTR("MPU6050 init FAILED\r\n"));
+	}
+}
+*/
 void initHW() {
 	// HW
 	LED_DDR |= (1<<LED_BIT);
@@ -94,29 +116,14 @@ void initHW() {
 	//HW
 	initSerial();
 
+	i2c_init();
+
 	// HW
+	// TODO: Only unjam in case of jam.
+	// TODO: Auto addressing. Combine with unjam?
+	mpu.setAddr(0x68);
+	mpu.unjam();
 	mpu.init();
-
-	// Auto detect MPU address
-	mpu.setAddr(MPU6050_ADDRESS_AD0_HIGH);
-	if (mpu.testConnection()) {
-		printf_P(PSTR("MPU6050 ok (HIGH)\r\n"));
-	} else {
-		mpu.setAddr(MPU6050_ADDRESS_AD0_LOW);
-		if (mpu.testConnection()) {
-			printf_P(PSTR("MPU6050 ok (LOW)\r\n"));
-		} else {
-			printf_P(PSTR("MPU6050 init FAILED\r\n"));
-		}
-	}
-
-	// Init MPU Stuff
-	mpu.setClockSource(MPU6050_CLOCK_PLL_ZGYRO); // Set Clock to ZGyro
-	mpu.setFullScaleGyroRange(MPU6050_GYRO_FS); // Set Gyro Sensitivity to config.h
-	mpu.setFullScaleAccelRange(MPU6050_ACCEL_FS); //+- 2G
-	initMPUlpf(); // Set Gyro Low Pass Filter
-	mpu.setRate(0); // 0=1kHz, 1=500Hz, 2=333Hz, 3=250Hz, 4=200Hz
-	mpu.setSleepEnabled(false);
 
 	// Init BL Controller
 	// Set all outputs to zero.
@@ -142,7 +149,6 @@ void initState() {
 
 	// Read Config, fill with default settings if versions do not match or CRC fails
 	config.readEEPROMOrDefault();
-	updateAllParameters();
 
 	// Init Sinus Arrays and Motor Stuff
 	recalcMotorStuff();
@@ -153,8 +159,8 @@ void initState() {
 	// init RC variables
 	initRCFilter();
 
-	// mpu.setDLPFMode(config.mpuLPF);
-	// initMPUlpf();
+	mpu.setDLPFMode(config.mpuLPF);
+
 	// set sensor orientation (from config)
 	// This needs a working acc. sensor.
 	imu.init();
@@ -162,7 +168,41 @@ void initState() {
 	if (!imu.loadGyroCalibration())
 		calibrateGyro();
 
-	printf_P(PSTR("GO! Type HE for help, activate NL in Arduino Terminal!\r\n"));
+	printf_P(PSTR("GO! Type \"help\" for help.\r\n"));
+}
+
+void i2cTrouble() {
+	//HW
+	initSerial();
+
+	mpu.setAddr(0x68);
+
+	i2c_init();
+
+	mpu.unjam();
+	mpu.init();
+
+	int16_t gyro[3];
+
+	_delay_ms(100);
+
+	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
+
+	mpu.getRotationRates(gyro);
+
+	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
+	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), gyro[0], gyro[1], gyro[2]);
+	mpu.getRotationRates(gyro);
+
+	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
+	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), gyro[0], gyro[1], gyro[2]);
+	mpu.getRotationRates(gyro);
+
+	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
+	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), gyro[0], gyro[1], gyro[2]);
+
+	printf_P(PSTR("Error count %u\r\n"), i2c_errors_count);
+
 }
 
 void checkwatchdog(void) __attribute__((naked))
@@ -173,20 +213,27 @@ void checkwatchdog(void) {
 	MCUSR = 0;
 
 	// Set it to what we want while the system is up and running.
-	//wdt_enable(WDTO_1S);
+	wdt_enable(WDTO_1S);
+	//wdt_disable();
 }
 
 int main() {
 	// TODO: Can this be moved down?
+	// wdt_disable();
 	sei();
 
 	initHW();
+	LED_PORT |= (1 << LED_BIT);
 
 	// If it was not a WDT reset
-	if (!(mcusr_mirror & (1<<3)))
+	if (watchdogResetWasIntended || !(mcusr_mirror & (1<<3)))
 		initState();
 
-	//wdt_enable(WDTO_15MS);
+	watchdogResetWasIntended = false;
+
+	wdt_enable(WDT_TIMEOUT);
+
+	LED_PORT &= ~(1 << LED_BIT);
 
 	while(1) {
 		mainLoop();

@@ -16,7 +16,8 @@ extern SerialCommand sCmd;     // Create SerialCommand object
 extern PID pitchPID;
 extern PID rollPID;
 extern UARTSerial serial0;
-extern bool runMainLoop;
+extern volatile bool runMainLoop;
+extern bool watchdogResetWasIntended;
 
 extern uint8_t syncCounter;
 
