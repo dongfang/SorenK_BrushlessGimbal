@@ -1,3 +1,15 @@
+24.4.2014
+SorenK rewrite
+* Everything rewritten to non-Arduino
+* Better scheduling, smoother slow-loop, higher mainloop frequency
+* Gyro installable in any orientation
+* Microsecond RC timing
+* Many variables downsized to smaller types
+* PID params returned to the old 10 times smaller values
+* New commands - debug, perf, level
+* No gyro calibration unless explicitly done in serial console
+* Tons more: http://dongfang.ch/?p=59
+
 23.6.2013
 Version 049 r156
 * new config versEEPROM, eeprom is initialized when versEEPROM changes
