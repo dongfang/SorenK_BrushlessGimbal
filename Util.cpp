@@ -14,12 +14,13 @@ uint32_t stackBottom = 0;
 uint32_t heapTop = 0;
 uint32_t heapBottom = 0xffffffff;
 uint8_t timer1Extension;
+#include "Globals.h"
 
 #ifdef DO_PERFORMANCE
 uint16_t lastCycleTime;
 uint16_t cycleStartTime;
 uint16_t performanceTimers[BM_END];
-uint16_t slowLoopPerformanceTimers[10];
+uint16_t slowLoopPerformanceTimers[12];
 uint8_t nowPerformanceTiming;
 uint8_t performanceStack;
 #endif
@@ -153,26 +154,28 @@ static const char BMS05[] PROGMEM = "RCDecode";
 static const char BMS06[] PROGMEM = "PIDs   ";
 static const char BMS07[] PROGMEM = "MotorPhases";
 static const char BMS08[] PROGMEM = "SlowLoop";
-static const char BMS09[] PROGMEM = "Timeouts";
-static const char BMS10[] PROGMEM = "Serial ";
-static const char BMS11[] PROGMEM = "This   ";	// The task of printing this benchmark info.
-static const char BMS12[] PROGMEM = "Other  ";
-static const char BMS13[] PROGMEM = "END";
+static const char BMS09[] PROGMEM = "This   ";	// The task of printing this benchmark info.
+static const char BMS10[] PROGMEM = "Other  ";
+static const char BMS11[] PROGMEM = "END";
 
 static PGM_P const performanceItemNames[] PROGMEM = {
-	BMS00,BMS01,BMS02,BMS03,BMS04,BMS05,BMS06,BMS07,BMS08,BMS09,BMS10,BMS11,BMS12,BMS13
+	BMS00,BMS01,BMS02,BMS03,BMS04,BMS05,BMS06,BMS07,BMS08,BMS09,BMS10,BMS11
 };
 
-static const char BMSLS00[] PROGMEM = "UpdAccVect";
-static const char BMSLS01[] PROGMEM = "FlashLED";
-static const char BMSLS02[] PROGMEM = "GimState";
-static const char BMSLS03[] PROGMEM = "RCPitch ";
-static const char BMSLS04[] PROGMEM = "RCRoll  ";
-static const char BMSLS05[] PROGMEM = "Debug   ";
-static const char BMSLS06[] PROGMEM = "Restart ";
+static const char BMSLS00[] PROGMEM = "UpdAccMagm";
+static const char BMSLS01[] PROGMEM = "UpdAccMagd1";
+static const char BMSLS02[] PROGMEM = "UpdAccMagd2";
+static const char BMSLS03[] PROGMEM = "FlashLED";
+static const char BMSLS04[] PROGMEM = "GimState";
+static const char BMSLS05[] PROGMEM = "RCPitch ";
+static const char BMSLS06[] PROGMEM = "RCRoll  ";
+static const char BMSLS07[] PROGMEM = "Debug   ";
+static const char BMSLS08[] PROGMEM = "Timeouts";
+static const char BMSLS09[] PROGMEM = "Serial  ";
+static const char BMSLS10[] PROGMEM = "Restart ";
 
 static PGM_P const performaceSlowLoopSubitemNames[] PROGMEM = {
-		BMSLS00,BMSLS01,BMSLS02,BMSLS03,BMSLS04,BMSLS05,BMSLS06
+		BMSLS00,BMSLS01,BMSLS02,BMSLS03,BMSLS04,BMSLS05,BMSLS06,BMSLS07,BMSLS08,BMSLS09,BMSLS10
 };
 
 void reportPerformance() {
@@ -189,9 +192,8 @@ void reportPerformance() {
 		 PGM_P const sprt = (PGM_P)pgm_read_word(&performaceSlowLoopSubitemNames[i]);
 		 printf_P(PSTR("%S:\t%lu\t\r\n"), sprt, t);
 	 }
-	 //printf_P(PSTR("I2C success count: %u\r\n"), i2c_success_count);
+	 // TODO: Remove off to some debug/status thing,
 	 printf_P(PSTR("I2C error count: %u\r\n"), i2c_errors_count);
-
 	 printf_P(PSTR("Cycle time %u CPU cycles (%u us)\r\n"), lastCycleTime, lastCycleTime/(F_CPU/1000000UL));
 	 doPerformance(save);
  }

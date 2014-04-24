@@ -93,6 +93,14 @@ void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val) {
   i2c_write(reg);        // register selection
   i2c_write(val);        // value to write in register
   i2c_stop();
+
+  i2c_read_regs(add, reg, 1);
+  bool mismatchIsOkay = (reg==0x68 || reg==0x6b);
+
+  if (val != i2c_buffer[0] && !mismatchIsOkay) {
+	  printf_P(PSTR("Verification mismatch: I2C device %x at address %x (wrote %x, read %x)\r\n"), add, reg, val, i2c_buffer[0]);
+	  //printf_P(PSTR("(For MPU6050 addresses 68 and 6b it is okay)\r\n"), add, reg, val, i2c_buffer[0]);
+  }
 }
 
 ISR(TWI_vect) {

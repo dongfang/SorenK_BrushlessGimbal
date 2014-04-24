@@ -48,7 +48,11 @@
 #define MPU6050_CLOCK_DIV_364       0xF
 
 // Do not change for now
-#define MPU6050_GYRO_FS MPU6050_GYRO_FS_500  // +-250,500,1000,2000 deg/s
+
+// dongfang: I want 500 deg/s. I like the tolerance to bumps (gyros won't saturate so easily).
+// But trying to set up the MPU6050 chip to anything else than 250 does not work. Why?
+// #define MPU6050_GYRO_FS MPU6050_GYRO_FS_500  // +-250,500,1000,2000 deg/s
+#define MPU6050_GYRO_FS MPU6050_GYRO_FS_250  // +-250,500,1000,2000 deg/s
 #define MPU6050_ACCEL_FS MPU6050_ACCEL_FS_2
 #define MPU6050_DLPF_BW MPU6050_DLPF_BW_256  // 5,10,20,42,98,188,256 Hz
 #define MPU6050_RA_WHO_AM_I         	0x75
@@ -87,14 +91,17 @@ private:
 	uint8_t devAddr;
 //	uint8_t buffer[6];
 public:
+	static const uint8_t GYRO = 0;
+	static const uint8_t ACC = 1;
+
 	struct SensorAxisDef {
-	  char idx;
-	  int  dir;
-	} t_sensorAxisDef;
+	  uint8_t idx;		// index of physical sensor
+	  int  dir;			// sign of logical sensor
+	} SensorAxisDef_t;
 
 	struct SensorOrientationDef {
-	  SensorAxisDef Gyro[3];
-	  SensorAxisDef Acc[3];
+	  SensorAxisDef gyro[3];
+	  SensorAxisDef acc[3];
 	};
 
 	// Reset signal paths. Often jammed at startup.
@@ -110,8 +117,8 @@ public:
 	bool testConnection();
 
 	// Configure
-	void setClockSource(uint8_t); // Set Clock to ZGyro
-	void setGyroRange(uint8_t); // Set Gyro Sensitivity to config.h
+	void setClockSource(uint8_t); // Set Clock
+	void setGyroRange(uint8_t); // Set Gyro Sensitivity
 	void setAccelRange(uint8_t); //
 	void setRate(uint8_t); // 0=1kHz, 1=500Hz, 2=333Hz, 3=250Hz, 4=200Hz
 	void setSleepEnabled(bool);
@@ -144,15 +151,16 @@ public:
 	// Shit .. this depends on acc.meter settings!!
 //#define ACC_1G 16384.0f
 
-	void initSensorOrientationFaceUp();
-	void initSensorOrientationChipTextRightSideUp();
-	void initSensorOrientationChipTextStandingOnEnd();
-	void initSensorOrientation();
+	void initSensorOrientation(uint8_t majorAxis, bool reverseZ, bool swapXY);
 
 	// Load EEPROM-stored offsets. Return true if success.
 	bool loadGyroCalibration();
 	// Do the calibration ritual and store result in EEPROM.
-	void recalibrateGyros();
+	void recalibrateSensor(void (*complain)(), uint8_t which);
+
+	void resetAccCalibration() {
+		sensorOffset[3] = sensorOffset[4] = sensorOffset[5] = 0;
+	}
 
 	// Get motion data
 	void getAccelerations(int16_t* acc);
@@ -163,18 +171,23 @@ public:
 	void getAccelerationsAsync(int16_t* acc);
 
 	// gyro calibration value. Only public for debug's sake.
-	int16_t gyroOffset[4];
+	int16_t sensorOffset[3+3+1];
 
 private:
+	void initSensorOrientationRaw();
+	void initSensorOrientationFaceUp();
+	void initSensorOrientationChipTextRightSideUp();
+	void initSensorOrientationChipTextStandingOnEnd();
+
 	uint16_t CRC();
-	void getRotationRates11(int16_t* gyro);
-	void saveGyroCalibration();
+	void getSensor(int16_t* result, uint8_t which);
+	void saveSensorCalibration();
 	void transformRotationRates(int16_t* gyro);
 	void transformAccelerations(int16_t* acc);
 
 	// swap two char items
-	inline void swap_char(char * a, char * b) {
-	  char tmp = *a;
+	inline void swap_uint8(uint8_t * a, uint8_t * b) {
+		uint8_t tmp = *a;
 	  *a = *b;
 	  *b = tmp;
 	}
@@ -187,7 +200,5 @@ private:
 	}
 	SensorOrientationDef sensorDef;
 };
-
-void calibrateGyro();
 
 #endif

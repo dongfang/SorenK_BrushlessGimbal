@@ -1,14 +1,6 @@
 //************************************************************************************
 // general config parameter access routines
 //************************************************************************************
-/*
- Groups?
- 1) MPU orientation
- 2) Filters
- 3) PIDs
- 4) Motors
- 5) RC in
- */
 #include "Util.h"
 #include "Configuration.h"
 #include "RCdecode.h"
@@ -22,20 +14,24 @@
 
 static uint8_t _debug;
 
-static inline void writeEEPROM() {
+static void writeEEPROM() {
 	wdt_enable(WDTO_1S);
 	config.writeEEPROM();
+	printf_P(PSTR("Wrote.\r\n"));
 	wdt_enable(WDT_TIMEOUT);
 }
 
-static inline void fixme_readEEPROM() {
+static void readEEPROM() {
+	wdt_enable(WDTO_1S);
 	config.readEEPROMOrDefault();
+	printf_P(PSTR("Read.\r\n"));
+	wdt_enable(WDT_TIMEOUT);
 }
 
 // print single parameter value
 void printConfig(ConfigDef_t * def) {
 	if (def != NULL) {
-		printf_P(PSTR("%s"), def->name);
+		printf_P(PSTR("par %s"), def->name);
 		printf_P(PSTR(" "));
 		switch (def->type) {
 		case BOOL:
@@ -143,7 +139,8 @@ void printHelpUsage() {
 	printf_P(PSTR("sd    Set Defaults\r\n"));
 	printf_P(PSTR("we    Writes active config to eeprom\r\n"));
 	printf_P(PSTR("re    Restores values from eeprom to active config\r\n"));
-	printf_P(PSTR("cal   Recalibrates the Gyro Offsets\r\n"));
+	printf_P(PSTR("cal   Recalibrates the gyro\r\n"));
+	//printf_P(PSTR("level Sets level (place gimbal firmly level and run)\r\n"));
 	printf_P(PSTR("debug <category> Prints troubleshooting info\r\n"));
 	printf_P(PSTR("        debug usage:\r\n"));
 	printf_P(PSTR("        debug off               ... turns off debug\r\n"));
@@ -162,7 +159,7 @@ void printHelpUsage() {
 	printf_P(PSTR("reset  Reboot system\r\n"));
 	printf_P(PSTR("help   print this output\r\n"));
 	printf_P(PSTR("\r\n"));
-	printf_P(PSTR("Note: command input is case-insensitive, commands are accepted in both upper/lower case\r\n"));
+	printf_P(PSTR("Commands and parameter names are case-insensitive.\r\n"));
 }
 
 void unrecognized(const char *command) {
@@ -209,8 +206,8 @@ void debugControl() {
 		found = true;
 		char stored;
 		do {
-			stored = pgm_read_byte(ptr + j++);
-			char given = itemName[i];
+			stored = pgm_read_byte(ptr+j);
+			char given = itemName[j++];
 			if (tolower(stored) != tolower(given)) { found = false; break; }
 		} while (stored);
 		if (found) break;
@@ -242,17 +239,18 @@ void insertComma(char* temp) {
 }
 
 void debug() {
-	char temp[15];
+	char temp[16];
 	uint8_t i;
+	wdt_reset();
 	// printf_P(PSTR("debug %d\r\n"), _debug);
 	switch(_debug) {
 	case DEBUG_ATTITUDE:
 		// This stunt is to avoid having to draw in the printf_flt stuff which is a pain.
 		sprintf_P(temp, PSTR("%ld"), imu.angle_md[ROLL]);
-		insertComma(temp);
+		//insertComma(temp);
 		printf_P(PSTR("roll:%s"), temp);
 		sprintf_P(temp, PSTR("%ld"), imu.angle_md[PITCH]);
-		insertComma(temp);
+		//insertComma(temp);
 		printf_P(PSTR("\tpitch:%s\r\n"), temp);
 		break;
 	case DEBUG_ACCVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.acc[X], imu.acc[Y], imu.acc[Z]); break;
@@ -279,17 +277,45 @@ void reset() {
 	while(1);
 }
 
-void showGyroCal() {
-	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), mpu.gyroOffset[0], mpu.gyroOffset[1], mpu.gyroOffset[2]);
+
+void complainAboutSensorMotion(){
+	printf_P(PSTR("Motion detected during calibration. Starting over!"));
+}
+
+void calibrateSensor(uint8_t which) {
+	// Gyro Offset calibration
+	printf_P(PSTR("Sensor calibration: do not move\r\n"));
+	// mpu.setDLPFMode(MPU6050_DLPF_BW_5);  // experimental AHa: set to slow mode during calibration
+	mpu.recalibrateSensor(&complainAboutSensorMotion, which);
+	// initMPUlpf();
+	printf_P(PSTR("Sensor calibration: done\r\n"));
+}
+
+void calibrateGyro() {
+	calibrateSensor(MPU6050::GYRO);
+}
+
+/*
+ * Is currently broken: It will zero out the physical Z axis (of the MPU chip)
+ * but it should have been the logical.
+void calibrateAcc() {
+	calibrateSensor(MPU6050::ACC);
+}
+*/
+
+void showSensorCal() {
+	printf_P(PSTR("Gyro roll\t%d, pitch\t%d, yaw\t%d\r\n"), mpu.sensorOffset[0], mpu.sensorOffset[1], mpu.sensorOffset[2]);
+	printf_P(PSTR("Acc X\t%d, Y\t%d, Z\t%d\r\n"), mpu.sensorOffset[3], mpu.sensorOffset[4], mpu.sensorOffset[5]);
 }
 
 void setSerialProtocol() {
 	// Setup callbacks for SerialCommand commands
 	sCmd.addCommand("sd", setDefaultParametersAndUpdate);
 	sCmd.addCommand("we", writeEEPROM);
-	sCmd.addCommand("re", fixme_readEEPROM);
+	sCmd.addCommand("re", readEEPROM);
 	sCmd.addCommand("par", parameterMod);
 	sCmd.addCommand("cal", calibrateGyro);
+	//sCmd.addCommand("level", calibrateAcc);
 	// sCmd.addCommand("echo", toggleEcho);
 	sCmd.addCommand("help", printHelpUsage);
 #ifdef DO_PERFORMANCE
@@ -297,6 +323,6 @@ void setSerialProtocol() {
 #endif
 	sCmd.addCommand("debug", debugControl);
 	sCmd.addCommand("reset", reset);
-	sCmd.addCommand("gcal", showGyroCal);
+	sCmd.addCommand("cal", showSensorCal);
 	sCmd.setDefaultHandler(unrecognized); // Handler for command that isn't matched  (says "What?")
 }

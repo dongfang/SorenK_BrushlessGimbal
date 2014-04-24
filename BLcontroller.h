@@ -10,36 +10,17 @@ void initBlController() {
   DDRB |= 1<<1 | 1<<2 | 1<<3;
   DDRD |= 1<<3 | 1<<5 | 1<<6;
 
-#ifdef PWM_8KHZ_FAST
-  TCCR0A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM01) | (1<<WGM00); 
-  TCCR0B = (1<<CS01);
-  TCCR1A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM10); 
-  TCCR1B = (1<<WGM12)  | (1<<CS11);
-  TCCR2A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM21) | (1<<WGM20);
-  TCCR2B = (1<<CS21);
-#endif
-
-#ifdef PWM_32KHZ_PHASE
   TCCR0A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM00); 
   TCCR0B = (1<<CS00);
   TCCR1A = (1<<COM1A1) | (1<<COM1B1) | (1<<WGM10);
   TCCR1B = (1<<CS10);
   TCCR2A = (1<<COM2A1) | (1<<COM2B1) | (1<<WGM20);
   TCCR2B = (1<<CS20);
-#endif
 
-#ifdef PWM_4KHZ_PHASE
-  TCCR0A = (1<<COM0A1) | (1<<COM0B1) | (1<<WGM00); 
-  TCCR0B = (1<<CS01);
-  TCCR1A = (1<<COM1A1) | (1<<COM1B1) | (1<<WGM10);
-  TCCR1B = (1<<CS11);
-  TCCR2A = (1<<COM2A1) | (1<<COM2B1) | (1<<WGM20);
-  TCCR2B = (1<<CS21);
-#endif
-
+  // Enable Timer1 Interrupt for timing
   TIMSK1 |= 1<<TOIE1;
 
-  // Enable Timer1 Interrupt for Motor Control
+  // Start out with no power applied.
   OCR2A = 0;  //11  APIN
   OCR2B = 0;  //D3
   OCR1A = 0;  //D9  CPIN

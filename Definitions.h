@@ -3,21 +3,16 @@
 /*************************/
 // FOR CHANGES PLEASE READ: ReleaseHistory.txt
 #define VERSION_STATUS B // A = Alpha; B = Beta , N = Normal Release
-#define VERSION 49
-#define VERSION_EEPROM 2 // change this number when eeprom data strcuture has changed
+#define VERSION 100
+#define VERSION_EEPROM 0 // change this number when eeprom data strcuture has changed
 
 // MPU Address Settings
+// TODO: Not supported right now.
 #define MPU6050_ADDRESS_AD0_LOW     0x68 // default for InvenSense evaluation board
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // Drotek MPU breakout board
 #define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_HIGH
 
-// Define Brushless PWM Mode, uncomment ONE setting
-#define PWM_32KHZ_PHASE  // Resolution 8 bit for PWM
-//#define PWM_8KHZ_FAST    // Resolution 8 bit for PWM
-//#define PWM_4KHZ_PHASE   // Resolution 8 bit for PWM
-//#define NO_PWM_LOOP
-
-#define MOTORUPDATE_FREQ 1000                // in Hz, 1000 is default // 1,2,4,8 for 32kHz, 1,2,4 for 4kHz
+#define MOTORUPDATE_FREQ 725                // in Hz, 500 is default // 1,2,4,8 for 32kHz, 1,2,4 for 4kHz
 #define LOOPUPDATE_FREQ MOTORUPDATE_FREQ    // loop control sample rate equals motor update rate
 #define DT_FLOAT (1.0/LOOPUPDATE_FREQ)      // loop controller sample period dT
 #define DT_INT_MS (1000/MOTORUPDATE_FREQ)
@@ -32,9 +27,6 @@
 // NOW FIXED TO 256 !!!
 // Reason: Fast Motor Routine using uint8_t overflow for stepping
 #define N_SIN 256
-
-#define SCALE_ACC 10000.0
-#define SCALE_PID_PARAMS 1000.0f
 
 // RC data size and channel assigment
 #define RC_DATA_SIZE  3
@@ -68,18 +60,7 @@
 #define PWM_B_MOTOR0 OCR0B
 #define PWM_C_MOTOR0 OCR2B
 
-#ifdef PWM_32KHZ_PHASE
-  #define CC_FACTOR 32
-#endif
-#ifdef PWM_4KHZ_PHASE
-  #define CC_FACTOR 4
-#endif
-#ifdef PWM_8KHZ_FAST
-  #define CC_FACTOR 8
-#endif
-#ifdef NO_PWM_LOOP
-  #define CC_FACTOR 1
-#endif
+#define CC_FACTOR 32
 
 // enable stack and heapsize check (use just for debugging)
 // #define STACKHEAPCHECK_ENABLE

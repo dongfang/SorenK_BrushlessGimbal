@@ -23,9 +23,9 @@ public:
 	// Do not call from WDT restart.
 	void init();
 
-	// void readAcc(uint8_t axis);
-
-	void updateAccVector();
+	//void updateAccVector();
+	void updateAccMagnitude1();
+	void updateAccMagnitude2();
 
 	// Get attitude data
 	void fastUpdateCycle() {
@@ -49,7 +49,8 @@ public:
 	// Apparently the accelerations and estG have the same scale, and divided by
 	// accMagnitude_g_100 should yield 1/100 g units.
 	float estG[3];
-	int32_t accMagnitude_g_100;
+	int16_t accMagnitude_g_100;
+	int32_t tmp_accMagnitude_g_2;
 
 	int32_t angle_md[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
 
@@ -58,11 +59,9 @@ private:
 	MPU6050* mpu;
 	// TODO: This sensor orientation stuff is hardware related only.
 	// Should that be moved into the MPU class?
-
 	float gyroADCToRad_s;
 
-	float accLPF_f[3];
-	int32_t accLPF_i[3];
+	//float accLPF_f[3];
 
 	float accComplFilterConstant;  // filter constant for complementary filter
 
@@ -73,7 +72,14 @@ private:
 	void blendGyrosToAttitude();
 	void blendAccToAttitude();
 	void calculateAttitudeAngles();
-	void rotateV(float* v, float* delta);
+	// Rotate Estimated vector(s) with small angle approximation, according to the gyro data
+	// needs angle in radian units !
+	inline void rotateV(float* v, float* delta) {
+		float v_tmp[3] = { v[X], v[Y], v[Z] };
+		v[Z] -= delta[ROLL] * v_tmp[X] + delta[PITCH] * v_tmp[Y];
+		v[X] += delta[ROLL] * v_tmp[Z] - delta[YAW] * v_tmp[Y];
+		v[Y] += delta[PITCH] * v_tmp[Z] + delta[YAW] * v_tmp[X];
+	}
 };
 
 void initMPUlpf();

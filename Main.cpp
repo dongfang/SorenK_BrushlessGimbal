@@ -160,14 +160,17 @@ void initState() {
 	// init RC variables
 	initRCFilter();
 
+	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
 	mpu.setDLPFMode(config.mpuLPF);
 
 	// set sensor orientation (from config)
 	// This needs a working acc. sensor.
 	imu.init();
 
-	if (!mpu.loadGyroCalibration())
-		calibrateGyro();
+	if (!mpu.loadGyroCalibration()) {
+		calibrateSensor(MPU6050::GYRO);
+		mpu.resetAccCalibration();
+	}
 
 	printf_P(PSTR("GO! Type \"help\" for help.\r\n"));
 }

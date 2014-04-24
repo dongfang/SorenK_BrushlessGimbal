@@ -5,7 +5,7 @@
 #include <avr/wdt.h>
 #include <avr/eeprom.h>
 
-static Configuration configInEEPROM EEMEM;
+Configuration configInEEPROM EEMEM;
 Configuration config;
 ConfigDef_t configDef;
 ConfigUnion_t configUnion;
@@ -13,20 +13,20 @@ ConfigUnion_t configUnion;
 void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
-	pitchKp = 7500;
-	pitchKi = 10000;
-	pitchKd = 11000;
-	rollKp = 20000;
-	rollKi = 8000;
-	rollKd = 30000;
+	pitchKp = 900;
+	pitchKi = 800;
+	pitchKd = 3000;
+	rollKp = 3000;
+	rollKi = 800;
+	rollKd = 13500;
 	accTimeConstant = 4;
 	mpuLPF = 0;
 	angleOffsetPitch = 0;
 	angleOffsetRoll = 0;
 	nPolesMotorPitch = 14;
 	nPolesMotorRoll = 14;
-	dirMotorPitch = 1;
-	dirMotorRoll = -1;
+	dirMotorPitch = -1;
+	dirMotorRoll = 1;
 	motorNumberPitch = 0;
 	motorNumberRoll = 1;
 	maxPWMmotorPitch = 100;
@@ -39,11 +39,9 @@ void Configuration::setDefaults() {
 	rcLPF = 5; // 0.5 sec
 	rcMid = MID_RC;
 	rcAbsolute = true;
-	calibrateGyro = true;
 	axisReverseZ = true;
 	axisSwapXY = false;
-	majorAxis = 0;
-	crc16 = 0;
+	majorAxis = 2;
 }
 
 uint16_t Configuration::CRC() {
@@ -82,7 +80,7 @@ static inline void fixme_initIMU() {
 }
 
 static inline void fixme_initSensorOrientation() {
-	mpu.initSensorOrientation();
+	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
 }
 
 static inline void fixme_initMPUlpf() {
@@ -97,54 +95,29 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "rollKp", INT32, &config.rollKp, &initPIDs },
 { "rollKi", INT32, &config.rollKi, &initPIDs },
 { "rollKd", INT32, &config.rollKd, &initPIDs },
-{ "accTimeConstant", INT16, &config.accTimeConstant, &fixme_initIMU },
-{ "mpuLPF", INT8, &config.mpuLPF, &fixme_initMPUlpf },
-{ "angleOffsetPitch", INT16, &config.angleOffsetPitch, NULL },
-{ "angleOffsetRoll", INT16, &config.angleOffsetRoll, NULL },
-{ "dirMotorPitch", INT8, &config.dirMotorPitch, NULL },
-{ "dirMotorRoll", INT8, &config.dirMotorRoll, NULL },
-{ "motorNumberPitch", UINT8, &config.motorNumberPitch, NULL },
-{ "motorNumberRoll", UINT8, &config.motorNumberRoll, NULL },
-{ "maxPWMmotorPitch", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
-{ "maxPWMmotorRoll", UINT8, &config.maxPWMmotorRoll, &recalcMotorStuff },
-{ "minRCPitch", INT8, &config.minRCPitch, NULL },
-{ "maxRCPitch", INT8, &config.maxRCPitch, NULL },
-{ "minRCRoll", INT8, &config.minRCRoll, NULL },
-{ "maxRCRoll", INT8, &config.maxRCRoll, NULL },
+{ "accTime", INT16, &config.accTimeConstant, &fixme_initIMU },
+{ "mpuFilter", INT8, &config.mpuLPF, &fixme_initMPUlpf },
+{ "pitchOffset", INT16, &config.angleOffsetPitch, NULL },
+{ "rollOffset", INT16, &config.angleOffsetRoll, NULL },
+{ "pitchDir", INT8, &config.dirMotorPitch, NULL },
+{ "rollDir", INT8, &config.dirMotorRoll, NULL },
+{ "ritchMotor", UINT8, &config.motorNumberPitch, NULL },
+{ "rollMotor", UINT8, &config.motorNumberRoll, NULL },
+{ "pitchPower", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
+{ "rollPower", UINT8, &config.maxPWMmotorRoll, &recalcMotorStuff },
+{ "pitchMinRC", INT8, &config.minRCPitch, NULL },
+{ "pitchMaxRC", INT8, &config.maxRCPitch, NULL },
+{ "rollMinRC", INT8, &config.minRCRoll, NULL },
+{ "rollMaxRC", INT8, &config.maxRCRoll, NULL },
 { "rcGain", INT16, &config.rcGain, NULL },
-{ "rcLPF", INT16, &config.rcLPF, &initRCFilter },
+{ "rcFilter", INT16, &config.rcLPF, &initRCFilter },
 { "rcMid", INT16, &config.rcMid, NULL },
 { "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
 { "majorAxis", UINT8, &config.majorAxis, 		&fixme_initSensorOrientation },
-{ "axisReverseZ", BOOL, &config.axisReverseZ, 	&fixme_initSensorOrientation },
-{ "axisSwapXY", BOOL, &config.axisSwapXY, 		&fixme_initSensorOrientation },
+{ "reverseZ", BOOL, &config.axisReverseZ, 	&fixme_initSensorOrientation },
+{ "swapXY", BOOL, &config.axisSwapXY, 		&fixme_initSensorOrientation },
 { "", BOOL, NULL, NULL } // terminating NULL required !!
 };
-
-/*
-ConfigDef_t * getConfigDef(char* name) {
-	bool found = false;
-	ConfigDef_t * p = (ConfigDef_t *) configListPGM;
-
-	while (true) {
-		uint8_t i;
-		for (i = 0; i < sizeof(ConfigDef_t); i++) {
-			configUnion.asBytes[i] = pgm_read_byte((uint8_t*)p + i);
-		}
-		if (configUnion.asConfig.address == NULL)
-			break;
-		if (strncmp(configUnion.asConfig.name, name, CONFIGNAME_MAX_LEN) == 0) {
-			found = true;
-			break;
-		}
-		p++;
-	}
-	if (found)
-		return &configUnion.asConfig;
-	else
-		return NULL;
-}
-*/
 
 /*
  * Is now case insensitive.
@@ -199,6 +172,6 @@ void updateAllParameters() {
 	recalcMotorStuff();
 	initPIDs();
 	mpu.setDLPFMode(config.mpuLPF);
-	mpu.initSensorOrientation();
+	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
 	initRCFilter();
 }

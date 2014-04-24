@@ -20,7 +20,7 @@ float pitchAngleSet;
 void flashLED() {
 	static uint8_t count;
 	count++;
-	if (count >= 50) {
+	if (count >= 25) {
 		count = 0;
 		LED_PIN |= (1 << LED_BIT);
 	}
@@ -63,17 +63,18 @@ void mainLoop() {
 	}
 
 	evaluateRCSwitch();
+	/*
+	 * TODO: Faked controls. Make them work.
+	*/
 	switchPos = 1;
+	pitchAngleSet = rollAngleSet = 0;
 
 	//****************************
 	// pitch and roll PIDs
 	//****************************
-	// t=94us
-
 	PERFORMANCE(BM_PIDS);
 	pitchPIDVal = //ComputePID(DT_INT_MS, angle[PITCH], pitchAngleSet*1000, &pitchErrorSum, &pitchErrorOld, pitchPIDpar.Kp, pitchPIDpar.Ki, pitchPIDpar.Kd);
 			pitchPID.compute(DT_INT_MS, imu.angle_md[PITCH], pitchAngleSet * 1000);
-	// t=94us
 	rollPIDVal = //ComputePID(DT_INT_MS, angle[ROLL], rollAngleSet*1000, &rollErrorSum, &rollErrorOld, rollPIDpar.Kp, rollPIDpar.Ki, rollPIDpar.Kd);
 			rollPID.compute(DT_INT_MS, imu.angle_md[ROLL], rollAngleSet * 1000);
 	PERFORMANCE(BM_OTHER);
@@ -103,12 +104,18 @@ void mainLoop() {
 	switch (slowLoopTask++) {
 
 	case 0:
-		imu.updateAccVector();
+		imu.updateAccMagnitude1();
 		break;
 	case 1:
-		flashLED();
+		imu.updateAccMagnitude2();
 		break;
 	case 2:
+		imu.updateAccMagnitude2(); // YES again. Not a bug.
+		break;
+	case 3:
+		flashLED();
+		break;
+	case 4:
 		// gimbal state transitions
 		if (gimbalState == GIMBAL_OFF) {
 			// wait 2 sec to settle ACC, before PID controller becomes active
@@ -140,7 +147,7 @@ void mainLoop() {
 			break;
 		}
 		break;
-	case 3:
+	case 5:
 		// RC Pitch function
 		if (rcData[RC_DATA_PITCH].isValid) {
 			if (config.rcAbsolute == 1) {
@@ -159,7 +166,7 @@ void mainLoop() {
 			pitchPhiSet = constrain_f(pitchPhiSet, config.maxRCPitch, config.minRCPitch);
 		}
 		break;
-	case 4:
+	case 6:
 		// RC roll function
 		if (rcData[RC_DATA_ROLL].isValid) {
 			if (config.rcAbsolute == 1) {
@@ -178,7 +185,7 @@ void mainLoop() {
 			rollPhiSet = constrain_f(rollPhiSet, config.maxRCRoll, config.minRCRoll);
 		}
 		break;
-	case 5:
+	case 7:
 		// regular debug output
 		pOutCnt++;
 		if (pOutCnt == (LOOPUPDATE_FREQ / 10 / POUT_FREQ)) {
@@ -186,29 +193,23 @@ void mainLoop() {
 			debug();
 		}
 		break;
-	case 6:
+	case 8:
+		checkRcTimeouts();
+		break;
+	case 9:
+		sCmd.readSerial();
+		slowLoopTask = 0;
+		break;
+	case 10:
 #ifdef STACKHEAPCHECK_ENABLE
 		stackHeapEval(false);
 #endif
-		slowLoopTask = 0;
 		break;
 	default:
 		break;
 	}
+
 	PERFORMANCE(BM_OTHER);
 
-	//****************************
-	// check RC channel timeouts
-	//****************************
-
-	PERFORMANCE(BM_TIMEOUTS);
-	checkRcTimeouts();
-	PERFORMANCE(BM_OTHER);
-
-	//****************************
-	// Evaluate Serial inputs
-	//****************************
-	PERFORMANCE(BM_SERIAL);
-	sCmd.readSerial();
-	PERFORMANCE(BM_OTHER);
+	doubleFault = false; // If we have run the mainloop successfully, we reset the double WDT fault status.
 }
