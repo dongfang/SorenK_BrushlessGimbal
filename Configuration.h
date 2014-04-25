@@ -26,12 +26,6 @@ public:
 	int32_t rollKd;
 
 // Output settings
-	int16_t angleOffsetPitch; // angle offset, deg*100
-	int16_t angleOffsetRoll;
-	uint8_t nPolesMotorPitch;
-	uint8_t nPolesMotorRoll;
-	int8_t  dirMotorPitch;
-	int8_t  dirMotorRoll;
 	uint8_t motorNumberPitch;
 	uint8_t motorNumberRoll;
 	uint8_t maxPWMmotorPitch;

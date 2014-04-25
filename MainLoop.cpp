@@ -17,6 +17,8 @@ float pitchPhiSet;
 float rollAngleSet;
 float pitchAngleSet;
 
+void slowLoop();
+
 void flashLED() {
 	static uint8_t count;
 	count++;
@@ -34,7 +36,6 @@ void mainLoop() {
 	int32_t rollPIDVal;
 
 	static char pOutCnt = 0;
-	static int stateCount = 0;
 
 	PERFORMANCE(BM_IDLE);
 	while (!runMainLoop); // wdt_reset();
@@ -47,22 +48,6 @@ void mainLoop() {
 	// update IMU data
 	imu.fastUpdateCycle();
 
-	// Evaluate RC-Signals
-	if (config.rcAbsolute == 1) {
-		PERFORMANCE(BM_RC_DECODE);
-		evaluateRCAbsolute(); // t=30/142us,  returns rollRCSetPoint, pitchRCSetpoint
-		utilLP_float(&pitchAngleSet, pitchPhiSet, rcLPF_tc); // t=16us
-		utilLP_float(&rollAngleSet, rollPhiSet, rcLPF_tc); // t=28us
-		PERFORMANCE(BM_OTHER);
-	} else {
-		PERFORMANCE(BM_RC_DECODE);
-		evaluateRCIntegrating(); // gives rollRCSpeed, pitchRCSpeed
-		utilLP_float(&pitchAngleSet, pitchPhiSet, 0.01);
-		utilLP_float(&rollAngleSet, rollPhiSet, 0.01);
-		PERFORMANCE(BM_OTHER);
-	}
-
-	evaluateRCSwitch();
 	/*
 	 * TODO: Faked controls. Make them work.
 	*/
@@ -73,32 +58,36 @@ void mainLoop() {
 	// pitch and roll PIDs
 	//****************************
 	PERFORMANCE(BM_PIDS);
-	pitchPIDVal = //ComputePID(DT_INT_MS, angle[PITCH], pitchAngleSet*1000, &pitchErrorSum, &pitchErrorOld, pitchPIDpar.Kp, pitchPIDpar.Ki, pitchPIDpar.Kd);
-			pitchPID.compute(DT_INT_MS, imu.angle_md[PITCH], pitchAngleSet * 1000);
-	rollPIDVal = //ComputePID(DT_INT_MS, angle[ROLL], rollAngleSet*1000, &rollErrorSum, &rollErrorOld, rollPIDpar.Kp, rollPIDpar.Ki, rollPIDpar.Kd);
-			rollPID.compute(DT_INT_MS, imu.angle_md[ROLL], rollAngleSet * 1000);
+	pitchPIDVal = pitchPID.compute(DT_INT_MS, imu.angle_md[PITCH], pitchAngleSet * ANGLE_SCALING);
+	rollPIDVal = rollPID.compute(DT_INT_MS, imu.angle_md[ROLL], rollAngleSet * ANGLE_SCALING);
 	PERFORMANCE(BM_OTHER);
 
 	// motor control
 	if (switchPos >= 0) {
 		PERFORMANCE(BM_MOTORPHASES);
-		int motorDrive = pitchPIDVal * config.dirMotorPitch;
-		uint8_t posStep = motorDrive >> 3;
+		//int motorDrive = pitchPIDVal; // * config.dirMotorPitch;
+		uint8_t posStep = pitchPIDVal >> 3;
 		motorPhases[config.motorNumberPitch][0] = pwmSinMotorPitch[posStep] * softStart >> 4;
 		motorPhases[config.motorNumberPitch][1] = pwmSinMotorPitch[(uint8_t) (posStep + 85)] * softStart >> 4;
 		motorPhases[config.motorNumberPitch][2] = pwmSinMotorPitch[(uint8_t) (posStep + 170)] * softStart >> 4;
 
-		motorDrive = rollPIDVal * config.dirMotorRoll;
-		posStep = motorDrive >> 3;
+		posStep = rollPIDVal >> 3;
 		motorPhases[config.motorNumberRoll][0] = pwmSinMotorRoll[posStep] * softStart >> 4;
 		motorPhases[config.motorNumberRoll][1] = pwmSinMotorRoll[(uint8_t) (posStep + 85)] * softStart >> 4;
 		motorPhases[config.motorNumberRoll][2] = pwmSinMotorRoll[(uint8_t) (posStep + 170)] * softStart >> 4;
 		PERFORMANCE(BM_OTHER);
 	}
 
-	//****************************
+	slowLoop();
+	doubleFault = false; // If we have run the main loop successfully, we reset the double WDT fault status.
+}
+
+void slowLoop() {
+  //****************************
 	// slow rate actions
 	//****************************
+	static int stateCount = 0;
+
 	PERFORMANCE(BM_SLOWLOOP);
 	slowLoopTaskPerformanceTimed = slowLoopTask;
 	switch (slowLoopTask++) {
@@ -198,12 +187,30 @@ void mainLoop() {
 		break;
 	case 9:
 		sCmd.readSerial();
-		slowLoopTask = 0;
 		break;
 	case 10:
+	  // Evaluate RC-Signals
+	  if (config.rcAbsolute == 1) {
+	    PERFORMANCE(BM_RC_DECODE);
+	    evaluateRCAbsolute(); // t=30/142us,  returns rollRCSetPoint, pitchRCSetpoint
+	    utilLP_float(&pitchAngleSet, pitchPhiSet, rcLPF_tc); // t=16us
+	    utilLP_float(&rollAngleSet, rollPhiSet, rcLPF_tc); // t=28us
+	    PERFORMANCE(BM_OTHER);
+	  } else {
+	    PERFORMANCE(BM_RC_DECODE);
+	    evaluateRCIntegrating(); // gives rollRCSpeed, pitchRCSpeed
+	    utilLP_float(&pitchAngleSet, pitchPhiSet, 0.01);
+	    utilLP_float(&rollAngleSet, rollPhiSet, 0.01);
+	    PERFORMANCE(BM_OTHER);
+	  }
+	  evaluateRCSwitch();
+	  break;
+	case 11:
+
 #ifdef STACKHEAPCHECK_ENABLE
 		stackHeapEval(false);
 #endif
+		slowLoopTask = 0;
 		break;
 	default:
 		break;
@@ -211,5 +218,4 @@ void mainLoop() {
 
 	PERFORMANCE(BM_OTHER);
 
-	doubleFault = false; // If we have run the mainloop successfully, we reset the double WDT fault status.
 }

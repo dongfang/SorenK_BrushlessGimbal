@@ -50,10 +50,8 @@ public:
 	// accMagnitude_g_100 should yield 1/100 g units.
 	float estG[3];
 	int16_t accMagnitude_g_100;
-	int32_t tmp_accMagnitude_g_2;
 
-	int32_t angle_md[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
-
+	int16_t angle_cd[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
 
 private:
 	MPU6050* mpu;
@@ -64,8 +62,7 @@ private:
 	//float accLPF_f[3];
 
 	float accComplFilterConstant;  // filter constant for complementary filter
-
-	// int16_t acc_25deg;      //** TODO: check
+	int32_t tmp_accMagnitude_g_2;
 
 	void readRotationRates();
 	void readAccelerations();
@@ -80,6 +77,15 @@ private:
 		v[X] += delta[ROLL] * v_tmp[Z] - delta[YAW] * v_tmp[Y];
 		v[Y] += delta[PITCH] * v_tmp[Z] + delta[YAW] * v_tmp[X];
 	}
+
+	/*
+	 * Stupid approach to fast control!
+	 * pitch motor comp = pitch gyro, as simply as that.
+	 * roll motor comp = cos(pitch deflect) * roll gyro + sin(pitch deflect) * yaw gyro
+	 * pitch deflect is pitch angle, if the airframe is horizontal.
+	 * As pitch deflect is not a small angle, small-angle approx will not cut it. But we might 
+	 * be fortunate that linear blending is good enough.
+	 */
 };
 
 void initMPUlpf();

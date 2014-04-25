@@ -38,7 +38,7 @@ void IMU::init() {
 	mpu->getAccelerations(acc);
 
 	for (axis = 0; axis < 3; axis++) {
-		estG[axis] = /*accLPF_f[axis] = */ acc[axis];
+		estG[axis] = acc[axis];
 	}
 
 	accMagnitude_g_100 = 100;
@@ -96,8 +96,8 @@ void IMU::calculateAttitudeAngles() {
 	// Here, the traditional meanings of pitch and roll are reversed.
 	// That is ultimately okay! In an airframe, it is first pitch then roll.
 	// On the typical gimbal frame, it is opposite.
-	angle_md[ROLL] = (config.angleOffsetRoll * 10) + Rajan_FastArcTan2_scaled(estG[X], sqrt(estG[Z] * estG[Z] + estG[Y] * estG[Y]));
-	angle_md[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_scaled(estG[Y], estG[Z]);
+	angle_cd[ROLL] = (config.angleOffsetRoll * 10) + Rajan_FastArcTan2_scaled(estG[X], sqrt(estG[Z] * estG[Z] + estG[Y] * estG[Y]));
+	angle_cd[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_scaled(estG[Y], estG[Z]);
 }
 
 void initPIDs(void) {

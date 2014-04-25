@@ -21,12 +21,6 @@ void Configuration::setDefaults() {
 	rollKd = 13500;
 	accTimeConstant = 4;
 	mpuLPF = 0;
-	angleOffsetPitch = 0;
-	angleOffsetRoll = 0;
-	nPolesMotorPitch = 14;
-	nPolesMotorRoll = 14;
-	dirMotorPitch = -1;
-	dirMotorRoll = 1;
 	motorNumberPitch = 0;
 	motorNumberRoll = 1;
 	maxPWMmotorPitch = 100;
