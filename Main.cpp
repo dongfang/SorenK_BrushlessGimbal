@@ -161,7 +161,7 @@ void initState() {
 	initRCFilter();
 
 	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
-	mpu.setDLPFMode(config.mpuLPF);
+	//mpu.setDLPFMode(config.mpuLPF);
 
 	// set sensor orientation (from config)
 	// This needs a working acc. sensor.

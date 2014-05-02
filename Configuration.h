@@ -11,7 +11,7 @@ public:
 
 // Input settings
 	int16_t accTimeConstant;
-	int8_t mpuLPF; // mpu LPF 0..6, 0=fastest(256Hz) 6=slowest(5Hz)
+	//int8_t mpuLPF; // mpu LPF 0..6, 0=fastest(256Hz) 6=slowest(5Hz)
 	bool calibrateGyro; // Else use EEPROM value
 	uint8_t majorAxis;
 	bool axisReverseZ;

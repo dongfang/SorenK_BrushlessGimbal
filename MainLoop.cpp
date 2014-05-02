@@ -17,6 +17,9 @@ float pitchPhiSet;
 float rollAngleSet;
 float pitchAngleSet;
 
+int32_t pitchPIDVal;
+int32_t rollPIDVal;
+
 void flashLED() {
 	static uint8_t count;
 	count++;
@@ -30,9 +33,6 @@ void flashLED() {
 /* Main Loop                                  */
 /**********************************************/
 void mainLoop() {
-	int32_t pitchPIDVal;
-	int32_t rollPIDVal;
-
 	static char pOutCnt = 0;
 	static int stateCount = 0;
 

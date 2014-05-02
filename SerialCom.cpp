@@ -147,6 +147,7 @@ void printHelpUsage() {
 	printf_P(PSTR("        debug acc               ... prints accelerometer values\r\n"));
 	printf_P(PSTR("        debug gyro              ... prints gyro values\r\n"));
 	printf_P(PSTR("        debug att               ... prints attitude\r\n"));
+	printf_P(PSTR("        debug pid               ... prints PID outputs\r\n"));
 	printf_P(PSTR("par   <parName> <parValue>   General parameter read/set command\r\n"));
 	printf_P(PSTR("        example usage:\r\n"));
 	printf_P(PSTR("        par                     ... list all config parameters\r\n"));
@@ -171,17 +172,17 @@ void unrecognized(const char *command) {
 #define DEBUG_GYROVALUES 2
 #define DEBUG_ESTG 3
 #define DEBUG_ATTITUDE 4
-#define DEBUG_I2C 5
+#define DEBUG_PID 5
 
 static const char DEBUG_OFF_ARG[] PROGMEM = "off";
 static const char DEBUG_ACCVALUES_ARG[] PROGMEM = "acc";
 static const char DEBUG_GYROVALUES_ARG[] PROGMEM = "gyro";
 static const char DEBUG_ESTG_ARG[] PROGMEM = "estg";
 static const char DEBUG_ATTITUDE_ARG[] PROGMEM = "att";
-static const char DEBUG_I2C_ARG[] PROGMEM = "i2c";
+static const char DEBUG_PID_ARG[] PROGMEM = "pid";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = {
-	DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG, DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_I2C_ARG
+	DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG, DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG
 };
 
 /*
@@ -262,10 +263,8 @@ void debug() {
 			imu.accMagnitude_g_100
 			);
 	break;
-	case DEBUG_I2C:
-		for (i=0; i<sizeof(i2c_interrupt_hits); i++) {
-			printf_P(PSTR("%d: %x\r\n"), i, i2c_interrupt_hits[i]);
-		}
+	case DEBUG_PID:
+		printf_P(PSTR("roll:%ld, pitch:%ld\r\n"), rollPIDVal, pitchPIDVal);
 		break;
 	default: break;
 	}

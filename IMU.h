@@ -82,7 +82,7 @@ private:
 	}
 };
 
-void initMPUlpf();
+// void initMPUlpf();
 void initPIDs();
 
 #endif

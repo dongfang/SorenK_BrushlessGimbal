@@ -20,7 +20,6 @@ void Configuration::setDefaults() {
 	rollKi = 800;
 	rollKd = 13500;
 	accTimeConstant = 4;
-	mpuLPF = 0;
 	angleOffsetPitch = 0;
 	angleOffsetRoll = 0;
 	nPolesMotorPitch = 14;
@@ -83,9 +82,11 @@ static inline void fixme_initSensorOrientation() {
 	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
 }
 
+/*
 static inline void fixme_initMPUlpf() {
 	mpu.setDLPFMode(config.mpuLPF);
 }
+*/
 
 const ConfigDef_t PROGMEM configListPGM[] = {
 { "vers", UINT8, &config.vers, NULL },
@@ -96,7 +97,7 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "rollKi", INT32, &config.rollKi, &initPIDs },
 { "rollKd", INT32, &config.rollKd, &initPIDs },
 { "accTime", INT16, &config.accTimeConstant, &fixme_initIMU },
-{ "mpuFilter", INT8, &config.mpuLPF, &fixme_initMPUlpf },
+// { "mpuFilter", INT8, &config.mpuLPF, &fixme_initMPUlpf }, // This only makes everything worse.
 { "pitchOffset", INT16, &config.angleOffsetPitch, NULL },
 { "rollOffset", INT16, &config.angleOffsetRoll, NULL },
 { "pitchDir", INT8, &config.dirMotorPitch, NULL },
@@ -171,7 +172,7 @@ void writeConfig(ConfigDef_t* def, int32_t val) {
 void updateAllParameters() {
 	recalcMotorStuff();
 	initPIDs();
-	mpu.setDLPFMode(config.mpuLPF);
+	// mpu.setDLPFMode(config.mpuLPF);
 	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
 	initRCFilter();
 }
