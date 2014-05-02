@@ -24,7 +24,7 @@ void MPU6050::init() {
 	setGyroRange(MPU6050_GYRO_FS); // Set Gyro Sensitivity to config.h
 
 	setAccelRange(MPU6050_ACCEL_FS); //+- 2G
-	setRate(0); // 0=1kHz, 1=500Hz, 2=333Hz, 3=250Hz, 4=200Hz
+	setRate(7); // 0=8kHz, 1=4kHz, 2=2.66Hz, 3=2kHz, 4=1.6kHz, 5=1.33kHz, 6=1.14Hz, 7=1kHz
 	setSleepEnabled(false);
 	//_delay_ms(100);
 }
@@ -39,11 +39,13 @@ bool MPU6050::testConnection() {
     return result == 0x34;
 }
 
+/*
 void MPU6050::setDLPFMode(uint8_t mode) {
 	i2c_read_regs(devAddr, MPU6050_RA_CONFIG, 1);
 	setBits(&i2c_buffer[0], MPU6050_CFG_DLPF_CFG_BIT, MPU6050_CFG_DLPF_CFG_LENGTH, mode);
 	i2c_writeReg(devAddr, MPU6050_RA_CONFIG, i2c_buffer[0]);
 }
+*/
 
 void MPU6050::setClockSource(uint8_t source) {
 	i2c_read_regs(devAddr, MPU6050_RA_PWR_MGMT_1, 1);
