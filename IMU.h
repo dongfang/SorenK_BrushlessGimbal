@@ -24,19 +24,26 @@ public:
 	void init();
 
 	void updateAccMagnitude();
+	void blendAccToAttitude();
+	void calculateAttitudeAngles();
 
 	// Get attitude data
 	void fastUpdateCycle() {
 		PERFORMANCE(BM_READ_GYROS);
-	    readRotationRates();
+		// There is a case of optimistic scheduling here: We start the background
+		// fetching of acc. data before the gyro data has been read from the (same)
+		// buffer. It should be verified that there is no collision.
+		// OK at first, we just execute it the safe way around, missing the opportunity
+		// to start acc.meter sampling early.
+		mpu->getRotationRatesAsync(gyro);
 	    mpu->startAccelerationsAsync();
 	    PERFORMANCE(BM_BLEND_GYROS);
-	    blendGyrosToAttitude();  // t=260us
+	    blendGyrosToAttitude();
 	    PERFORMANCE(BM_BLEND_ACC);
 	    readAccelerations();
-	    blendAccToAttitude();   // t=146us
-	    PERFORMANCE(BM_CALCULATE_AA);
-	    //calculateAttitudeAngles(); // t=468us
+	    // blendAccToAttitude();
+	    // PERFORMANCE(BM_CALCULATE_AA);
+	    //calculateAttitudeAngles();
 	    mpu->startRotationRatesAsync();
 	    PERFORMANCE(BM_OTHER);
 	}
@@ -54,7 +61,8 @@ public:
 	uint32_t accMagnitudeLowerLimit;
 	uint32_t accMagnitudeUpperLimit;
 
-	int32_t angle_md[2];  // absolute angle inclination in multiple of 0.001 degree    180 deg = 180000
+//	int32_t angle_md[2];  // absolute angle inclination in multiple of 0.001 degree    180 deg = 180000
+	int16_t angle_cd[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
 
 private:
 	MPU6050* mpu;
@@ -63,12 +71,11 @@ private:
 	float gyroADCToRad_s;
 
 	float accComplFilterConstant;  // filter constant for complementary filter
+	int32_t tmp_accMagnitude_g_2;
 
 	void readRotationRates();
 	void readAccelerations();
 	void blendGyrosToAttitude();
-	void blendAccToAttitude();
-	void calculateAttitudeAngles();
 	// Rotate Estimated vector(s) with small angle approximation, according to the gyro data
 	// needs angle in radian units !
 	inline void rotateV(float* v, float* delta) {
@@ -77,6 +84,15 @@ private:
 		v[X] += delta[ROLL] * v_tmp[Z] - delta[YAW] * v_tmp[Y];
 		v[Y] += delta[PITCH] * v_tmp[Z] + delta[YAW] * v_tmp[X];
 	}
+
+	/*
+	 * Stupid approach to fast control!
+	 * pitch motor comp = pitch gyro, as simply as that.
+	 * roll motor comp = cos(pitch deflect) * roll gyro + sin(pitch deflect) * yaw gyro
+	 * pitch deflect is pitch angle, if the airframe is horizontal.
+	 * As pitch deflect is not a small angle, small-angle approx will not cut it. But we might 
+	 * be fortunate that linear blending is good enough.
+	 */
 };
 
 // void initMPUlpf();

@@ -31,7 +31,7 @@
 void IMU::init() {
 	// 102us
 	gyroADCToRad_s = 1.0 / mpu->gyroToDeg_s() / 180.0 * M_PI; // convert to radians/s
-	accComplFilterConstant = (float) DT_FLOAT / (config.accTimeConstant + DT_FLOAT);
+	accComplFilterConstant = (float) MEDIUMLOOP_DT_F_S / (config.accTimeConstant + MEDIUMLOOP_DT_F_S);
 
 	uint8_t axis;
 
@@ -39,7 +39,7 @@ void IMU::init() {
 	mpu->getAccelerations(acc);
 
 	for (axis = 0; axis < 3; axis++) {
-		estG[axis] = /*accLPF_f[axis] = */ acc[axis];
+		estG[axis] = acc[axis];
 	}
 
 	uint32_t factor = mpu->accToG();
@@ -62,7 +62,7 @@ void IMU::blendGyrosToAttitude() {
 	uint8_t axis;
 	float deltaGyroAngle[3];
 	for (axis = 0; axis < 3; axis++) {
-		deltaGyroAngle[axis] = gyro[axis] * gyroADCToRad_s * DT_FLOAT;
+		deltaGyroAngle[axis] = gyro[axis] * gyroADCToRad_s * FASTLOOP_DT_F_S;
 	}
 	rotateV(estG, deltaGyroAngle);
 }
@@ -90,7 +90,14 @@ void IMU::blendAccToAttitude() {
 	// To do that, we just skip filter, as EstV already rotated by Gyro
 	if ((accMagnitudeLowerLimit < accMagnitude && accMagnitude < accMagnitudeUpperLimit)) {
 		for (axis = 0; axis < 3; axis++) {
-			estG[axis] = estG[axis] * (1.0 - accComplFilterConstant) + acc[axis] * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
+			cli();
+			int16_t _acc = acc[axis];
+			int16_t _eg = estG[axis];
+			sei();
+			_eg = _eg * (1.0 - accComplFilterConstant) + _acc * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
+			cli();
+			estG[axis] = _eg;
+			sei();
 		}
 	}
 }
@@ -100,8 +107,11 @@ void IMU::calculateAttitudeAngles() {
 	// Here, the traditional meanings of pitch and roll are reversed.
 	// That is ultimately okay! In an airframe, it is first pitch then roll.
 	// On the typical gimbal frame, it is opposite.
-	angle_md[ROLL] = (config.angleOffsetRoll * 10) + Rajan_FastArcTan2_scaled(estG[X], sqrt(estG[Z] * estG[Z] + estG[Y] * estG[Y]));
-	angle_md[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_scaled(estG[Y], estG[Z]);
+	cli();
+	float x = estG[X]; float y = estG[Y]; float z = estG[Z];
+	sei();
+	angle_cd[ROLL] = (config.angleOffsetRoll * 10) + Rajan_FastArcTan2_scaled(x, sqrt(y*y + z*z));
+	angle_cd[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_scaled(y, z);
 }
 
 void initPIDs(void) {

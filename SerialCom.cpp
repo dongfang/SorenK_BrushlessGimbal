@@ -252,10 +252,10 @@ void debug() {
 	switch(_debug) {
 	case DEBUG_ATTITUDE:
 		// This stunt is to avoid having to draw in the printf_flt stuff which is a pain.
-		sprintf_P(temp, PSTR("%ld"), imu.angle_md[ROLL]);
+		sprintf_P(temp, PSTR("%ld"), imu.angle_cd[ROLL]);
 		//insertComma(temp);
 		printf_P(PSTR("roll:%s"), temp);
-		sprintf_P(temp, PSTR("%ld"), imu.angle_md[PITCH]);
+		sprintf_P(temp, PSTR("%ld"), imu.angle_cd[PITCH]);
 		//insertComma(temp);
 		printf_P(PSTR("\tpitch:%s\r\n"), temp);
 		break;

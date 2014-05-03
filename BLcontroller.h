@@ -79,11 +79,14 @@ inline void motorOff(uint8_t motorNumber, uint8_t* pwmSin) {
 }
 */
 
-#define DONE 0
-#define RUNNING_MAINLOOP 1
-#define FINISHED_MAINLOOP 2
+#define IDLE 0
+#define RUNNING 1
+#define DONE 2
+extern void fastTask();
+extern void mediumTask();
 
-extern void mainLoop();
+#define FAST_PERIOD (F_CPU/510/FASTLOOP_FREQ)
+#define MEDIUM_PERIOD (F_CPU/510/MEDIUMLOOP_FREQ)
 
 /********************************/
 /* Motor Control IRQ Routine    */
@@ -91,34 +94,89 @@ extern void mainLoop();
 // Motor control.
 // Should trigger at 31.25 kHz. More than often enough that we really can output the PWM values in sync with the overflow.
 ISR (TIMER1_OVF_vect) {
-  static uint8_t state = DONE;
-  static uint8_t divider = 0;
-  divider++;// increments at F_CPU/256 so after time T it is T*F_CPU/256
+  static uint8_t fastState = DONE;
+  static uint8_t mediumState = DONE;
+  static uint8_t fastDivider = FAST_PERIOD;
+  static uint16_t mediumDivider = MEDIUM_PERIOD;
+  fastDivider--;	// decrements at F_CPU/256 so after time T it is T*F_CPU/256
+  mediumDivider--;
   timer1Extension++;
-  if (state == FINISHED_MAINLOOP) {
-    // As a further experiment, try put this at exit time of mainLoop.
+  sei(); // Make reentrant (!)
+  if (fastState == DONE) {
+    // As a further experiment, try put this at exit time of mainLoop (unsynced PWM out).
     PWM_A_MOTOR0 = motorPhases[0][0];
     PWM_B_MOTOR0 = motorPhases[0][1];
     PWM_C_MOTOR0 = motorPhases[0][2];
     PWM_A_MOTOR1 = motorPhases[1][0];
     PWM_B_MOTOR1 = motorPhases[1][1];
     PWM_C_MOTOR1 = motorPhases[1][2];
-    state = DONE;
+    fastState = IDLE;
   }
-  if (state == DONE && divider == F_CPU/510/LOOPUPDATE_FREQ) {
-    divider = 0;
+  if (fastState == IDLE && !fastDivider) {
+    fastState = RUNNING;
+    fastDivider = FAST_PERIOD;
 	//LED_PORT |= (1 << LED_BIT);
-    //LED_PIN |= (1 << LED_BIT);LED_PIN |= (1 << LED_BIT);
-    state = RUNNING_MAINLOOP;
-    sei(); // This is the experiment. Run the fast loop from within this interrupt handler and allow re-entry.
-	LED_PORT |= (1 << LED_BIT);
-    mainLoop();
-	LED_PORT &= ~(1 << LED_BIT);
-    state = FINISHED_MAINLOOP;
+    fastTask();
 	//LED_PORT &= ~(1 << LED_BIT);
+    fastState = DONE;
+  }
+  if (fastState != RUNNING && mediumState == IDLE && !mediumDivider) {
+    mediumState = RUNNING;
+    mediumDivider = MEDIUM_PERIOD;
+	//LED_PORT |= (1 << LED_BIT);
+    mediumTask();
+	//LED_PORT &= ~(1 << LED_BIT);
+    mediumState = IDLE;
   }
 }
 
+/*
+if (faststate == RUNNING) return;
+if (faststate == DONE) lastchout to motors; faststate = IDLE;
+if (faststate == IDLE) {
+	if ([time for fast loop]) {
+		faststate = RUNNING;
+		reschedule
+		fastLoop()
+		faststate = DONE;
+	}
+	if(mediumstate == DONE && [time for medium loop]) {
+		mediumstate = RUNNING;
+		reschedule
+		mediumLoop();
+		mediumstate = DONE;
+	}
+}
+
+/*
+ * Oh shit
+struct Task {
+	uint8_t state;
+	int nextTime;
+	int period;
+	void (*task)();
+	void (*postTask)(); // if there is something that much be synced to the timer's overflow
+}
+
+ISR(timern_OVF) {
+	uint8_t i;
+	int t = timerExtension;
+	sei();
+	for (i=0; i<NUM_TASKS; i++) {
+		if (tasks[i].state == DONE) {
+			if (tasks[i].postTask()!=0) tasks[i].postTask();
+			tasks[i].state = IDLE;
+		}
+		// Oh shit here we need to check that no higher priority stuff is waiting.. too comlicated or I lack the right idea right now.
+		if (tasks[i].state == IDLE && t >= tasks[i].nextTime) {
+			tasks[i] = RUNNING;
+			tasks[i].nextTime += tasks[i].period;
+			tasks[i].task();
+			tasks[i] = DONE;
+		}
+	}
+}
+*/
 /*
 void motorTest() {
   #define MOT_DEL 100

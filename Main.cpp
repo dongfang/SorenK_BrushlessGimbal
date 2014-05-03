@@ -64,7 +64,7 @@ uint8_t pwmSinMotorRoll[N_SIN];
 RCData_t rcData[RC_DATA_SIZE];
 int8_t switchPos = SW_UNKNOWN;
 
-extern void slowLoop();
+extern void slowTask();
 
 // D'uh!
 int _putchar(char c, FILE* f) {
@@ -219,7 +219,7 @@ int main() {
 	// doesnt work anyway (why?)
 	mpu.startRotationRatesAsync();
 	while(1) {
-		slowLoop();
+		slowTask();
 		//printf("%d, %d\r\n", debug_i2c_status[0], debug_i2c_status[1]);
 	}
 }

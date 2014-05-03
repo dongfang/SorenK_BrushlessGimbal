@@ -168,8 +168,11 @@ uint8_t debug_i2c_status[2] ;
 void i2c_wait_async_done() {
 	debug_i2c_status[debug_measureing_what] = i2c_async_status;
 	if(i2c_async_status == I2C_ASYNC_DONE) return;
-	//wait_16_micros(10);
-	printf_P(PSTR("I2c asy late: %d\r\n"), i2c_async_status);
+	// wait_16_micros(10);
+
+	// This should in almost all cases just result in a brief wait.
+	// If it takes long, such as if the more or less self-sustained
+	// I2C interrupt handling has stalled, the WDT should shoot it down.
+	// (TODO: That happens but it stalls after restart, for some obscure reason).
 	while(i2c_async_status != I2C_ASYNC_DONE);
-	printf_P(PSTR("I2c asy resolved: %d\r\n"), i2c_async_status);
 }

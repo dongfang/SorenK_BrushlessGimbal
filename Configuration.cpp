@@ -20,12 +20,13 @@ void Configuration::setDefaults() {
 	rollKi = 800;
 	rollKd = 13500;
 	accTimeConstant = 4;
+
 	angleOffsetPitch = 0;
 	angleOffsetRoll = 0;
-	nPolesMotorPitch = 14;
-	nPolesMotorRoll = 14;
-	dirMotorPitch = -1;
-	dirMotorRoll = 1;
+
+	//dirMotorPitch = -1;
+	//dirMotorRoll = 1;
+
 	motorNumberPitch = 0;
 	motorNumberRoll = 1;
 	maxPWMmotorPitch = 100;
@@ -97,11 +98,13 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "rollKi", INT32, &config.rollKi, &initPIDs },
 { "rollKd", INT32, &config.rollKd, &initPIDs },
 { "accTime", INT16, &config.accTimeConstant, &fixme_initIMU },
-// { "mpuFilter", INT8, &config.mpuLPF, &fixme_initMPUlpf }, // This only makes everything worse.
+
 { "pitchOffset", INT16, &config.angleOffsetPitch, NULL },
 { "rollOffset", INT16, &config.angleOffsetRoll, NULL },
-{ "pitchDir", INT8, &config.dirMotorPitch, NULL },
-{ "rollDir", INT8, &config.dirMotorRoll, NULL },
+
+//{ "pitchDir", INT8, &config.dirMotorPitch, NULL },
+//{ "rollDir", INT8, &config.dirMotorRoll, NULL },
+
 { "ritchMotor", UINT8, &config.motorNumberPitch, NULL },
 { "rollMotor", UINT8, &config.motorNumberRoll, NULL },
 { "pitchPower", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
