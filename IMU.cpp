@@ -18,6 +18,7 @@
 #include "IMU.h"
 #include "Globals.h"
 #include <math.h>
+#include <avr/interrupt.h>
 
 //******  advanced users settings *******************
 /* Set the Low Pass Filter factor for ACC */
@@ -41,7 +42,12 @@ void IMU::init() {
 		estG[axis] = /*accLPF_f[axis] = */ acc[axis];
 	}
 
-	accMagnitude_g_100 = 100;
+	uint32_t factor = mpu->accToG();
+	factor *= factor;
+	accMagnitudeLowerLimit = factor * 36 / 100;
+	accMagnitudeUpperLimit = factor * 196 / 100;
+
+	accMagnitude = factor;
 }
 
 void IMU::readRotationRates() {
@@ -62,20 +68,18 @@ void IMU::blendGyrosToAttitude() {
 }
 
 // Called from slow-loop in main.
-void IMU::updateAccMagnitude1() {
+void IMU::updateAccMagnitude() {
 	uint8_t axis;
 
 	// 179 us
-	tmp_accMagnitude_g_2 = 0;
+	uint32_t tmp_accMagnitude = 0;
 	for (axis = 0; axis < 3; axis++) {
 		//accMagnitude_g_100 += accLPF_f[axis] * accLPF_f[axis];
-		tmp_accMagnitude_g_2 += (int32_t)acc[axis] * (int32_t)acc[axis];
+		tmp_accMagnitude += (int32_t)acc[axis] * (int32_t)acc[axis];
 	}
-	tmp_accMagnitude_g_2 = tmp_accMagnitude_g_2 * 100;
-}
-
-void IMU::updateAccMagnitude2() {
-	tmp_accMagnitude_g_2 = tmp_accMagnitude_g_2 / mpu->accToG();
+	cli();
+	accMagnitude = tmp_accMagnitude;
+	sei();
 }
 
 void IMU::blendAccToAttitude() {
@@ -84,7 +88,7 @@ void IMU::blendAccToAttitude() {
 	// Apply complimentary filter (Gyro drift correction)
 	// If accel magnitude >1.4G or <0.6G and ACC vector outside of the limit range => we neutralize the effect of accelerometers in the angle estimation.
 	// To do that, we just skip filter, as EstV already rotated by Gyro
-	if ((36 < accMagnitude_g_100 && accMagnitude_g_100 < 196)) {
+	if ((accMagnitudeLowerLimit < accMagnitude && accMagnitude < accMagnitudeUpperLimit)) {
 		for (axis = 0; axis < 3; axis++) {
 			estG[axis] = estG[axis] * (1.0 - accComplFilterConstant) + acc[axis] * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
 		}

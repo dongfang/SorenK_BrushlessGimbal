@@ -23,11 +23,8 @@
 
  Anyhow, if you start to commercialize our work, please read on http://code.google.com/p/brushless-gimbal/ on how to contribute
 
- // I2Cdev library collection - MPU6050 I2C device class
- // Based on InvenSense MPU-6050 register map document rev. 2.0, 5/19/2011 (RM-MPU-6000A-00)
- // 10/3/2011 by Jeff Rowberg <jeff@rowberg.net>
- // Updates should (hopefully) always be available at https://github.com/jrowberg/i2cdevlib
- */
+ I2Cdev: Kicked.
+*/
 
 #include <avr/eeprom.h>
 #include <stdio.h>
@@ -56,7 +53,6 @@ uint8_t mcusr_mirror  __attribute__ ((section (".noinit")));
 bool watchdogResetWasIntended __attribute__ ((section (".noinit")));
 bool doubleFault __attribute__ ((section (".noinit")));
 
-volatile bool runMainLoop;
 uint8_t syncCounter;
 
 uint8_t motorPhases[2][3];
@@ -68,7 +64,7 @@ uint8_t pwmSinMotorRoll[N_SIN];
 RCData_t rcData[RC_DATA_SIZE];
 int8_t switchPos = SW_UNKNOWN;
 
-extern void mainLoop();
+extern void slowLoop();
 
 // D'uh!
 int _putchar(char c, FILE* f) {
@@ -180,6 +176,10 @@ __attribute__((section(".init3")));
 
 int main();
 
+extern uint8_t debug_i2c_status[2];
+extern uint8_t 	debug_measureing_what;
+;
+
 void checkwatchdog(void) {
 	mcusr_mirror = MCUSR;
 	MCUSR = 0;
@@ -195,10 +195,9 @@ void checkwatchdog(void) {
 int main() {
 	// TODO: Can this be moved down?
 	// wdt_disable();
-	sei();
 
 	initHW();
-	LED_PORT |= (1 << LED_BIT);
+	sei();
 
 	// If it was not a WDT reset
 	if (watchdogResetWasIntended || doubleFault || !(mcusr_mirror & (1<<3))) {
@@ -211,12 +210,16 @@ int main() {
 	}
 
 	wdt_enable(WDT_TIMEOUT);
-
 	LED_PORT &= ~(1 << LED_BIT);
 
-	mpu.startRotationRatesAsync();
+	printf_P(PSTR("Go!\r\n"));
 
+	// Enable Timer1 Interrupt for timing
+	TIMSK1 |= 1<<TOIE1;
+	// doesnt work anyway (why?)
+	mpu.startRotationRatesAsync();
 	while(1) {
-		mainLoop();
+		slowLoop();
+		//printf("%d, %d\r\n", debug_i2c_status[0], debug_i2c_status[1]);
 	}
 }

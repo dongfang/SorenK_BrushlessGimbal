@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include "Board.h"
 #include "I2C.h"
 #include "Util.h"
@@ -30,6 +31,7 @@ void i2c_init(void) {
   TWSR = 0;                                 // no prescaler => prescaler = 1
   TWBR = ((F_CPU / I2C_SPEED) - 16) / 2;       // set the I2C clock rate to 100kHz
   TWCR = 1<<TWEN;							// enable twi module, possiblhy also interrupt
+  i2c_async_status = -1; // an invalid value.
 }
 
 // Synchronized (blocking till done).
@@ -104,8 +106,8 @@ void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val) {
 }
 
 ISR(TWI_vect) {
-	if (i2c_async_status != I2C_ASYNC_DATA || i2c_async_bufidx == 0)
-		i2c_interrupt_hits[i2c_async_status] = TWSR;
+	//if (i2c_async_status != I2C_ASYNC_DATA || i2c_async_bufidx == 0)
+	i2c_interrupt_hits[i2c_async_status] = TWSR;
 	switch(i2c_async_status) {
 	case I2C_ASYNC_STARTED_1:
 		TWDR = i2c_async_sladr<<1;
@@ -116,7 +118,6 @@ ISR(TWI_vect) {
 	case I2C_DEVADDR_SENT_1:
 		TWDR = i2c_async_reg;
 		TWCR = 1<<TWINT | 1<<TWEN | 1<<TWIE;
-		//TWCR |= 1<<TWINT;
 		i2c_async_status++;
 		break;
 	case I2C_REGADDR_SENT:
@@ -126,13 +127,13 @@ ISR(TWI_vect) {
 	case I2C_ASYNC_STARTED_2:
 		TWDR = (i2c_async_sladr<<1) | 1;
 		TWCR = 1<<TWINT | 1<<TWEN | 1<<TWIE;
-		//TWCR |= 1<<TWINT;
 		i2c_async_status++;
 		break;
 	case I2C_DEVADR_SENT_2:
 		// Nothing? Or first data byte? Dunno.
 		TWCR = 1<<TWINT | 1<<TWEN | 1<<TWIE | 1<<TWEA;
 		i2c_async_status++;
+		i2c_async_bufidx = 0;
 		break;
 	case I2C_ASYNC_DATA:
 		i2c_buffer[i2c_async_bufidx] = TWDR;
@@ -159,8 +160,16 @@ void i2c_read_regs_async(uint8_t add, uint8_t reg, uint8_t size) {
 	TWCR = 1<<TWINT | 1<<TWSTA | 1<<TWEN | 1<<TWIE; // send REPEAT START condition
 }
 
+extern uint8_t debug_measureing_what ;
+uint8_t debug_i2c_status[2] ;
+
 // This will wait till the async handling it completed but not reset the watchdog timer.
 // If it takes too long (glitch), bang, watchdog reboot.
 void i2c_wait_async_done() {
+	debug_i2c_status[debug_measureing_what] = i2c_async_status;
+	if(i2c_async_status == I2C_ASYNC_DONE) return;
+	//wait_16_micros(10);
+	printf_P(PSTR("I2c asy late: %d\r\n"), i2c_async_status);
 	while(i2c_async_status != I2C_ASYNC_DONE);
+	printf_P(PSTR("I2c asy resolved: %d\r\n"), i2c_async_status);
 }

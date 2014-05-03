@@ -17,9 +17,6 @@ void initBlController() {
   TCCR2A = (1<<COM2A1) | (1<<COM2B1) | (1<<WGM20);
   TCCR2B = (1<<CS20);
 
-  // Enable Timer1 Interrupt for timing
-  TIMSK1 |= 1<<TOIE1;
-
   // Start out with no power applied.
   OCR2A = 0;  //11  APIN
   OCR2B = 0;  //D3
@@ -82,24 +79,43 @@ inline void motorOff(uint8_t motorNumber, uint8_t* pwmSin) {
 }
 */
 
+#define DONE 0
+#define RUNNING_MAINLOOP 1
+#define FINISHED_MAINLOOP 2
+
+extern void mainLoop();
+
 /********************************/
 /* Motor Control IRQ Routine    */
 /********************************/
-// motor position control
+// Motor control.
+// Should trigger at 31.25 kHz. More than often enough that we really can output the PWM values in sync with the overflow.
 ISR (TIMER1_OVF_vect) {
-  // 0.88us / 8.1us
+  static uint8_t state = DONE;
+  static uint8_t divider = 0;
+  divider++;// increments at F_CPU/256 so after time T it is T*F_CPU/256
   timer1Extension++;
-  syncCounter++;
-  if(syncCounter==(CC_FACTOR*1000/MOTORUPDATE_FREQ)) {
-	syncCounter=0;
+  if (state == FINISHED_MAINLOOP) {
+    // As a further experiment, try put this at exit time of mainLoop.
     PWM_A_MOTOR0 = motorPhases[0][0];
     PWM_B_MOTOR0 = motorPhases[0][1];
     PWM_C_MOTOR0 = motorPhases[0][2];
     PWM_A_MOTOR1 = motorPhases[1][0];
     PWM_B_MOTOR1 = motorPhases[1][1];
     PWM_C_MOTOR1 = motorPhases[1][2];
-    // update event
-    runMainLoop = true;
+    state = DONE;
+  }
+  if (state == DONE && divider == F_CPU/510/LOOPUPDATE_FREQ) {
+    divider = 0;
+	//LED_PORT |= (1 << LED_BIT);
+    //LED_PIN |= (1 << LED_BIT);LED_PIN |= (1 << LED_BIT);
+    state = RUNNING_MAINLOOP;
+    sei(); // This is the experiment. Run the fast loop from within this interrupt handler and allow re-entry.
+	LED_PORT |= (1 << LED_BIT);
+    mainLoop();
+	LED_PORT &= ~(1 << LED_BIT);
+    state = FINISHED_MAINLOOP;
+	//LED_PORT &= ~(1 << LED_BIT);
   }
 }
 

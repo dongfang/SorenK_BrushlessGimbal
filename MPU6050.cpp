@@ -225,7 +225,6 @@ void MPU6050::recalibrateSensor(void (*complain)(), uint8_t which) {
 #define SENSOR_ITERATIONS 2000
 	int16_t prevSensor[3], sensor[3];
 	int32_t sensorOffsetSums[3];
-	bool motionDetected = false;
 	int calibGCounter = SENSOR_ITERATIONS;
 
 	// wait 1 second
@@ -235,6 +234,7 @@ void MPU6050::recalibrateSensor(void (*complain)(), uint8_t which) {
 	}
 
 	while (calibGCounter > 0) {
+		bool motionDetected = false;
 		wdt_reset();
 		if (calibGCounter == SENSOR_ITERATIONS) {
 			for (i = 0; i < 70; i++) { // wait 0.7sec if calibration failed
@@ -266,7 +266,6 @@ void MPU6050::recalibrateSensor(void (*complain)(), uint8_t which) {
 		if (motionDetected) {
 			complain();
 			calibGCounter = SENSOR_ITERATIONS;
-			motionDetected = false;
 		}
 	}
 
@@ -305,7 +304,10 @@ void MPU6050::startRotationRatesAsync() {
 	i2c_read_regs_async(devAddr, MPU6050_RA_GYRO_XOUT_H, 6);
 }
 
+uint8_t debug_measureing_what ;
+
 void MPU6050::getRotationRatesAsync(int16_t* gyro) {
+	debug_measureing_what = 0;
 	i2c_wait_async_done();
 	transformRotationRates(gyro);
 }
@@ -334,6 +336,7 @@ void MPU6050::startAccelerationsAsync() {
 }
 
 void MPU6050::getAccelerationsAsync(int16_t* acc) {
+	debug_measureing_what = 1;
 	i2c_wait_async_done();
     transformAccelerations(acc);
 }

@@ -239,6 +239,11 @@ void insertComma(char* temp) {
 	temp[ip] = '.';
 }
 
+// This hurts performance wise (an int32 division) but heck, we never really use it.
+int16_t estGComponentIng_100(uint8_t axis) {
+	return (int16_t)(imu.estG[axis] * mpu.accToG() * mpu.accToG() / imu.accMagnitude);
+}
+
 void debug() {
 	char temp[16];
 	uint8_t i;
@@ -257,10 +262,10 @@ void debug() {
 	case DEBUG_ACCVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.acc[X], imu.acc[Y], imu.acc[Z]); break;
 	case DEBUG_GYROVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.gyro[X], imu.gyro[Y], imu.gyro[Z]); break;
 	case DEBUG_ESTG:		printf_P(PSTR("x:%d, y:%d, z:%d (mag: %ld)\r\n"),
-			(int)(imu.estG[X]/imu.accMagnitude_g_100),
-			(int)(imu.estG[Y]/imu.accMagnitude_g_100),
-			(int)(imu.estG[Z]/imu.accMagnitude_g_100),
-			imu.accMagnitude_g_100
+			estGComponentIng_100(X),
+			estGComponentIng_100(Y),
+			estGComponentIng_100(Z),
+			imu.accMagnitude / ((uint32_t)mpu.accToG() * mpu.accToG())
 			);
 	break;
 	case DEBUG_PID:
@@ -278,7 +283,7 @@ void reset() {
 
 
 void complainAboutSensorMotion(){
-	printf_P(PSTR("Motion detected during calibration. Starting over!"));
+	printf_P(PSTR("Motion detected during calibration. Starting over!\r\n"));
 }
 
 void calibrateSensor(uint8_t which) {

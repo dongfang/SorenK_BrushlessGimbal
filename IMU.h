@@ -23,9 +23,7 @@ public:
 	// Do not call from WDT restart.
 	void init();
 
-	//void updateAccVector();
-	void updateAccMagnitude1();
-	void updateAccMagnitude2();
+	void updateAccMagnitude();
 
 	// Get attitude data
 	void fastUpdateCycle() {
@@ -38,7 +36,7 @@ public:
 	    readAccelerations();
 	    blendAccToAttitude();   // t=146us
 	    PERFORMANCE(BM_CALCULATE_AA);
-	    calculateAttitudeAngles(); // t=468us
+	    //calculateAttitudeAngles(); // t=468us
 	    mpu->startRotationRatesAsync();
 	    PERFORMANCE(BM_OTHER);
 	}
@@ -49,11 +47,14 @@ public:
 	// Apparently the accelerations and estG have the same scale, and divided by
 	// accMagnitude_g_100 should yield 1/100 g units.
 	float estG[3];
-	int16_t accMagnitude_g_100;
-	int32_t tmp_accMagnitude_g_2;
 
-	int32_t angle_md[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
+	// Now in units depending on the acc. meters scale.
+	uint32_t accMagnitude;
+	// These limits are to the same scale.
+	uint32_t accMagnitudeLowerLimit;
+	uint32_t accMagnitudeUpperLimit;
 
+	int32_t angle_md[2];  // absolute angle inclination in multiple of 0.001 degree    180 deg = 180000
 
 private:
 	MPU6050* mpu;
@@ -61,11 +62,7 @@ private:
 	// Should that be moved into the MPU class?
 	float gyroADCToRad_s;
 
-	//float accLPF_f[3];
-
 	float accComplFilterConstant;  // filter constant for complementary filter
-
-	// int16_t acc_25deg;      //** TODO: check
 
 	void readRotationRates();
 	void readAccelerations();

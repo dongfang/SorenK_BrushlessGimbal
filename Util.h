@@ -122,6 +122,8 @@ inline uint32_t abs32(int32_t z) {
 }
 
 uint16_t time();
+void wait_16_micros(uint8_t n);
+
 
 uint8_t selectBits(uint8_t data, uint8_t bitStart, uint8_t length);
 void setBits(uint8_t* writtenTo, uint8_t bitStart, uint8_t length, uint8_t newBits);
@@ -141,7 +143,7 @@ enum PERFORMANCE_ITEMS {
     BM_END
 };
 
-#define DO_PERFORMANCE 1
+//#define DO_PERFORMANCE 1
 
 #ifdef DO_PERFORMANCE
 //extern uint8_t hitCounters[];

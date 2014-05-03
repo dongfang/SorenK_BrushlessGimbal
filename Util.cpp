@@ -117,6 +117,14 @@ uint16_t time() {
   }
 }
 
+/*
+ * 1 cycle is 16 microseconds
+ */
+void wait_16_micros(uint8_t n) {
+	uint8_t capture = timer1Extension + n;
+	while(timer1Extension != capture);
+}
+
 uint8_t selectBits(uint8_t data, uint8_t bitStart, uint8_t length) {
     // 01101001 read byte
     // 76543210 bit numbers
