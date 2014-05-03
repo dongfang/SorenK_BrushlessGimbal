@@ -12,10 +12,8 @@
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // Drotek MPU breakout board
 #define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_HIGH
 
-#define MOTORUPDATE_FREQ 725                // in Hz, 500 is default // 1,2,4,8 for 32kHz, 1,2,4 for 4kHz
-#define LOOPUPDATE_FREQ MOTORUPDATE_FREQ    // loop control sample rate equals motor update rate
+#define LOOPUPDATE_FREQ 400 			    // loop control sample rate equals motor update rate
 #define DT_FLOAT (1.0/LOOPUPDATE_FREQ)      // loop controller sample period dT
-#define DT_INT_MS (1000/MOTORUPDATE_FREQ)
 
 #define POUT_FREQ 4      // rate of ACC print output in Hz, 25 Hz is default
 #define LOCK_TIME_SEC 0  // gimbal fast lock time at startup
@@ -43,7 +41,7 @@
 #define MID_RC 1500
 #define MAX_RC 2050
 #define RC_DEADBAND 50U
-#define RC_TIMEOUT 100000
+#define RC_TIMEOUT 1000000UL
 
 // PPM Decoder
 // #define RC_PPM_GUARD_TIME 4000
@@ -59,8 +57,6 @@
 #define PWM_A_MOTOR0 OCR0A
 #define PWM_B_MOTOR0 OCR0B
 #define PWM_C_MOTOR0 OCR2B
-
-#define CC_FACTOR 32
 
 // enable stack and heapsize check (use just for debugging)
 // #define STACKHEAPCHECK_ENABLE
@@ -86,5 +82,5 @@
 
 #define WDT_TIMEOUT WDTO_250MS
 
-#define ANGLE_SCALING 1000L
-#define LOG_ANGLE_SCALING 3
+#define ANGLE_SCALING 100
+#define LOG_ANGLE_SCALING 2

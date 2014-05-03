@@ -90,7 +90,7 @@ ISR (TIMER1_OVF_vect) {
   // 0.88us / 8.1us
   timer1Extension++;
   syncCounter++;
-  if(syncCounter==(CC_FACTOR*1000/MOTORUPDATE_FREQ)) {
+  if(syncCounter==(F_CPU/510/ LOOPUPDATE_FREQ)) {
 	syncCounter=0;
     PWM_A_MOTOR0 = motorPhases[0][0];
     PWM_B_MOTOR0 = motorPhases[0][1];

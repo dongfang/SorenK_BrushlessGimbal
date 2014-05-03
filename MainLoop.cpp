@@ -12,10 +12,17 @@ static uint8_t slowLoopTask;
 uint8_t slowLoopTaskPerformanceTimed;
 uint8_t gimbalState;
 
-float rollPhiSet;
-float pitchPhiSet;
-float rollAngleSet;
-float pitchAngleSet;
+// TODO: INTEGERS!!!!!
+//float rollPhiSet;
+//float pitchPhiSet;
+//float rollAngleSet;
+//float pitchAngleSet;
+
+int16_t rollAngleSet;
+int16_t pitchAngleSet;
+
+int16_t rollPhiSet;
+int16_t pitchPhiSet;
 
 int32_t pitchPIDVal;
 int32_t rollPIDVal;
@@ -25,16 +32,20 @@ void flashLED() {
 	count++;
 	if (count >= 25) {
 		count = 0;
-		LED_PIN |= (1 << LED_BIT);
+		//LED_PIN |= (1 << LED_BIT);
 	}
 }
+
+void slowLoop();
 
 /**********************************************/
 /* Main Loop                                  */
 /**********************************************/
 void mainLoop() {
-	static char pOutCnt = 0;
-	static int stateCount = 0;
+	// int32_t pitchPIDVal;
+	// int32_t rollPIDVal;
+
+	LED_PORT |= (1 << LED_BIT);
 
 	PERFORMANCE(BM_IDLE);
 	while (!runMainLoop); // wdt_reset();
@@ -51,14 +62,14 @@ void mainLoop() {
 	if (config.rcAbsolute == 1) {
 		PERFORMANCE(BM_RC_DECODE);
 		evaluateRCAbsolute(); // t=30/142us,  returns rollRCSetPoint, pitchRCSetpoint
-		utilLP_float(&pitchAngleSet, pitchPhiSet, rcLPF_tc); // t=16us
-		utilLP_float(&rollAngleSet, rollPhiSet, rcLPF_tc); // t=28us
+		utilLP_int(&pitchAngleSet, pitchPhiSet, rcLPF_tc); // t=16us
+		utilLP_int(&rollAngleSet, rollPhiSet, rcLPF_tc); // t=28us
 		PERFORMANCE(BM_OTHER);
 	} else {
 		PERFORMANCE(BM_RC_DECODE);
 		evaluateRCIntegrating(); // gives rollRCSpeed, pitchRCSpeed
-		utilLP_float(&pitchAngleSet, pitchPhiSet, 0.01);
-		utilLP_float(&rollAngleSet, rollPhiSet, 0.01);
+		utilLP_int(&pitchAngleSet, pitchPhiSet, 1);
+		utilLP_int(&rollAngleSet, rollPhiSet, 1);
 		PERFORMANCE(BM_OTHER);
 	}
 
@@ -73,10 +84,8 @@ void mainLoop() {
 	// pitch and roll PIDs
 	//****************************
 	PERFORMANCE(BM_PIDS);
-	pitchPIDVal = //ComputePID(DT_INT_MS, angle[PITCH], pitchAngleSet*1000, &pitchErrorSum, &pitchErrorOld, pitchPIDpar.Kp, pitchPIDpar.Ki, pitchPIDpar.Kd);
-			pitchPID.compute(DT_INT_MS, imu.angle_md[PITCH], pitchAngleSet * 1000);
-	rollPIDVal = //ComputePID(DT_INT_MS, angle[ROLL], rollAngleSet*1000, &rollErrorSum, &rollErrorOld, rollPIDpar.Kp, rollPIDpar.Ki, rollPIDpar.Kd);
-			rollPID.compute(DT_INT_MS, imu.angle_md[ROLL], rollAngleSet * 1000);
+	pitchPIDVal = pitchPID.compute(imu.angle_cd[PITCH], pitchAngleSet);
+	rollPIDVal = rollPID.compute(imu.angle_cd[ROLL], rollAngleSet);
 	PERFORMANCE(BM_OTHER);
 
 	// motor control
@@ -99,23 +108,29 @@ void mainLoop() {
 	//****************************
 	// slow rate actions
 	//****************************
+	slowLoop();
+	doubleFault = false; // If we have run the main loop successfully, we reset the double WDT fault status.
+	LED_PORT &= ~(1 << LED_BIT);
+}
+
+void slowLoop() {
+  //****************************
+	// slow rate actions
+	//****************************
+	static int stateCount = 0;
+	static char pOutCnt = 0;
+
 	PERFORMANCE(BM_SLOWLOOP);
 	slowLoopTaskPerformanceTimed = slowLoopTask;
 	switch (slowLoopTask++) {
 
 	case 0:
-		imu.updateAccMagnitude1();
+		imu.updateAccMagnitude();
 		break;
 	case 1:
-		imu.updateAccMagnitude2();
-		break;
-	case 2:
-		imu.updateAccMagnitude2(); // YES again. Not a bug.
-		break;
-	case 3:
 		flashLED();
 		break;
-	case 4:
+	case 2:
 		// gimbal state transitions
 		if (gimbalState == GIMBAL_OFF) {
 			// wait 2 sec to settle ACC, before PID controller becomes active
@@ -147,45 +162,41 @@ void mainLoop() {
 			break;
 		}
 		break;
-	case 5:
+	case 3:
 		// RC Pitch function
 		if (rcData[RC_DATA_PITCH].isValid) {
 			if (config.rcAbsolute == 1) {
 				pitchPhiSet = rcData[RC_DATA_PITCH].setpoint;
 			} else {
-				if (fabs(rcData[RC_DATA_PITCH].rcSpeed) > 0.01) {
-					pitchPhiSet += rcData[RC_DATA_PITCH].rcSpeed * 0.01;
-				}
+				pitchPhiSet += rcData[RC_DATA_PITCH].rcSpeed;
 			}
 		} else {
 			pitchPhiSet = 0;
 		}
 		if (config.minRCPitch < config.maxRCPitch) {
-			pitchPhiSet = constrain_f(pitchPhiSet, config.minRCPitch, config.maxRCPitch);
+			pitchPhiSet = constrain_int16(pitchPhiSet, config.minRCPitch, config.maxRCPitch);
 		} else {
-			pitchPhiSet = constrain_f(pitchPhiSet, config.maxRCPitch, config.minRCPitch);
+			pitchPhiSet = constrain_int16(pitchPhiSet, config.maxRCPitch, config.minRCPitch);
 		}
 		break;
-	case 6:
+	case 4:
 		// RC roll function
 		if (rcData[RC_DATA_ROLL].isValid) {
 			if (config.rcAbsolute == 1) {
 				rollPhiSet = rcData[RC_DATA_ROLL].setpoint;
 			} else {
-				if (fabs(rcData[RC_DATA_ROLL].rcSpeed) > 0.01) {
-					rollPhiSet += rcData[RC_DATA_ROLL].rcSpeed * 0.01;
-				}
+				rollPhiSet += rcData[RC_DATA_ROLL].setpoint;
 			}
 		} else {
 			rollPhiSet = 0;
 		}
 		if (config.minRCRoll < config.maxRCRoll) {
-			rollPhiSet = constrain_f(rollPhiSet, config.minRCRoll, config.maxRCRoll);
+			rollPhiSet = constrain_int16(rollPhiSet, config.minRCRoll, config.maxRCRoll);
 		} else {
-			rollPhiSet = constrain_f(rollPhiSet, config.maxRCRoll, config.minRCRoll);
+			rollPhiSet = constrain_int16(rollPhiSet, config.maxRCRoll, config.minRCRoll);
 		}
 		break;
-	case 7:
+	case 5:
 		// regular debug output
 		pOutCnt++;
 		if (pOutCnt == (LOOPUPDATE_FREQ / 10 / POUT_FREQ)) {
@@ -193,14 +204,35 @@ void mainLoop() {
 			debug();
 		}
 		break;
-	case 8:
+	case 6:
 		checkRcTimeouts();
 		break;
-	case 9:
+	case 7:
 		sCmd.readSerial();
 		slowLoopTask = 0;
 		break;
-	case 10:
+	case 8:
+	  // Evaluate RC-Signals
+	  if (config.rcAbsolute == 1) {
+	    PERFORMANCE(BM_RC_DECODE);
+	    evaluateRCAbsolute(); // t=30/142us,  returns rollRCSetPoint, pitchRCSetpoint
+	    utilLP_int(&pitchAngleSet, pitchPhiSet, rcLPF_tc); // t=16us
+	    utilLP_int(&rollAngleSet, rollPhiSet, rcLPF_tc); // t=28us
+	    PERFORMANCE(BM_OTHER);
+	  } else {
+	    PERFORMANCE(BM_RC_DECODE);
+	    evaluateRCIntegrating(); // gives rollRCSpeed, pitchRCSpeed
+	    utilLP_int(&pitchAngleSet, pitchPhiSet, 0.01);
+	    utilLP_int(&rollAngleSet, rollPhiSet, 0.01);
+	    PERFORMANCE(BM_OTHER);
+	  }
+	  // nah this is not right........
+	  // i_rollAngleSet = rollAngleSet * ANGLE_SCALING;
+	  // i_pitchAngleSet = pitchAngleSet * ANGLE_SCALING;
+	  evaluateRCSwitch();
+	  break;
+	case 9:
+
 #ifdef STACKHEAPCHECK_ENABLE
 		stackHeapEval(false);
 #endif
@@ -210,6 +242,5 @@ void mainLoop() {
 	}
 
 	PERFORMANCE(BM_OTHER);
-
 	doubleFault = false; // If we have run the mainloop successfully, we reset the double WDT fault status.
 }

@@ -229,39 +229,28 @@ void debugControl() {
 	}
 }
 
-void insertComma(char* temp) {
-	// index of the \0
-	uint8_t end = strlen(temp);
-	uint8_t ip = end - LOG_ANGLE_SCALING;
-	for (uint8_t i=end; i>=ip; i--) {
-		temp[i+1] = temp[i];
-	}
-	temp[ip] = '.';
-}
-
 void debug() {
 	char temp[16];
 	uint8_t i;
 	wdt_reset();
 	// printf_P(PSTR("debug %d\r\n"), _debug);
+
 	switch(_debug) {
 	case DEBUG_ATTITUDE:
 		// This stunt is to avoid having to draw in the printf_flt stuff which is a pain.
-		sprintf_P(temp, PSTR("%ld"), imu.angle_md[ROLL]);
+		sprintf_P(temp, PSTR("%d"), imu.angle_cd[ROLL]);
 		//insertComma(temp);
 		printf_P(PSTR("roll:%s"), temp);
-		sprintf_P(temp, PSTR("%ld"), imu.angle_md[PITCH]);
+		sprintf_P(temp, PSTR("%d"), imu.angle_cd[PITCH]);
 		//insertComma(temp);
 		printf_P(PSTR("\tpitch:%s\r\n"), temp);
 		break;
 	case DEBUG_ACCVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.acc[X], imu.acc[Y], imu.acc[Z]); break;
 	case DEBUG_GYROVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.gyro[X], imu.gyro[Y], imu.gyro[Z]); break;
-	case DEBUG_ESTG:		printf_P(PSTR("x:%d, y:%d, z:%d (mag: %ld)\r\n"),
-			(int)(imu.estG[X]/imu.accMagnitude_g_100),
-			(int)(imu.estG[Y]/imu.accMagnitude_g_100),
-			(int)(imu.estG[Z]/imu.accMagnitude_g_100),
-			imu.accMagnitude_g_100
-			);
+	case DEBUG_ESTG:		printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),
+			(int)imu.estG[X],
+			(int)imu.estG[Y],
+			(int)imu.estG[Z]);
 	break;
 	case DEBUG_PID:
 		printf_P(PSTR("roll:%ld, pitch:%ld\r\n"), rollPIDVal, pitchPIDVal);

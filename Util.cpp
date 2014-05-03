@@ -87,7 +87,7 @@ float Rajan_FastArcTan2(float y, float x) {
 
 // atan2 returning degrees * 1000
 int32_t Rajan_FastArcTan2_scaled(float y, float x) {
-  return 180/M_PI * ANGLE_SCALING * Rajan_FastArcTan2(y, x);
+  return (180.0/M_PI * ANGLE_SCALING) * Rajan_FastArcTan2(y, x);
 }
 
 uint16_t time() {

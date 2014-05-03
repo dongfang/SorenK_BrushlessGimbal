@@ -12,7 +12,7 @@ float rcLPF_tc = 1.0;
 //******************************************
 inline void decodePWM(RCData_t* rcData) {
   uint16_t pulseInPWMtmp;
-  pulseInPWMtmp = (rcData->microsLastUpdate - rcData->microsRisingEdge)/(CC_FACTOR/2);
+  pulseInPWMtmp = (rcData->microsLastUpdate - rcData->microsRisingEdge)/16;
   // update if within expected RC range
   rcData->rx = pulseInPWMtmp;
   rcData->isFresh=true;
@@ -106,7 +106,7 @@ void checkRcTimeouts() {
     cli();
     timerLastUpdate = rcData[id].microsLastUpdate;
     sei();
-    if (rcData[id].isValid && ((timerNow - timerLastUpdate)/(CC_FACTOR/2)) > RC_TIMEOUT){
+    if (rcData[id].isValid && ((timerNow - timerLastUpdate)) > RC_TIMEOUT){
       rcData[id].rx = config.rcMid;
       rcData[id].isValid = false;
       rcData[id].isFresh = true;
@@ -185,7 +185,7 @@ inline void evalRCChannelAbsolute(RCData_t* rcData, int16_t rcMin, int16_t rcMax
     k = (float)(rcMax - rcMin)/(MAX_RC - MIN_RC);
     y0 = rcMin + k * (MID_RC - MIN_RC);
     rx = rcData->rx - rcMid;
-    utilLP_float(&rcData->setpoint, y0 + k * rx, 0.05);
+    //utilLP_float(&rcData->setpoint, y0 + k * rx, 0.05);
     rcData->isFresh = false;
   }
 }

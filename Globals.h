@@ -40,8 +40,8 @@ struct RCData_t {
 	uint16_t rx;
 	bool isFresh;
 	bool isValid;
-	float rcSpeed;
-	float setpoint;
+	int16_t rcSpeed;
+	int16_t setpoint;
 };
 
 extern RCData_t rcData[RC_DATA_SIZE];

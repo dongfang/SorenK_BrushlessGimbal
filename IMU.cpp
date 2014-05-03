@@ -41,7 +41,10 @@ void IMU::init() {
 		estG[axis] = /*accLPF_f[axis] = */ acc[axis];
 	}
 
-	accMagnitude_g_100 = 100;
+	int32_t temp = mpu->accToG() * mpu->accToG();
+	accMagnitude = temp;
+	minAccMagnitude = temp * 36 / 100;
+	maxAccMagnitude = temp * 196 / 100;
 }
 
 void IMU::readRotationRates() {
@@ -62,29 +65,23 @@ void IMU::blendGyrosToAttitude() {
 }
 
 // Called from slow-loop in main.
-void IMU::updateAccMagnitude1() {
+void IMU::updateAccMagnitude() {
 	uint8_t axis;
 
 	// 179 us
-	tmp_accMagnitude_g_2 = 0;
+	accMagnitude = 0;
 	for (axis = 0; axis < 3; axis++) {
 		//accMagnitude_g_100 += accLPF_f[axis] * accLPF_f[axis];
-		tmp_accMagnitude_g_2 += (int32_t)acc[axis] * (int32_t)acc[axis];
+		accMagnitude += (int32_t)acc[axis] * (int32_t)acc[axis];
 	}
-	tmp_accMagnitude_g_2 = tmp_accMagnitude_g_2 * 100;
 }
-
-void IMU::updateAccMagnitude2() {
-	tmp_accMagnitude_g_2 = tmp_accMagnitude_g_2 / mpu->accToG();
-}
-
 void IMU::blendAccToAttitude() {
 	uint8_t axis;
 	// 255 us
 	// Apply complimentary filter (Gyro drift correction)
 	// If accel magnitude >1.4G or <0.6G and ACC vector outside of the limit range => we neutralize the effect of accelerometers in the angle estimation.
 	// To do that, we just skip filter, as EstV already rotated by Gyro
-	if ((36 < accMagnitude_g_100 && accMagnitude_g_100 < 196)) {
+	if ((minAccMagnitude < accMagnitude && accMagnitude < maxAccMagnitude)) {
 		for (axis = 0; axis < 3; axis++) {
 			estG[axis] = estG[axis] * (1.0 - accComplFilterConstant) + acc[axis] * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
 		}
@@ -96,12 +93,12 @@ void IMU::calculateAttitudeAngles() {
 	// Here, the traditional meanings of pitch and roll are reversed.
 	// That is ultimately okay! In an airframe, it is first pitch then roll.
 	// On the typical gimbal frame, it is opposite.
-	angle_md[ROLL] = (config.angleOffsetRoll * 10) + Rajan_FastArcTan2_scaled(estG[X], sqrt(estG[Z] * estG[Z] + estG[Y] * estG[Y]));
-	angle_md[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_scaled(estG[Y], estG[Z]);
+
+	angle_cd[ROLL] = (config.angleOffsetRoll * 10) + Rajan_FastArcTan2_scaled(estG[X], sqrt(estG[Z] * estG[Z] + estG[Y] * estG[Y]));
+	angle_cd[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_scaled(estG[Y], estG[Z]);
 }
 
 void initPIDs(void) {
 	rollPID.setCoefficients(config.rollKp, config.rollKi / 100, config.rollKd);
 	pitchPID.setCoefficients(config.pitchKp, config.pitchKi / 100, config.pitchKd);
 }
-

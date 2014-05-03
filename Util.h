@@ -109,8 +109,15 @@ int32_t Rajan_FastArcTan2_scaled(float y, float x);
 /* Coeff=0: *q not changing */
 /* Coeff=1: *q <- i         */
 /****************************/
+/*
 inline void utilLP_float(float* q, float i, float coeff) {
 	*q += (i - *q) * coeff;
+}
+*/
+
+inline void utilLP_int(int16_t* q, int16_t i, uint16_t coeff) {
+	*q += (i - *q) * coeff;
+	*q += ((i - *q) * (int32_t)coeff >> 8);
 }
 
 inline uint16_t abs16(int16_t z) {
@@ -141,7 +148,7 @@ enum PERFORMANCE_ITEMS {
     BM_END
 };
 
-#define DO_PERFORMANCE 1
+//#define DO_PERFORMANCE 1
 
 #ifdef DO_PERFORMANCE
 //extern uint8_t hitCounters[];

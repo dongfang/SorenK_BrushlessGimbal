@@ -13,12 +13,12 @@ ConfigUnion_t configUnion;
 void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
-	pitchKp = 900;
+	pitchKp = 450;
 	pitchKi = 800;
-	pitchKd = 3000;
-	rollKp = 3000;
-	rollKi = 800;
-	rollKd = 13500;
+	pitchKd = 1100;
+	rollKp = 1000;
+	rollKi = 1500;
+	rollKd = 3000;
 	accTimeConstant = 4;
 	angleOffsetPitch = 0;
 	angleOffsetRoll = 0;
@@ -35,6 +35,8 @@ void Configuration::setDefaults() {
 	minRCRoll = -30;
 	maxRCRoll = 30;
 	rcGain = 5;
+	angleOffsetRoll = 0;
+	angleOffsetPitch = 0;
 	rcLPF = 5; // 0.5 sec
 	rcMid = MID_RC;
 	rcAbsolute = true;
@@ -100,9 +102,9 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 // { "mpuFilter", INT8, &config.mpuLPF, &fixme_initMPUlpf }, // This only makes everything worse.
 { "pitchOffset", INT16, &config.angleOffsetPitch, NULL },
 { "rollOffset", INT16, &config.angleOffsetRoll, NULL },
-{ "pitchDir", INT8, &config.dirMotorPitch, NULL },
-{ "rollDir", INT8, &config.dirMotorRoll, NULL },
-{ "ritchMotor", UINT8, &config.motorNumberPitch, NULL },
+//{ "pitchDir", INT8, &config.dirMotorPitch, NULL },
+//{ "rollDir", INT8, &config.dirMotorRoll, NULL },
+{ "pitchMotor", UINT8, &config.motorNumberPitch, NULL },
 { "rollMotor", UINT8, &config.motorNumberRoll, NULL },
 { "pitchPower", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
 { "rollPower", UINT8, &config.maxPWMmotorRoll, &recalcMotorStuff },

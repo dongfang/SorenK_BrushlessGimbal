@@ -22,10 +22,7 @@ public:
 	// Initially set vectors and such.
 	// Do not call from WDT restart.
 	void init();
-
-	//void updateAccVector();
-	void updateAccMagnitude1();
-	void updateAccMagnitude2();
+	void updateAccMagnitude();
 
 	// Get attitude data
 	void fastUpdateCycle() {
@@ -33,12 +30,12 @@ public:
 	    readRotationRates();
 	    mpu->startAccelerationsAsync();
 	    PERFORMANCE(BM_BLEND_GYROS);
-	    blendGyrosToAttitude();  // t=260us
+	    blendGyrosToAttitude();
 	    PERFORMANCE(BM_BLEND_ACC);
 	    readAccelerations();
-	    blendAccToAttitude();   // t=146us
+	    blendAccToAttitude();
 	    PERFORMANCE(BM_CALCULATE_AA);
-	    calculateAttitudeAngles(); // t=468us
+	    calculateAttitudeAngles();
 	    mpu->startRotationRatesAsync();
 	    PERFORMANCE(BM_OTHER);
 	}
@@ -49,11 +46,11 @@ public:
 	// Apparently the accelerations and estG have the same scale, and divided by
 	// accMagnitude_g_100 should yield 1/100 g units.
 	float estG[3];
-	int16_t accMagnitude_g_100;
-	int32_t tmp_accMagnitude_g_2;
 
-	int32_t angle_md[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
-
+	int32_t angle_cd[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
+	int32_t accMagnitude;
+	int32_t minAccMagnitude;
+	int32_t maxAccMagnitude;
 
 private:
 	MPU6050* mpu;
