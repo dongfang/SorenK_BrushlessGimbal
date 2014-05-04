@@ -47,10 +47,10 @@ public:
 	// accMagnitude_g_100 should yield 1/100 g units.
 	float estG[3];
 
-	int32_t angle_cd[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
-	int32_t accMagnitude;
-	int32_t minAccMagnitude;
-	int32_t maxAccMagnitude;
+	int16_t angle_cd[2];  // absolute angle inclination in multiple of 0.01 degree    180 deg = 18000
+	uint32_t accMagnitude;
+	uint32_t minAccMagnitude;
+	uint32_t maxAccMagnitude;
 
 private:
 	MPU6050* mpu;

@@ -13,12 +13,12 @@ ConfigUnion_t configUnion;
 void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
-	pitchKp = 450;
+	pitchKp = 320;
 	pitchKi = 800;
-	pitchKd = 1100;
-	rollKp = 1000;
-	rollKi = 1500;
-	rollKd = 3000;
+	pitchKd = 1500;
+	rollKp = 650;
+	rollKi = 3000;
+	rollKd = 5000;
 	accTimeConstant = 4;
 	angleOffsetPitch = 0;
 	angleOffsetRoll = 0;
@@ -92,12 +92,12 @@ static inline void fixme_initMPUlpf() {
 
 const ConfigDef_t PROGMEM configListPGM[] = {
 { "vers", UINT8, &config.vers, NULL },
-{ "pitchKp", INT32, &config.pitchKp, &initPIDs },
-{ "pitchKi", INT32, &config.pitchKi, &initPIDs },
-{ "pitchKd", INT32, &config.pitchKd, &initPIDs },
-{ "rollKp", INT32, &config.rollKp, &initPIDs },
-{ "rollKi", INT32, &config.rollKi, &initPIDs },
-{ "rollKd", INT32, &config.rollKd, &initPIDs },
+{ "pitchKp", INT16, &config.pitchKp, &initPIDs },
+{ "pitchKi", INT16, &config.pitchKi, &initPIDs },
+{ "pitchKd", INT16, &config.pitchKd, &initPIDs },
+{ "rollKp", INT16, &config.rollKp, &initPIDs },
+{ "rollKi", INT16, &config.rollKi, &initPIDs },
+{ "rollKd", INT16, &config.rollKd, &initPIDs },
 { "accTime", INT16, &config.accTimeConstant, &fixme_initIMU },
 // { "mpuFilter", INT8, &config.mpuLPF, &fixme_initMPUlpf }, // This only makes everything worse.
 { "pitchOffset", INT16, &config.angleOffsetPitch, NULL },

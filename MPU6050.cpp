@@ -219,9 +219,9 @@ bool MPU6050::loadGyroCalibration() {
 // This functions performs an initial gyro offset calibration
 // INCLUDING motion detection
 // Board should be still for some seconds
-void MPU6050::recalibrateSensor(void (*complain)(), uint8_t which) {
-	int i;
-#define TOL 64
+void MPU6050::recalibrateSensor(void (*complain)(), uint8_t whichMotion) {
+	uint8_t i;
+	int16_t tolerance = whichMotion == GYRO ? 64 : 256;
 #define SENSOR_ITERATIONS 2000
 	int16_t prevSensor[3], sensor[3];
 	int32_t sensorOffsetSums[3];
@@ -238,44 +238,44 @@ void MPU6050::recalibrateSensor(void (*complain)(), uint8_t which) {
 		wdt_reset();
 		if (calibGCounter == SENSOR_ITERATIONS) {
 			for (i = 0; i < 70; i++) { // wait 0.7sec if calibration failed
-				_delay_ms(10);
+				wdt_reset();
+				_delay_ms(70);
 			}
-			getSensor(sensor, which);
+			getSensor(sensor, whichMotion);
 			for (i = 0; i < 3; i++) {
 				sensorOffsetSums[i] = 0;
 				prevSensor[i] = sensor[i];
 			}
 		}
 
-		getSensor(sensor, which);
+		getSensor(sensor, whichMotion);
 		wdt_reset();
 		for (i = 0; i < 3; i++) {
-			if (abs16(prevSensor[i] - sensor[i]) > TOL) {
+			if (abs16(prevSensor[i] - sensor[i]) > tolerance) {
 				motionDetected = true;
 				break;
 			}
-		}
-
-		for (i = 0; i < 3; i++) {
-			wdt_reset();
 			sensorOffsetSums[i] += sensor[i];
 			prevSensor[i] = sensor[i];
 		}
 
 		calibGCounter--;
 		if (motionDetected) {
+			wdt_reset();
 			complain();
 			calibGCounter = SENSOR_ITERATIONS;
 			motionDetected = false;
 		}
 	}
 
+	wdt_reset();
+
 	// put result into integer
-	for (i = 0; i < 3; i++) {
-		sensorOffset[i] = (sensorOffsetSums[i] + SENSOR_ITERATIONS/2) / SENSOR_ITERATIONS;
+	for (i=0; i<3; i++) {
+		// We don't want to offset away gravity on Z.
+		if (whichMotion == ACC && i == sensorDef.acc[Z].idx) sensorOffset[i] = 0;
+		else sensorOffset[i + whichMotion*3] = (sensorOffsetSums[i] + SENSOR_ITERATIONS/2) / SENSOR_ITERATIONS;
 	}
-	if (which == ACC)
-		sensorOffset[Z] = 0; // We don't want to calibrate Z accel away.
 
 	saveSensorCalibration();
 }

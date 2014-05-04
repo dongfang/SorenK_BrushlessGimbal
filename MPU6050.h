@@ -156,7 +156,7 @@ public:
 	// Load EEPROM-stored offsets. Return true if success.
 	bool loadGyroCalibration();
 	// Do the calibration ritual and store result in EEPROM.
-	void recalibrateSensor(void (*complain)(), uint8_t which);
+	void recalibrateSensor(void (*complain)(), uint8_t whichMotion);
 
 	void resetAccCalibration() {
 		sensorOffset[3] = sensorOffset[4] = sensorOffset[5] = 0;

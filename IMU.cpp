@@ -30,21 +30,20 @@
 void IMU::init() {
 	// 102us
 	gyroADCToRad_s = 1.0 / mpu->gyroToDeg_s() / 180.0 * M_PI; // convert to radians/s
-	accComplFilterConstant = (float) DT_FLOAT / (config.accTimeConstant + DT_FLOAT);
-
+	accComplFilterConstant = DT_FLOAT / ((float)config.accTimeConstant + DT_FLOAT);
 	uint8_t axis;
 
 	// Take gravity vector directly from acc. meter
 	mpu->getAccelerations(acc);
 
 	for (axis = 0; axis < 3; axis++) {
-		estG[axis] = /*accLPF_f[axis] = */ acc[axis];
+		estG[axis] = acc[axis];
 	}
 
-	int32_t temp = mpu->accToG() * mpu->accToG();
+	uint32_t temp = (uint32_t)mpu->accToG() * mpu->accToG();
 	accMagnitude = temp;
-	minAccMagnitude = temp * 36 / 100;
-	maxAccMagnitude = temp * 196 / 100;
+	minAccMagnitude = temp * 2/3;
+	maxAccMagnitude = temp * 3/2;
 }
 
 void IMU::readRotationRates() {
@@ -72,7 +71,7 @@ void IMU::updateAccMagnitude() {
 	accMagnitude = 0;
 	for (axis = 0; axis < 3; axis++) {
 		//accMagnitude_g_100 += accLPF_f[axis] * accLPF_f[axis];
-		accMagnitude += (int32_t)acc[axis] * (int32_t)acc[axis];
+		accMagnitude += (uint32_t)acc[axis] * acc[axis];
 	}
 }
 void IMU::blendAccToAttitude() {
@@ -94,8 +93,8 @@ void IMU::calculateAttitudeAngles() {
 	// That is ultimately okay! In an airframe, it is first pitch then roll.
 	// On the typical gimbal frame, it is opposite.
 
-	angle_cd[ROLL] = (config.angleOffsetRoll * 10) + Rajan_FastArcTan2_scaled(estG[X], sqrt(estG[Z] * estG[Z] + estG[Y] * estG[Y]));
-	angle_cd[PITCH] = (config.angleOffsetPitch * 10) + Rajan_FastArcTan2_scaled(estG[Y], estG[Z]);
+	angle_cd[ROLL] = config.angleOffsetRoll + Rajan_FastArcTan2_scaled(estG[X], sqrt(estG[Z] * estG[Z] + estG[Y] * estG[Y]));
+	angle_cd[PITCH] = config.angleOffsetPitch + Rajan_FastArcTan2_scaled(estG[Y], estG[Z]);
 }
 
 void initPIDs(void) {

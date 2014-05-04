@@ -18,12 +18,12 @@ public:
 	bool axisSwapXY;
 
 // PID settings
-	int32_t pitchKp;
-	int32_t pitchKi;
-	int32_t pitchKd;
-	int32_t rollKp;
-	int32_t rollKi;
-	int32_t rollKd;
+	int16_t pitchKp;
+	int16_t pitchKi;
+	int16_t pitchKd;
+	int16_t rollKp;
+	int16_t rollKi;
+	int16_t rollKd;
 
 // Output settings
 	int16_t angleOffsetPitch; // angle offset, deg*100

@@ -11,9 +11,9 @@
 // you have to multiply ki by 1/k, and multiply kd by k.
 class PID {
 public:
-	int32_t Kp;
-	int32_t Ki;
-	int32_t Kd;
+	int16_t Kp;
+	int16_t Ki;
+	int16_t Kd;
 
 	int32_t errorIntegral;
 	int32_t errorOld;
@@ -24,7 +24,7 @@ public:
 			Kp(Kp), Ki(Ki), Kd(Kd) {
 	}
 
-	void setCoefficients(int32_t Kp, int32_t Ki, int32_t Kd) {
+	void setCoefficients(int16_t Kp, int16_t Ki, int16_t Kd) {
 		this->Kp = Kp;
 		this->Ki = Ki;
 		this->Kd = Kd;

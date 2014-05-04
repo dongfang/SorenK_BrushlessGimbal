@@ -140,7 +140,7 @@ void printHelpUsage() {
 	printf_P(PSTR("we    Writes active config to eeprom\r\n"));
 	printf_P(PSTR("re    Restores values from eeprom to active config\r\n"));
 	printf_P(PSTR("cal   Recalibrates the gyro\r\n"));
-	//printf_P(PSTR("level Sets level (place gimbal firmly level and run)\r\n"));
+	printf_P(PSTR("level Sets level (place gimbal firmly level and run)\r\n"));
 	printf_P(PSTR("debug <category> Prints troubleshooting info\r\n"));
 	printf_P(PSTR("        debug usage:\r\n"));
 	printf_P(PSTR("        debug off               ... turns off debug\r\n"));
@@ -231,7 +231,7 @@ void debugControl() {
 
 void debug() {
 	char temp[16];
-	uint8_t i;
+	//uint8_t i;
 	wdt_reset();
 	// printf_P(PSTR("debug %d\r\n"), _debug);
 
@@ -283,13 +283,9 @@ void calibrateGyro() {
 	calibrateSensor(MPU6050::GYRO);
 }
 
-/*
- * Is currently broken: It will zero out the physical Z axis (of the MPU chip)
- * but it should have been the logical.
 void calibrateAcc() {
 	calibrateSensor(MPU6050::ACC);
 }
-*/
 
 void showSensorCal() {
 	printf_P(PSTR("Gyro roll\t%d, pitch\t%d, yaw\t%d\r\n"), mpu.sensorOffset[0], mpu.sensorOffset[1], mpu.sensorOffset[2]);
@@ -303,8 +299,7 @@ void setSerialProtocol() {
 	sCmd.addCommand("re", readEEPROM);
 	sCmd.addCommand("par", parameterMod);
 	sCmd.addCommand("cal", calibrateGyro);
-	//sCmd.addCommand("level", calibrateAcc);
-	// sCmd.addCommand("echo", toggleEcho);
+	sCmd.addCommand("level", calibrateAcc);
 	sCmd.addCommand("help", printHelpUsage);
 #ifdef DO_PERFORMANCE
 	sCmd.addCommand("perf", reportPerformance);

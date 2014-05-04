@@ -12,12 +12,6 @@ static uint8_t slowLoopTask;
 uint8_t slowLoopTaskPerformanceTimed;
 uint8_t gimbalState;
 
-// TODO: INTEGERS!!!!!
-//float rollPhiSet;
-//float pitchPhiSet;
-//float rollAngleSet;
-//float pitchAngleSet;
-
 int16_t rollAngleSet;
 int16_t pitchAngleSet;
 
@@ -42,9 +36,6 @@ void slowLoop();
 /* Main Loop                                  */
 /**********************************************/
 void mainLoop() {
-	// int32_t pitchPIDVal;
-	// int32_t rollPIDVal;
-
 	LED_PORT |= (1 << LED_BIT);
 
 	PERFORMANCE(BM_IDLE);
