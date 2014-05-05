@@ -6,7 +6,10 @@ UARTSerial serial0(128, 128, &UBRR0H, &UBRR0L, &UCSR0A, &UCSR0B, &UDR0);
 
 void Serial::put(uint8_t c) {
 	uint8_t next = (_txBuf.head+1) & _txBuf.mask;
-	while (next == _txBuf.tail) { wdt_reset(); }
+	while (next == _txBuf.tail) {
+		// If an infinite loop printed something, that would keep the dog calm. Should not be, so removed.
+		// wdt_reset();
+	}
 	_txBuf.data[_txBuf.head] = c;
 	// Now there definitely is data in the buffer.
 	_txBuf.head = next;

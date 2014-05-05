@@ -29,8 +29,8 @@
 // Do not run this in hot starts.
 void IMU::init() {
 	// 102us
-	gyroADCToRad_s = 1.0 / mpu->gyroToDeg_s() / 180.0 * M_PI; // convert to radians/s
-	accComplFilterConstant = DT_FLOAT / ((float)config.accTimeConstant + DT_FLOAT);
+	gyroADCToRad_dt = FASTLOOP_DT_F_S * M_PI / mpu->gyroToDeg_s() / 180.0;
+	accComplFilterConstant = (float) MEDIUMLOOP_DT_F_S / (config.accTimeConstant + MEDIUMLOOP_DT_F_S);
 	uint8_t axis;
 
 	// Take gravity vector directly from acc. meter
@@ -58,7 +58,7 @@ void IMU::blendGyrosToAttitude() {
 	uint8_t axis;
 	float deltaGyroAngle[3];
 	for (axis = 0; axis < 3; axis++) {
-		deltaGyroAngle[axis] = gyro[axis] * gyroADCToRad_s * DT_FLOAT;
+		deltaGyroAngle[axis] = gyro[axis] * gyroADCToRad_dt;
 	}
 	rotateV(estG, deltaGyroAngle);
 }
@@ -68,11 +68,14 @@ void IMU::updateAccMagnitude() {
 	uint8_t axis;
 
 	// 179 us
-	accMagnitude = 0;
+	uint32_t tmp_accMagnitude = 0;
 	for (axis = 0; axis < 3; axis++) {
 		//accMagnitude_g_100 += accLPF_f[axis] * accLPF_f[axis];
-		accMagnitude += (uint32_t)acc[axis] * acc[axis];
+		tmp_accMagnitude += (uint32_t)acc[axis] * acc[axis];
 	}
+	cli();
+	accMagnitude = tmp_accMagnitude;
+	sei();
 }
 void IMU::blendAccToAttitude() {
 	uint8_t axis;
@@ -82,7 +85,14 @@ void IMU::blendAccToAttitude() {
 	// To do that, we just skip filter, as EstV already rotated by Gyro
 	if ((minAccMagnitude < accMagnitude && accMagnitude < maxAccMagnitude)) {
 		for (axis = 0; axis < 3; axis++) {
-			estG[axis] = estG[axis] * (1.0 - accComplFilterConstant) + acc[axis] * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
+			cli();
+			int16_t _acc = acc[axis];
+			float _eg = estG[axis];
+			sei();
+			_eg = _eg * (1.0 - accComplFilterConstant) + _acc * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
+			cli();
+			estG[axis] = _eg;
+			sei();
 		}
 	}
 }
@@ -92,12 +102,25 @@ void IMU::calculateAttitudeAngles() {
 	// Here, the traditional meanings of pitch and roll are reversed.
 	// That is ultimately okay! In an airframe, it is first pitch then roll.
 	// On the typical gimbal frame, it is opposite.
+	int16_t resultRoll, resultPitch;
 
-	angle_cd[ROLL] = config.angleOffsetRoll + Rajan_FastArcTan2_scaled(estG[X], sqrt(estG[Z] * estG[Z] + estG[Y] * estG[Y]));
-	angle_cd[PITCH] = config.angleOffsetPitch + Rajan_FastArcTan2_scaled(estG[Y], estG[Z]);
-}
+	cli();
+	float x = estG[X]; float y = estG[Y]; float z = estG[Z];
+	sei();
 
-void initPIDs(void) {
-	rollPID.setCoefficients(config.rollKp, config.rollKi / 100, config.rollKd);
-	pitchPID.setCoefficients(config.pitchKp, config.pitchKi / 100, config.pitchKd);
+	float hypo = sqrt(y*y + z*z);
+	resultRoll = ANGLE_SCALING * Rajan_FastArcTan2(x, hypo);
+	resultPitch = ANGLE_SCALING * Rajan_FastArcTan2(y, z);
+
+	// Assume the G vector is normal (meaning it has length mpu->accToG()
+	cli();
+	angle_i16[ROLL] = resultRoll;
+	angle_i16[PITCH] = resultPitch;
+	sei();
+
+	//sinPitch = ((int16_t)y) >> (mpu->logAccToG()-LOG_SIN_RES);
+	//cosPitch = ((int16_t)z) >> (mpu->logAccToG()-LOG_SIN_RES);
+
+	sinPitch = (1<<LOG_SIN_RES) * y/hypo;
+	cosPitch = (1<<LOG_SIN_RES) * z/hypo;
 }

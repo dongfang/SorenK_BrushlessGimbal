@@ -22,7 +22,8 @@
  any later version. see <http://www.gnu.org/licenses/>
 
  Anyhow, if you start to commercialize our work, please read on http://code.google.com/p/brushless-gimbal/ on how to contribute
- */
+*/
+// I2Cdev: Removed. Too fat, too slow.
 
 #include <avr/eeprom.h>
 #include <stdio.h>
@@ -51,7 +52,6 @@ uint8_t mcusr_mirror  __attribute__ ((section (".noinit")));
 bool watchdogResetWasIntended __attribute__ ((section (".noinit")));
 bool doubleFault __attribute__ ((section (".noinit")));
 
-volatile bool runMainLoop;
 uint8_t syncCounter;
 
 uint8_t motorPhases[2][3];
@@ -63,7 +63,7 @@ uint8_t pwmSinMotorRoll[N_SIN];
 RCData_t rcData[RC_DATA_SIZE];
 int8_t switchPos = SW_UNKNOWN;
 
-extern void mainLoop();
+extern void slowTask();
 
 // D'uh!
 int _putchar(char c, FILE* f) {
@@ -104,6 +104,7 @@ if (mpu.testConnection()) {
 void initHW() {
 	// HW
 	LED_DDR |= (1<<LED_BIT);
+	DEBUG_DDR |= 1<<DEBUG_BIT1 | 1<<DEBUG_BIT2;
 
 	// We don't use this, whatever it was.
 	// CH2_PINMODE
@@ -183,20 +184,21 @@ void checkwatchdog(void) {
 	wdt_enable(WDTO_1S);
 
 	// Skip init
-	if ((mcusr_mirror & (1<<3)) && !watchdogResetWasIntended && !doubleFault)
-		main();
+	//if ((mcusr_mirror & (1<<3)) && !watchdogResetWasIntended && !doubleFault)
+	//	main();
 }
 
 int main() {
 	// TODO: Can this be moved down?
 	// wdt_disable();
-	sei();
 
 	initHW();
-	LED_PORT |= (1 << LED_BIT);
+	sei();
 
 	// If it was not a WDT reset
-	if (watchdogResetWasIntended || doubleFault || !(mcusr_mirror & (1<<3))) {
+	// if (watchdogResetWasIntended || doubleFault || !(mcusr_mirror & (1<<3))) {
+	if (true)
+	{
 		initState();
 		watchdogResetWasIntended = false;
 		doubleFault = false;
@@ -206,12 +208,14 @@ int main() {
 	}
 
 	wdt_enable(WDT_TIMEOUT);
+	printf_P(PSTR("Go!\r\n"));
 
-	LED_PORT &= ~(1 << LED_BIT);
-
+	// Enable Timer1 Interrupt for timing
+	TIMSK1 |= 1<<TOIE1;
+	// doesnt work anyway (why?)
 	mpu.startRotationRatesAsync();
-
 	while(1) {
-		mainLoop();
+		slowTask();
+		//printf("%d, %d\r\n", debug_i2c_status[0], debug_i2c_status[1]);
 	}
 }

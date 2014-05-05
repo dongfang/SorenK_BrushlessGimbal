@@ -137,6 +137,19 @@ public:
 		return 1; // should never happen
 	}
 
+	// Divide raw values by 1<<this to get approx. degrees/sec
+	uint8_t logGyroToDeg_s() {
+		if (MPU6050_GYRO_FS == MPU6050_GYRO_FS_250)
+			return 7;
+		if (MPU6050_GYRO_FS == MPU6050_GYRO_FS_500)
+			return 6;
+		if (MPU6050_GYRO_FS == MPU6050_GYRO_FS_1000)
+			return 5;
+		if (MPU6050_GYRO_FS == MPU6050_GYRO_FS_2000)
+			return 4;
+		return 1; // should never happen
+	}
+
 	uint16_t accToG() {
 		if (MPU6050_ACCEL_FS == MPU6050_ACCEL_FS_2)
 			return 16384;
@@ -148,8 +161,19 @@ public:
 			return 2048;
 		return 1; // should never happen
 	}
-	// Shit .. this depends on acc.meter settings!!
-//#define ACC_1G 16384.0f
+
+	// Divide raw values by 1<<this to get g's
+	uint8_t logAccToG() {
+		if (MPU6050_ACCEL_FS == MPU6050_ACCEL_FS_2)
+			return 14;
+		if (MPU6050_ACCEL_FS == MPU6050_ACCEL_FS_4)
+			return 13;
+		if (MPU6050_ACCEL_FS == MPU6050_ACCEL_FS_8)
+			return 12;
+		if (MPU6050_ACCEL_FS == MPU6050_ACCEL_FS_16)
+			return 11;
+		return 1; // should never happen
+	}
 
 	void initSensorOrientation(uint8_t majorAxis, bool reverseZ, bool swapXY);
 

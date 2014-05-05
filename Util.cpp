@@ -85,11 +85,6 @@ float Rajan_FastArcTan2(float y, float x) {
   return z;
 }
 
-// atan2 returning degrees * 1000
-int32_t Rajan_FastArcTan2_scaled(float y, float x) {
-  return (180.0/M_PI * ANGLE_SCALING) * Rajan_FastArcTan2(y, x);
-}
-
 uint16_t time() {
   uint8_t sreg = SREG;
   cli();
@@ -115,6 +110,14 @@ uint16_t time() {
       return (ext<<9) + after;
     }
   }
+}
+
+/*
+ * 1 cycle is 16 microseconds
+ */
+void wait_16_micros(uint8_t n) {
+	uint8_t capture = timer1Extension + n;
+	while(timer1Extension != capture);
 }
 
 uint8_t selectBits(uint8_t data, uint8_t bitStart, uint8_t length) {

@@ -11,6 +11,7 @@
 #include <avr/eeprom.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
+#include <avr/interrupt.h>
 
 static uint8_t _debug;
 
@@ -173,6 +174,8 @@ void unrecognized(const char *command) {
 #define DEBUG_ESTG 3
 #define DEBUG_ATTITUDE 4
 #define DEBUG_PID 5
+#define DEBUG_DGYRO 6
+#define DEBUG_I2C 7
 
 static const char DEBUG_OFF_ARG[] PROGMEM = "off";
 static const char DEBUG_ACCVALUES_ARG[] PROGMEM = "acc";
@@ -180,9 +183,11 @@ static const char DEBUG_GYROVALUES_ARG[] PROGMEM = "gyro";
 static const char DEBUG_ESTG_ARG[] PROGMEM = "estg";
 static const char DEBUG_ATTITUDE_ARG[] PROGMEM = "att";
 static const char DEBUG_PID_ARG[] PROGMEM = "pid";
+static const char DEBUG_DGYRO_ARG[] PROGMEM = "dgyro";
+static const char DEBUG_I2C_ARG[] PROGMEM = "i2c";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = {
-	DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG, DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG
+	DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG, DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG
 };
 
 /*
@@ -233,27 +238,53 @@ void debug() {
 	char temp[16];
 	//uint8_t i;
 	wdt_reset();
-	// printf_P(PSTR("debug %d\r\n"), _debug);
+	int16_t x,y,z;
 
 	switch(_debug) {
 	case DEBUG_ATTITUDE:
-		// This stunt is to avoid having to draw in the printf_flt stuff which is a pain.
-		sprintf_P(temp, PSTR("%d"), imu.angle_cd[ROLL]);
-		//insertComma(temp);
+		cli();
+		x = imu.angle_i16[ROLL];
+		y = imu.angle_i16[PITCH];
+		sei();
+		sprintf_P(temp, PSTR("%d"), x/(32768/1800));
 		printf_P(PSTR("roll:%s"), temp);
-		sprintf_P(temp, PSTR("%d"), imu.angle_cd[PITCH]);
+		sprintf_P(temp, PSTR("%d"), y/(32768/1800));
 		//insertComma(temp);
 		printf_P(PSTR("\tpitch:%s\r\n"), temp);
 		break;
-	case DEBUG_ACCVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.acc[X], imu.acc[Y], imu.acc[Z]); break;
-	case DEBUG_GYROVALUES:	printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  imu.gyro[X], imu.gyro[Y], imu.gyro[Z]); break;
-	case DEBUG_ESTG:		printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),
-			(int)imu.estG[X],
-			(int)imu.estG[Y],
-			(int)imu.estG[Z]);
+	case DEBUG_ACCVALUES:
+		cli();
+		x=imu.acc[X];
+		y=imu.acc[Y];
+		z=imu.acc[Z];
+		sei();
+		printf_P(PSTR("x:%d, y:%d, z:%d\r\n"), x, y, z);
+		break;
+	case DEBUG_GYROVALUES:
+		cli();
+		x=imu.gyro[X];
+		y=imu.gyro[Y];
+		z=imu.gyro[Z];
+		sei();
+		printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),  x, y, z);
+		break;
+	case DEBUG_ESTG:
+		cli();
+		x = (int)imu.estG[X];
+		y = (int)imu.estG[Y];
+		z = (int)imu.estG[Z];
+		sei();
+		printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),x, y, z);
 	break;
 	case DEBUG_PID:
-		printf_P(PSTR("roll:%ld, pitch:%ld\r\n"), rollPIDVal, pitchPIDVal);
+		printf_P(PSTR("roll:%d, pitch:%d\r\n"), rollPIDVal, pitchPIDVal);
+		break;
+	case DEBUG_DGYRO:
+		printf_P(PSTR("cosp:%d, sinp:%d, roll:%d, pitch:%d\r\n"),
+				imu.cosPitch, imu.sinPitch, imu.rollDTerm(), imu.pitchDTerm());
+		break;
+	case DEBUG_I2C:
+		printf_P(PSTR("errors: %u\r\n"), i2c_errors_count);
 		break;
 	default: break;
 	}
@@ -267,7 +298,7 @@ void reset() {
 
 
 void complainAboutSensorMotion(){
-	printf_P(PSTR("Motion detected during calibration. Starting over!"));
+	printf_P(PSTR("Motion detected during calibration. Starting over!\r\n"));
 }
 
 void calibrateSensor(uint8_t which) {

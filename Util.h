@@ -102,7 +102,7 @@ float Rajan_FastArcTan(float x);
 float Rajan_FastArcTan2(float y, float x);
 
 // atan2 returnig degrees * 1000
-int32_t Rajan_FastArcTan2_scaled(float y, float x);
+// int32_t Rajan_FastArcTan2_scaled(float y, float x);
 
 /****************************/
 /* LP Filter                */
@@ -129,6 +129,8 @@ inline uint32_t abs32(int32_t z) {
 }
 
 uint16_t time();
+void wait_16_micros(uint8_t n);
+
 
 uint8_t selectBits(uint8_t data, uint8_t bitStart, uint8_t length);
 void setBits(uint8_t* writtenTo, uint8_t bitStart, uint8_t length, uint8_t newBits);

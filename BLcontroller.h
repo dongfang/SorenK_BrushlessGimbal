@@ -1,10 +1,6 @@
 #include "Definitions.h"
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <util/delay.h>
 #include <math.h>
-
-extern uint8_t timer1Extension;
+#include <avr/io.h>
 
 void initBlController() {
   DDRB |= 1<<1 | 1<<2 | 1<<3;
@@ -16,9 +12,6 @@ void initBlController() {
   TCCR1B = (1<<CS10);
   TCCR2A = (1<<COM2A1) | (1<<COM2B1) | (1<<WGM20);
   TCCR2B = (1<<CS20);
-
-  // Enable Timer1 Interrupt for timing
-  TIMSK1 |= 1<<TOIE1;
 
   // Start out with no power applied.
   OCR2A = 0;  //11  APIN
@@ -81,27 +74,6 @@ inline void motorOff(uint8_t motorNumber, uint8_t* pwmSin) {
   }
 }
 */
-
-/********************************/
-/* Motor Control IRQ Routine    */
-/********************************/
-// motor position control
-ISR (TIMER1_OVF_vect) {
-  // 0.88us / 8.1us
-  timer1Extension++;
-  syncCounter++;
-  if(syncCounter==(F_CPU/510/ LOOPUPDATE_FREQ)) {
-	syncCounter=0;
-    PWM_A_MOTOR0 = motorPhases[0][0];
-    PWM_B_MOTOR0 = motorPhases[0][1];
-    PWM_C_MOTOR0 = motorPhases[0][2];
-    PWM_A_MOTOR1 = motorPhases[1][0];
-    PWM_B_MOTOR1 = motorPhases[1][1];
-    PWM_C_MOTOR1 = motorPhases[1][2];
-    // update event
-    runMainLoop = true;
-  }
-}
 
 /*
 void motorTest() {

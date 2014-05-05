@@ -26,16 +26,12 @@ public:
 	int16_t rollKd;
 
 // Output settings
-	int16_t angleOffsetPitch; // angle offset, deg*100
-	int16_t angleOffsetRoll;
-	uint8_t nPolesMotorPitch;
-	uint8_t nPolesMotorRoll;
-	int8_t  dirMotorPitch;
-	int8_t  dirMotorRoll;
 	uint8_t motorNumberPitch;
 	uint8_t motorNumberRoll;
 	uint8_t maxPWMmotorPitch;
 	uint8_t maxPWMmotorRoll;
+	//int8_t dirMotorPitch;
+	//int8_t dirMotorRoll;
 
 // RC settings
 	int8_t minRCPitch;
@@ -53,6 +49,9 @@ public:
 // int8_t rcChannelPitch;     // input channel for pitch
 // int8_t rcChannelRoll;      // input channel for roll
 // int8_t rcChannelSwitch;    // input channel for switch
+
+	int16_t angleOffsetPitch;
+	int16_t angleOffsetRoll;
 
 	int16_t rcMid; // rc channel center ms
 	bool rcAbsolute;
@@ -95,5 +94,7 @@ ConfigDef_t * getConfigDef(char* name);
 void writeConfig(ConfigDef_t* def, int32_t val);
 
 void updateAllParameters();
+
+void initPIDs();
 
 #endif

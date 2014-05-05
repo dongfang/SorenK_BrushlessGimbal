@@ -13,19 +13,14 @@ ConfigUnion_t configUnion;
 void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
-	pitchKp = 320;
-	pitchKi = 800;
-	pitchKd = 1500;
-	rollKp = 650;
-	rollKi = 3000;
-	rollKd = 5000;
+	pitchKp = 160;
+	pitchKi = 540;
+	pitchKd = 7;
+	rollKp = 500;
+	rollKi = 400;
+	rollKd = 30;
+
 	accTimeConstant = 4;
-	angleOffsetPitch = 0;
-	angleOffsetRoll = 0;
-	nPolesMotorPitch = 14;
-	nPolesMotorRoll = 14;
-	dirMotorPitch = -1;
-	dirMotorRoll = 1;
 	motorNumberPitch = 0;
 	motorNumberRoll = 1;
 	maxPWMmotorPitch = 100;
@@ -99,11 +94,9 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "rollKi", INT16, &config.rollKi, &initPIDs },
 { "rollKd", INT16, &config.rollKd, &initPIDs },
 { "accTime", INT16, &config.accTimeConstant, &fixme_initIMU },
-// { "mpuFilter", INT8, &config.mpuLPF, &fixme_initMPUlpf }, // This only makes everything worse.
+
 { "pitchOffset", INT16, &config.angleOffsetPitch, NULL },
 { "rollOffset", INT16, &config.angleOffsetRoll, NULL },
-//{ "pitchDir", INT8, &config.dirMotorPitch, NULL },
-//{ "rollDir", INT8, &config.dirMotorRoll, NULL },
 { "pitchMotor", UINT8, &config.motorNumberPitch, NULL },
 { "rollMotor", UINT8, &config.motorNumberRoll, NULL },
 { "pitchPower", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
@@ -177,4 +170,9 @@ void updateAllParameters() {
 	// mpu.setDLPFMode(config.mpuLPF);
 	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
 	initRCFilter();
+}
+
+void initPIDs(void) {
+	rollPID.setCoefficients(config.rollKp, config.rollKi / 10, config.rollKd);
+	pitchPID.setCoefficients(config.pitchKp, config.pitchKi / 10, config.pitchKd);
 }

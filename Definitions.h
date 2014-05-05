@@ -10,16 +10,21 @@
 // TODO: Not supported right now.
 #define MPU6050_ADDRESS_AD0_LOW     0x68 // default for InvenSense evaluation board
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // Drotek MPU breakout board
-#define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_HIGH
+//#define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_HIGH
 
-#define LOOPUPDATE_FREQ 500 			    // loop control sample rate equals motor update rate
-#define DT_FLOAT (1.0/(float)LOOPUPDATE_FREQ)      // loop controller sample period dT
+#define FASTLOOP_FREQ 1000
+#define FASTLOOP_DT_F_S  (1.0/FASTLOOP_FREQ)   	    // loop controller sample period dT
+#define FASTLOOP_DT_I_MS (1000/FASTLOOP_FREQ)
+
+#define MEDIUMLOOP_FREQ 333
+#define MEDIUMLOOP_DT_F_S  (1.0/MEDIUMLOOP_FREQ)       // loop controller sample period dT
+#define MEDIUMLOOP_DT_I_MS (1000/MEDIUMLOOP_FREQ)
 
 #define POUT_FREQ 4      // rate of ACC print output in Hz, 25 Hz is default
 #define LOCK_TIME_SEC 0  // gimbal fast lock time at startup
 
 // LP filter coefficient
-#define LOWPASS_K_FLOAT(TAU) (DT_FLOAT/(TAU+DT_FLOAT))
+#define LOWPASS_K_FLOAT(TAU) (MEDIUMLOOP_DT_F_S/(TAU+MEDIUMLOOP_DT_F_S))
 
 // Number of sinus values for full 360 deg.
 // NOW FIXED TO 256 !!!
@@ -73,6 +78,9 @@
 #define GIMBAL_FROZEN 1
 #define GIMBAL_RUNNING 2
 
+#define GIMBAL_ON_DELAY 10
+#define DEBUG_DELAY 255
+
 // Just a binary switch for retract.
 #define SW_UNKNOWN 0
 #define SW_RETRACTED -1
@@ -82,5 +90,6 @@
 
 #define WDT_TIMEOUT WDTO_1S
 
-#define ANGLE_SCALING 100
-#define LOG_ANGLE_SCALING 2
+// Let's use int16-degrees.
+// -pi-->-(1<<15) to pi->(1<<15)-1
+#define ANGLE_SCALING (32768.0/M_PI)

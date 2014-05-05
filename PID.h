@@ -16,7 +16,6 @@ public:
 	int16_t Kd;
 
 	int32_t errorIntegral;
-	int32_t errorOld;
 
 	PID() {}
 
@@ -28,24 +27,18 @@ public:
 		this->Kp = Kp;
 		this->Ki = Ki;
 		this->Kd = Kd;
-		errorIntegral = errorOld = 0;
+		errorIntegral =  0;
 	}
 
 	// Yes I have checked if int16's would do and the answer was no.
-	int16_t compute(int16_t actual, int16_t target) {
-		int32_t error_ref = target - actual;
-		int32_t Ierror_ref = error_ref * Ki;
+	int16_t compute(int16_t actual, int16_t target, int16_t d) {
+		int32_t error = target - actual;
+		int32_t Ierror = error * Ki;
 
-		Ierror_ref = constrain_int32(Ierror_ref, -1000L, 1000L);
-		errorIntegral += Ierror_ref; // The integration
+		Ierror = constrain_int32(Ierror, -10000L, 10000L);
+		errorIntegral += Ierror; // The integration
 
-		// int32_t f1_ref = (int32_t)Kp * error_ref;
-		// int32_t f2_ref = (int32_t)Kd * (error_ref - errorOld_ref);
-		// int32_t out = f1_ref + errorIntegral + f2_ref;
-
-		int32_t out = (int32_t)Kp * error_ref + errorIntegral + (int32_t)Kd * (error_ref - errorOld);
-
-		errorOld = error_ref;
+		int32_t out = (int32_t)Kp * error + errorIntegral - (int32_t)Kd * d;
 
 		return out/256;
 	}
