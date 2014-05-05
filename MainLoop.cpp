@@ -22,6 +22,12 @@ int16_t pitchPhiSet;
 int16_t pitchPIDVal;
 int16_t rollPIDVal;
 
+int16_t prevPitchPIDVal;
+int16_t prevRollPIDVal;
+
+int16_t rollPIDDelta;
+int16_t pitchPIDDelta;
+
 void flashLED() {
 	static uint8_t count;
 	count++;
@@ -31,13 +37,10 @@ void flashLED() {
 	}
 }
 
-void slowLoop();
-
 /**********************************************/
 /* Main Loop                                  */
 /**********************************************/
 void fastTask() {
-	PERFORMANCE(BM_OTHER);
 	PERFORMANCE_NEW_CYCLE;
 
 	// update IMU data
@@ -55,27 +58,38 @@ void fastTask() {
 	//****************************
 	// pitch and roll PIDs
 	//****************************
-	PERFORMANCE(BM_PIDS);
+	rollPIDVal = rollPID.compute(imu.angle_i16[ROLL], rollAngleSet, imu.rollRate);
+	pitchPIDVal = pitchPID.compute(imu.angle_i16[PITCH], pitchAngleSet, imu.pitchRate);
 
-	pitchPIDVal = pitchPID.compute(imu.angle_i16[PITCH], pitchAngleSet, imu.pitchDTerm());
-	rollPIDVal = rollPID.compute(imu.angle_i16[ROLL], rollAngleSet, imu.rollDTerm());
+	rollPIDDelta = rollPIDVal - prevRollPIDVal;
+	pitchPIDDelta = pitchPIDVal - prevPitchPIDVal;
 
-	PERFORMANCE(BM_OTHER);
+	if (rollPIDDelta > config.rollSpeedLimit) {
+		rollPIDVal = prevRollPIDVal + config.rollSpeedLimit;
+	} else if (rollPIDDelta < -config.rollSpeedLimit) {
+		rollPIDVal = prevRollPIDVal - config.rollSpeedLimit;
+	}
+	if (pitchPIDDelta > config.pitchSpeedLimit) {
+		pitchPIDVal = prevPitchPIDVal + config.pitchSpeedLimit;
+	} else if (pitchPIDDelta < -config.pitchSpeedLimit) {
+		pitchPIDVal = prevPitchPIDVal - config.pitchSpeedLimit;
+	}
+
+	prevRollPIDVal = rollPIDVal;
+	prevPitchPIDVal = pitchPIDVal;
 
 	// motor control
 	if (switchPos >= 0) {
-		PERFORMANCE(BM_MOTORPHASES);
 		//int motorDrive = pitchPIDVal; // * config.dirMotorPitch;
-		uint8_t posStep = pitchPIDVal >> 3;
-		motorPhases[config.motorNumberPitch][0] = pwmSinMotorPitch[posStep] * softStart >> 4;
-		motorPhases[config.motorNumberPitch][1] = pwmSinMotorPitch[(uint8_t) (posStep + 85)] * softStart >> 4;
-		motorPhases[config.motorNumberPitch][2] = pwmSinMotorPitch[(uint8_t) (posStep + 170)] * softStart >> 4;
+		uint8_t posStep = pitchPIDVal;
+		motorPhases[PITCH][0] = pwmSinMotorPitch[posStep] * softStart >> 4;
+		motorPhases[PITCH][1] = pwmSinMotorPitch[(uint8_t) (posStep + 85)] * softStart >> 4;
+		motorPhases[PITCH][2] = pwmSinMotorPitch[(uint8_t) (posStep + 170)] * softStart >> 4;
 
-		posStep = rollPIDVal >> 3;
-		motorPhases[config.motorNumberRoll][0] = pwmSinMotorRoll[posStep] * softStart >> 4;
-		motorPhases[config.motorNumberRoll][1] = pwmSinMotorRoll[(uint8_t) (posStep + 85)] * softStart >> 4;
-		motorPhases[config.motorNumberRoll][2] = pwmSinMotorRoll[(uint8_t) (posStep + 170)] * softStart >> 4;
-		PERFORMANCE(BM_OTHER);
+		posStep = rollPIDVal;
+		motorPhases[ROLL][0] = pwmSinMotorRoll[posStep] * softStart >> 4;
+		motorPhases[ROLL][1] = pwmSinMotorRoll[(uint8_t) (posStep + 85)] * softStart >> 4;
+		motorPhases[ROLL][2] = pwmSinMotorRoll[(uint8_t) (posStep + 170)] * softStart >> 4;
 	}
 }
 

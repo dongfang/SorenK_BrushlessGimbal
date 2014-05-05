@@ -10,7 +10,7 @@ public:
 	uint8_t versEEPROM;
 
 // Input settings
-	int16_t accTimeConstant;
+	uint8_t accTimeConstant;
 	//int8_t mpuLPF; // mpu LPF 0..6, 0=fastest(256Hz) 6=slowest(5Hz)
 	bool calibrateGyro; // Else use EEPROM value
 	uint8_t majorAxis;
@@ -26,32 +26,47 @@ public:
 	int16_t rollKd;
 
 // Output settings
-	uint8_t motorNumberPitch;
-	uint8_t motorNumberRoll;
-	uint8_t maxPWMmotorPitch;
 	uint8_t maxPWMmotorRoll;
+	uint8_t maxPWMmotorPitch;
+
+	// There should be no need for these. One can just swap and turn the connectors.
+	//uint8_t motorNumberPitch;
+	//uint8_t motorNumberRoll;
 	//int8_t dirMotorPitch;
 	//int8_t dirMotorRoll;
 
-// RC settings
-	int8_t minRCPitch;
-	int8_t maxRCPitch;
+	// Source rules could be:
+	// If MAVLink seen, use that.
+	// If no RC signal, use fixed parameter value
+
+	// RC settings
 	int8_t minRCRoll;
 	int8_t maxRCRoll;
+
+	int8_t minRCPitch;
+	int8_t maxRCPitch;
+
 	int16_t rcGain;
 	int16_t rcLPF; // low pass filter for RC absolute mode, units=1/10 sec
 
-// RC channels are not configurable. Makes no sense, when it is so easy
-// to just move the connections around instead.
-// PPM mode is disabled for now (until I get a new interpreter written).
-// Of course for PPM mode, channel settings will be needed.
-// bool rcModePPM;          // RC mode, true=common RC PPM channel, false=separate RC channels
-// int8_t rcChannelPitch;     // input channel for pitch
-// int8_t rcChannelRoll;      // input channel for roll
-// int8_t rcChannelSwitch;    // input channel for switch
+	// RC channels are not configurable. Makes no sense, when it is so easy
+	// to just move the connectors around instead.
+	// PPM mode is disabled for now (until I get a new interpreter written).
+	// Of course for PPM mode, channel settings will be needed.
+	// bool rcModePPM;          // RC mode, true=common RC PPM channel, false=separate RC channels
+	// int8_t rcChannelPitch;     // input channel for pitch
+	// int8_t rcChannelRoll;      // input channel for roll
+	// int8_t rcChannelSwitch;    // input channel for switch
 
-	int16_t angleOffsetPitch;
-	int16_t angleOffsetRoll;
+	// No need for these. There is an acc. leverl feature for that.
+	// If somebody wants a way to set the output angle directly, fine, but this applied to the
+	// input/attitude estimation side and not to output. The 2 should be kept separate.
+	//int16_t pitchAngleOffset;
+	//int16_t rollAngleOffset;
+
+	// Experiment: Seems to help against tumbling motors when losing sync.
+	uint8_t pitchSpeedLimit;
+	uint8_t rollSpeedLimit;
 
 	int16_t rcMid; // rc channel center ms
 	bool rcAbsolute;

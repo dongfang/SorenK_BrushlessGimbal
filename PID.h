@@ -5,6 +5,8 @@
 #include "Util.h"
 #include "Board.h"
 
+extern MPU6050 mpu; // ouch thats ugly.
+
 // The dt parameter was removed (there was an error in its use anyway, and since
 // it was the integral number of millis, the rounding error was huge.
 // The only implication is that if you change the main loop frequency by factor k,
@@ -38,9 +40,14 @@ public:
 		Ierror = constrain_int32(Ierror, -10000L, 10000L);
 		errorIntegral += Ierror; // The integration
 
-		int32_t out = (int32_t)Kp * error + errorIntegral - (int32_t)Kd * d;
+		// The >> shift count is just an arbitrary number I came up with,
+		// to make reasonably valued Kd factors.
+		int32_t out = (int32_t)Kp * error + errorIntegral - ((int32_t)Kd * d >> (mpu.logGyroToDeg_s()-3));
 
-		return out/256;
+		// This is not the "same" division by 4096 as in Martinez: The subsequent division by 8
+		// in MainLoop has been removed. The angles (error and target) are to a different scale.
+		// Kp, Ki and Kd are much smaller here (16 bit)
+		return out / 4096;
 	}
 };
 

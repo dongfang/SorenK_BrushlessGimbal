@@ -13,25 +13,26 @@ ConfigUnion_t configUnion;
 void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
-	pitchKp = 160;
-	pitchKi = 540;
-	pitchKd = 7;
-	rollKp = 500;
-	rollKi = 400;
-	rollKd = 30;
+	pitchKp = 1100;
+	pitchKi = 1500;
+	pitchKd = 220;
+	rollKp = 800;
+	rollKi = 800;
+	rollKd = 700;
 
 	accTimeConstant = 4;
-	motorNumberPitch = 0;
-	motorNumberRoll = 1;
-	maxPWMmotorPitch = 100;
-	maxPWMmotorRoll = 100;
+	maxPWMmotorRoll = 110;
+	maxPWMmotorPitch = 95;
+
 	minRCPitch = 0;
 	maxRCPitch = 90;
 	minRCRoll = -30;
 	maxRCRoll = 30;
 	rcGain = 5;
-	angleOffsetRoll = 0;
-	angleOffsetPitch = 0;
+
+	rollSpeedLimit = 20;
+	pitchSpeedLimit = 20;
+
 	rcLPF = 5; // 0.5 sec
 	rcMid = MID_RC;
 	rcAbsolute = true;
@@ -87,20 +88,23 @@ static inline void fixme_initMPUlpf() {
 
 const ConfigDef_t PROGMEM configListPGM[] = {
 { "vers", UINT8, &config.vers, NULL },
+
 { "pitchKp", INT16, &config.pitchKp, &initPIDs },
 { "pitchKi", INT16, &config.pitchKi, &initPIDs },
 { "pitchKd", INT16, &config.pitchKd, &initPIDs },
+
 { "rollKp", INT16, &config.rollKp, &initPIDs },
 { "rollKi", INT16, &config.rollKi, &initPIDs },
 { "rollKd", INT16, &config.rollKd, &initPIDs },
-{ "accTime", INT16, &config.accTimeConstant, &fixme_initIMU },
 
-{ "pitchOffset", INT16, &config.angleOffsetPitch, NULL },
-{ "rollOffset", INT16, &config.angleOffsetRoll, NULL },
-{ "pitchMotor", UINT8, &config.motorNumberPitch, NULL },
-{ "rollMotor", UINT8, &config.motorNumberRoll, NULL },
+{ "accTime", UINT8, &config.accTimeConstant, &fixme_initIMU },
+
 { "pitchPower", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
 { "rollPower", UINT8, &config.maxPWMmotorRoll, &recalcMotorStuff },
+
+{ "pitchLimit", UINT8, &config.pitchSpeedLimit, NULL },
+{ "rollLimit", UINT8, &config.rollSpeedLimit, NULL },
+
 { "pitchMinRC", INT8, &config.minRCPitch, NULL },
 { "pitchMaxRC", INT8, &config.maxRCPitch, NULL },
 { "rollMinRC", INT8, &config.minRCRoll, NULL },

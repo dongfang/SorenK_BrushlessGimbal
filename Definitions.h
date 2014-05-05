@@ -16,7 +16,7 @@
 #define FASTLOOP_DT_F_S  (1.0/FASTLOOP_FREQ)   	    // loop controller sample period dT
 #define FASTLOOP_DT_I_MS (1000/FASTLOOP_FREQ)
 
-#define MEDIUMLOOP_FREQ 333
+#define MEDIUMLOOP_FREQ 500
 #define MEDIUMLOOP_DT_F_S  (1.0/MEDIUMLOOP_FREQ)       // loop controller sample period dT
 #define MEDIUMLOOP_DT_I_MS (1000/MEDIUMLOOP_FREQ)
 

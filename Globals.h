@@ -25,8 +25,10 @@ extern uint8_t syncCounter;		// Timer1 overflow divider to mainloop frequency.
 extern bool doubleFault;		// Set true after a WDT reset. Set false after mainloop completion.
 								// If true at WDT reset time, init not only HW but also state.
 
-extern int16_t pitchPIDVal;
 extern int16_t rollPIDVal;
+extern int16_t rollPIDDelta;
+extern int16_t pitchPIDVal;
+extern int16_t pitchPIDDelta;
 
 extern uint8_t motorPhases[2][3];
 extern uint8_t softStart;

@@ -277,11 +277,12 @@ void debug() {
 		printf_P(PSTR("x:%d, y:%d, z:%d\r\n"),x, y, z);
 	break;
 	case DEBUG_PID:
-		printf_P(PSTR("roll:%d, pitch:%d\r\n"), rollPIDVal, pitchPIDVal);
+		printf_P(PSTR("roll:%d, rolldelta:%d pitch:%d, pitchdelta:%d\r\n"),
+				rollPIDVal, rollPIDDelta, pitchPIDVal, pitchPIDDelta);
 		break;
 	case DEBUG_DGYRO:
 		printf_P(PSTR("cosp:%d, sinp:%d, roll:%d, pitch:%d\r\n"),
-				imu.cosPitch, imu.sinPitch, imu.rollDTerm(), imu.pitchDTerm());
+				imu.cosPitch, imu.sinPitch, imu.rollRate, imu.pitchRate);
 		break;
 	case DEBUG_I2C:
 		printf_P(PSTR("errors: %u\r\n"), i2c_errors_count);

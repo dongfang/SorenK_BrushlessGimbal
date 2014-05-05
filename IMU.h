@@ -17,26 +17,18 @@ public:
 	void blendAccToAttitude();
 	void calculateAttitudeAngles();
 
-	// Coming in same units as the gyro outputs, whatever that be.
-	inline int16_t pitchDTerm() {
+	inline void prepareRates() {
 		cli();
 		int16_t p = gyro[PITCH];
-		sei();
-		return p;
-	}
-
-	// Coming in same units as the gyro outputs, whatever that be.
-	inline int16_t rollDTerm() {
-		cli();
 		int32_t r = gyro[ROLL];
 		int32_t y = gyro[YAW];
 		sei();
-		return (r * cosPitch - y * sinPitch) >> LOG_SIN_RES;
+		pitchRate = p;
+		rollRate = (r * cosPitch - y * sinPitch) >> LOG_SIN_RES;
 	}
 
 	// Get attitude data
 	void fastUpdateCycle() {
-		PERFORMANCE(BM_READ_GYROS);
 		// There is a case of optimistic scheduling here: We start the background
 		// fetching of acc. data before the gyro data has been read from the (same)
 		// buffer. It should be verified that there is no collision.
@@ -44,23 +36,27 @@ public:
 		// to start acc.meter sampling early.
 		mpu->getRotationRatesAsync(gyro);
 	    mpu->startAccelerationsAsync();
-	    PERFORMANCE(BM_BLEND_GYROS);
 	    blendGyrosToAttitude();
-	    PERFORMANCE(BM_BLEND_ACC);
+	    prepareRates();
 	    readAccelerations();
 	    // blendAccToAttitude();
 	    // PERFORMANCE(BM_CALCULATE_AA);
 	    //calculateAttitudeAngles();
 	    mpu->startRotationRatesAsync();
-	    PERFORMANCE(BM_OTHER);
 	}
 
 	int16_t gyro[3];
 	int16_t acc[3];
 
+	// Public just so we can debug them. They are of no public use.
 	static const uint8_t LOG_SIN_RES = 6;
 	int8_t sinPitch;
 	int8_t cosPitch;
+
+	// The pitch and roll rates, on the axes of the motors (not the gyros).
+	// This assumes the platform (roll axis) is about horizontal.
+	int16_t pitchRate;
+	int16_t rollRate;
 
 	// Apparently the accelerations and estG have the same scale, and divided by
 	// accMagnitude_g_100 should yield 1/100 g units.

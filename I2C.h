@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <avr/io.h>
+#include <util/delay.h>
 
 #define I2C_ASYNC_STARTED_1	0
 #define I2C_DEVADDR_SENT_1 	1
@@ -31,8 +32,12 @@ void i2c_read_regs_async(uint8_t add, uint8_t reg, uint8_t size);
 // If it takes too long (glitch), bang, watchdog reboot.
 void i2c_wait_async_done();
 
+// This just ignores the timeout and gets on with it.
 inline bool i2c_is_async_done() {
 	bool result = (i2c_async_status == I2C_ASYNC_DONE);
+	if (result) return true;
+	_delay_us(5);
+	result = (i2c_async_status == I2C_ASYNC_DONE);
 	if (!result) i2c_errors_count++;
 	return result;
 }
