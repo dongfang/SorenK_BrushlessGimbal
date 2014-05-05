@@ -176,6 +176,7 @@ void unrecognized(const char *command) {
 #define DEBUG_PID 5
 #define DEBUG_DGYRO 6
 #define DEBUG_I2C 7
+#define DEBUG_RC 8
 
 static const char DEBUG_OFF_ARG[] PROGMEM = "off";
 static const char DEBUG_ACCVALUES_ARG[] PROGMEM = "acc";
@@ -185,9 +186,10 @@ static const char DEBUG_ATTITUDE_ARG[] PROGMEM = "att";
 static const char DEBUG_PID_ARG[] PROGMEM = "pid";
 static const char DEBUG_DGYRO_ARG[] PROGMEM = "dgyro";
 static const char DEBUG_I2C_ARG[] PROGMEM = "i2c";
+static const char DEBUG_RC_ARG[] PROGMEM = "rc";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = {
-	DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG, DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG
+	DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG, DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG, DEBUG_RC_ARG
 };
 
 /*
@@ -285,7 +287,15 @@ void debug() {
 				imu.cosPitch, imu.sinPitch, imu.rollRate, imu.pitchRate);
 		break;
 	case DEBUG_I2C:
-		printf_P(PSTR("errors: %u\r\n"), i2c_errors_count);
+		printf_P(PSTR("errors:%u\r\n"), i2c_errors_count);
+		break;
+	case DEBUG_RC:
+		printf_P(PSTR("roll:%d,%S, pitch:%d,%S\r\n"),
+				rcData[RC_DATA_ROLL].setpoint,
+				(rcData[RC_DATA_ROLL].isValid ? PSTR("y") : PSTR("n")),
+				rcData[RC_DATA_PITCH].setpoint,
+				(rcData[RC_DATA_PITCH].isValid ? PSTR("y") : PSTR("n"))
+		);
 		break;
 	default: break;
 	}

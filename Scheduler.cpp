@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 extern uint8_t timer1Extension;
+extern uint16_t timer1ExtensionExtension;
 
 #define IDLE 0
 #define RUNNING 1
@@ -29,7 +30,8 @@ ISR (TIMER1_OVF_vect) {
   static uint8_t mediumDivider = MEDIUM_SUBPERIOD;
   sei();
   fastDivider--;	// decrements at F_CPU/256 so after time T it is T*F_CPU/256
-  timer1Extension++;
+  if (!(++timer1Extension))
+	  timer1ExtensionExtension++;
   if (fastState == DONE) {
     // As a further experiment, try put this at exit time of mainLoop (unsynced PWM out).
     PWM_A_MOTOR0 = motorPhases[0][0];

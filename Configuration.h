@@ -4,6 +4,14 @@
 #include <stdint.h>
 #include "Definitions.h"
 
+struct RCChannelDef {
+	int16_t minAngle;			// min may be greater than max to reverse.
+	int16_t maxAngle;			// min may be greater than max to reverse.
+	int16_t defaultAngle;		// if no signal
+	uint8_t speed; 				// integrating mode : Integration speed. Absolute mode: max. speed.
+	//uint8_t LPF; 				// low pass filter for RC absolute mode. I don't like LPFs.
+};
+
 class Configuration {
 public:
 	uint8_t vers;
@@ -37,17 +45,11 @@ public:
 
 	// Source rules could be:
 	// If MAVLink seen, use that.
-	// If no RC signal, use fixed parameter value
-
+	// If no RC signal, use default angle (a default rate is meaningless)
 	// RC settings
-	int8_t minRCRoll;
-	int8_t maxRCRoll;
-
-	int8_t minRCPitch;
-	int8_t maxRCPitch;
-
-	int16_t rcGain;
-	int16_t rcLPF; // low pass filter for RC absolute mode, units=1/10 sec
+	RCChannelDef RCPitch;
+	RCChannelDef RCRoll;
+	bool rcAbsolute;
 
 	// RC channels are not configurable. Makes no sense, when it is so easy
 	// to just move the connectors around instead.
@@ -68,8 +70,6 @@ public:
 	uint8_t pitchSpeedLimit;
 	uint8_t rollSpeedLimit;
 
-	int16_t rcMid; // rc channel center ms
-	bool rcAbsolute;
 	uint16_t crc16;
 
 	void setDefaults();

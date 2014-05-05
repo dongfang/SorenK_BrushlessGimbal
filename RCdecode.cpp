@@ -1,8 +1,6 @@
 #include "Globals.h"
 #include <avr/interrupt.h>
 
-float rcLPF_tc = 1.0;
-
 /*************************/
 /* RC-Decoder            */
 /*************************/
@@ -10,12 +8,12 @@ float rcLPF_tc = 1.0;
 //******************************************
 // PWM Decoder
 //******************************************
-inline void decodePWM(RCData_t* rcData) {
+void decodePWM(RCData_t* rcData, uint16_t microsFallingEdge) {
   uint16_t pulseInPWMtmp;
-  pulseInPWMtmp = (rcData->microsLastUpdate - rcData->microsRisingEdge)/16;
+  pulseInPWMtmp = (microsFallingEdge - rcData->microsRisingEdge)/(F_CPU/1000000UL);
   // update if within expected RC range
   rcData->rx = pulseInPWMtmp;
-  rcData->isFresh=true;
+  rcData->timeout = 0;
   if ((pulseInPWMtmp >= MIN_RC) && (pulseInPWMtmp <= MAX_RC)) {
     rcData->isValid=true;
   }
@@ -71,24 +69,21 @@ ISR(PCINT1_vect) {
     if (pin & 1) {
      rcData[RC_DATA_ROLL].microsRisingEdge = frozenTime;
     } else {
-      rcData[RC_DATA_ROLL].microsLastUpdate = frozenTime;
-      decodePWM(&rcData[RC_DATA_ROLL]);
+      decodePWM(&rcData[RC_DATA_ROLL], frozenTime);
     }
   }
   if (change & 2) {
     if (pin & 2) {
       rcData[RC_DATA_PITCH].microsRisingEdge = frozenTime;
     } else {
-      rcData[RC_DATA_PITCH].microsLastUpdate = frozenTime;
-      decodePWM(&rcData[RC_DATA_PITCH]);
+      decodePWM(&rcData[RC_DATA_PITCH], frozenTime);
     }
   }
   if (change & 4) {
     if (pin & 4) {
       rcData[RC_DATA_SWITCH].microsRisingEdge = frozenTime;
     } else {
-      rcData[RC_DATA_SWITCH].microsLastUpdate = frozenTime;
-      decodePWM(&rcData[RC_DATA_SWITCH]);
+      decodePWM(&rcData[RC_DATA_SWITCH], frozenTime);
     }
   }
 }
@@ -96,33 +91,20 @@ ISR(PCINT1_vect) {
 //******************************************
 // PPM & PWM Decoder
 //******************************************
-
-// check for RC timout
-
 void checkRcTimeouts() {
-  uint16_t timerNow = time();
-  uint16_t timerLastUpdate;
+  //uint32_t timerNow = time32();
+  //uint16_t timerLastUpdate;
   for (uint8_t id = 0; id < RC_DATA_SIZE; id++) {
-    cli();
-    timerLastUpdate = rcData[id].microsLastUpdate;
-    sei();
-    if (rcData[id].isValid && ((timerNow - timerLastUpdate)) > RC_TIMEOUT){
-      rcData[id].rx = config.rcMid;
-      rcData[id].isValid = false;
-      rcData[id].isFresh = true;
+    if (rcData[id].timeout < 250) { // stale
+    	++rcData[id].timeout;
+    } else {
+    	rcData[id].isValid = false;
     }
   }
 }
 
-void initRCFilter() {
- rcLPF_tc = LOWPASS_K_FLOAT(config.rcLPF * 0.1);
-}
-
 // initialize RC Pin mode
 void initRC() {
-//  static bool first = true;
-//  if (first) {
-
 	// TODO: We need a pin identity abstraction (which is not Arduino :) )
 	//pinMode(A2, INPUT); digitalWrite(A2, HIGH);
     //pinMode(A1, INPUT); digitalWrite(A1, HIGH);
@@ -132,19 +114,11 @@ void initRC() {
 
     PCMSK1 |= (1<<PCINT8) | (1<<PCINT9) | (1<<PCINT10);
     PCICR |= (1<<PCIE1);
-    
-    //first = false;
-  //}
 
   for (uint8_t id = 0; id < RC_DATA_SIZE; id++) {
     cli();
-    rcData[id].microsRisingEdge = 0;
-    rcData[id].microsLastUpdate = 0;
-    rcData[id].rx               = MID_RC;
-    rcData[id].isFresh          = true;
-    rcData[id].isValid          = true;
-    rcData[id].rcSpeed          = 0.0;
-    rcData[id].setpoint         = 0.0;
+    rcData[id].rx               = MID_RC;	// raw pulse
+    rcData[id].setpoint         = 0;		// cooked
     sei();
   }
 }
@@ -152,48 +126,53 @@ void initRC() {
 //******************************************
 // Integrating
 //******************************************
-void evalRCChannelIntegrating(RCData_t* rcData, int16_t rcGain, uint16_t rcMid) {
-  if(rcData->isFresh) {
-    if(rcData->rx >= rcMid + RC_DEADBAND) {
-      rcData->rcSpeed = rcGain * (float)(rcData->rx - (rcMid + RC_DEADBAND))/ (float)(MAX_RC - (rcMid + RC_DEADBAND)) + 0.9 * rcData->rcSpeed;
-    } else if(rcData->rx <= rcMid-RC_DEADBAND){
-      rcData->rcSpeed = -rcGain * (float)((rcMid - RC_DEADBAND) - rcData->rx)/ (float)((rcMid - RC_DEADBAND)-MIN_RC) + 0.9 * rcData->rcSpeed;
-    } else {
-      rcData->rcSpeed = 0.0;
+void evalRCChannelIntegrating(RCData_t* rcData, RCChannelDef* def) {
+	int16_t live = rcData->rx - MID_RC - RC_DEADBAND;
+    if (live <= 0) {
+    	live = rcData->rx - MID_RC + RC_DEADBAND;
+        if (live >= 0) return;
     }
-    rcData->rcSpeed = constrain_f(rcData->rcSpeed, -200, +200);  // constrain for max speed
-    rcData->isFresh = false;
-  }
+
+    rcData->setpoint += def->speed * live/(MAX_RC-MIN_RC);
+    if (rcData->setpoint > def->maxAngle) rcData->setpoint = def->maxAngle;
+    if (rcData->setpoint < def->minAngle) rcData->setpoint = def->minAngle;
 }
 
-// Integrating RC control
-void evaluateRCIntegrating() {
-  evalRCChannelIntegrating(&rcData[RC_DATA_PITCH], config.rcGain, config.rcMid);
-  evalRCChannelIntegrating(&rcData[RC_DATA_ROLL ], config.rcGain, config.rcMid);
-}
 
 //******************************************
 // Absolute
 //******************************************
+void evalRCChannelAbsolute(RCData_t* rcData, RCChannelDef* def) {
+  int8_t k;
+	// Typically in the range 16000/1000, about 16 for a 90 degree setting, less for less
+	// Not really precise but who cares.
+    k = (def->maxAngle - def->minAngle) / (MAX_RC - MIN_RC);
+    // defaultAngle is our center point. NO, it makes no sense. Drop it.
+    int16_t result = (rcData->rx-MID_RC) * k + (def->maxAngle - def->minAngle)/2;
 
-inline void evalRCChannelAbsolute(RCData_t* rcData, int16_t rcMin, int16_t rcMax, int16_t rcMid) {
-  float k;
-  float y0;
-  int16_t rx;
-  
-  if(rcData->isFresh) {
-    k = (float)(rcMax - rcMin)/(MAX_RC - MIN_RC);
-    y0 = rcMin + k * (MID_RC - MIN_RC);
-    rx = rcData->rx - rcMid;
-    //utilLP_float(&rcData->setpoint, y0 + k * rx, 0.05);
-    rcData->isFresh = false;
-  }
+    // Check endpoints again
+    if (result > def->maxAngle) result = def->maxAngle;
+    if (result < def->minAngle) result = def->minAngle;
+
+    if (result > rcData->setpoint + def->speed) rcData->setpoint += def->speed;
+    else if (result < rcData->setpoint - def->speed) rcData->setpoint -= def->speed;
+    else rcData->setpoint = result;
 }
 
-// Absolute RC control
-void evaluateRCAbsolute() {
-  evalRCChannelAbsolute(&rcData[RC_DATA_PITCH], config.minRCPitch, config.maxRCPitch, config.rcMid);
-  evalRCChannelAbsolute(&rcData[RC_DATA_ROLL ], config.minRCRoll , config.maxRCRoll,  config.rcMid);
+void evaluateRCControl() {
+	if (rcData[RC_DATA_ROLL].isValid) {
+		if (config.rcAbsolute)
+			  evalRCChannelAbsolute(&rcData[RC_DATA_ROLL], &config.RCRoll);
+		else
+			  evalRCChannelIntegrating(&rcData[RC_DATA_ROLL], &config.RCRoll);
+	} else rcData[RC_DATA_ROLL].setpoint = config.RCRoll.defaultAngle;
+
+	if (rcData[RC_DATA_PITCH].isValid) {
+		if (config.rcAbsolute)
+			  evalRCChannelAbsolute(&rcData[RC_DATA_PITCH], &config.RCPitch);
+		else
+			  evalRCChannelIntegrating(&rcData[RC_DATA_PITCH], &config.RCPitch);
+	} else rcData[RC_DATA_PITCH].setpoint = config.RCPitch.defaultAngle;
 }
 
 /*
@@ -201,8 +180,9 @@ void evaluateRCAbsolute() {
  * It is simply -1 or 1 after evaluation.
  */
 void evaluateRCSwitch() {
-  if (!rcData[RC_DATA_SWITCH].isFresh)
-    return;
+	if (!rcData[RC_DATA_SWITCH].isValid) {
+		// Do something predictable, such as setting it default-locked.
+	}
   uint16_t lThreshold = (MIN_RC + MID_RC)/2;
   if (switchPos < 0) lThreshold += RC_DEADBAND;
   uint16_t hThreshold = (MID_RC + MAX_RC)/2;
@@ -214,6 +194,4 @@ void evaluateRCSwitch() {
     switchPos = 1;
   else 
     switchPos = 0;
-    
-  rcData[RC_DATA_SWITCH].isFresh = false;
 }

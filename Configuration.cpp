@@ -24,17 +24,19 @@ void Configuration::setDefaults() {
 	maxPWMmotorRoll = 110;
 	maxPWMmotorPitch = 95;
 
-	minRCPitch = 0;
-	maxRCPitch = 90;
-	minRCRoll = -30;
-	maxRCRoll = 30;
-	rcGain = 5;
+	RCRoll.defaultAngle = 0;
+	RCRoll.minAngle = -20;
+	RCRoll.maxAngle = 20;
+	RCRoll.speed = 10;
+
+	RCPitch.defaultAngle = 0;
+	RCPitch.minAngle = -60;
+	RCPitch.maxAngle = 10;
+	RCPitch.speed = 10;
 
 	rollSpeedLimit = 20;
 	pitchSpeedLimit = 20;
 
-	rcLPF = 5; // 0.5 sec
-	rcMid = MID_RC;
 	rcAbsolute = true;
 	axisReverseZ = true;
 	axisSwapXY = false;
@@ -70,7 +72,6 @@ void Configuration::readEEPROMOrDefault() {
 
 // Fixme
 extern void recalcMotorStuff();
-extern void initRCFilter();
 
 static inline void fixme_initIMU() {
 	imu.init();
@@ -105,13 +106,18 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "pitchLimit", UINT8, &config.pitchSpeedLimit, NULL },
 { "rollLimit", UINT8, &config.rollSpeedLimit, NULL },
 
-{ "pitchMinRC", INT8, &config.minRCPitch, NULL },
-{ "pitchMaxRC", INT8, &config.maxRCPitch, NULL },
-{ "rollMinRC", INT8, &config.minRCRoll, NULL },
-{ "rollMaxRC", INT8, &config.maxRCRoll, NULL },
-{ "rcGain", INT16, &config.rcGain, NULL },
-{ "rcFilter", INT16, &config.rcLPF, &initRCFilter },
-{ "rcMid", INT16, &config.rcMid, NULL },
+{ "rollMin", INT16, &config.RCRoll.minAngle, NULL },
+{ "rollMax", INT16, &config.RCRoll.maxAngle, NULL },
+{ "rollSpeed", INT8, &config.RCRoll.speed, NULL },
+{ "rollDefault", INT16, &config.RCRoll.defaultAngle, NULL },
+
+{ "pitchMin", INT16, &config.RCPitch.minAngle, NULL },
+{ "pitchMax", INT16, &config.RCPitch.maxAngle, NULL },
+{ "pitchSpeed", INT8, &config.RCPitch.speed, NULL },
+{ "pitchDefault", INT16, &config.RCPitch.defaultAngle, NULL },
+
+//{ "rcFilter", INT16, &config.rcLPF, &initRCFilter },
+
 { "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
 { "majorAxis", UINT8, &config.majorAxis, 		&fixme_initSensorOrientation },
 { "reverseZ", BOOL, &config.axisReverseZ, 	&fixme_initSensorOrientation },
@@ -173,7 +179,6 @@ void updateAllParameters() {
 	initPIDs();
 	// mpu.setDLPFMode(config.mpuLPF);
 	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
-	initRCFilter();
 }
 
 void initPIDs(void) {

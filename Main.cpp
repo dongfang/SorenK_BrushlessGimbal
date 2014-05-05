@@ -153,9 +153,6 @@ void initState() {
 	// Init PIDs to reduce floating point operations.
 	initPIDs();
 
-	// init RC variables
-	initRCFilter();
-
 	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
 	//mpu.setDLPFMode(config.mpuLPF);
 

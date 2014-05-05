@@ -4,10 +4,7 @@
 
 // init RC config variables
 void initRC();
-void initRCFilter();
-void evaluateRCAbsolute();
-void evaluateRCIntegrating();
+void evaluateRCControl();
 void evaluateRCSwitch();
-void checkRcTimeouts();
 
 #endif

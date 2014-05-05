@@ -42,9 +42,9 @@
 // #define RC_PIN_PPM_A1
 // #define RC_PIN_PPM_A0
 
-#define MIN_RC 950
+#define MIN_RC 1050
 #define MID_RC 1500
-#define MAX_RC 2050
+#define MAX_RC 1950
 #define RC_DEADBAND 50U
 #define RC_TIMEOUT 1000000UL
 

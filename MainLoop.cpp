@@ -16,9 +16,6 @@ uint8_t gimbalState;
 int16_t rollAngleSet;
 int16_t pitchAngleSet;
 
-int16_t rollPhiSet;
-int16_t pitchPhiSet;
-
 int16_t pitchPIDVal;
 int16_t rollPIDVal;
 
@@ -98,58 +95,9 @@ void mediumTask() {
     PERFORMANCE(BM_CALCULATE_AA);
     imu.calculateAttitudeAngles();
 
-    /*
     // Evaluate RC-Signals
-    if (config.rcAbsolute == 1) {
-      PERFORMANCE(BM_RC_DECODE);
-      evaluateRCAbsolute(); // t=30/142us,  returns rollRCSetPoint, pitchRCSetpoint
-      utilLP_int(&pitchAngleSet, pitchPhiSet, rcLPF_tc); // t=16us
-      utilLP_int(&rollAngleSet, rollPhiSet, rcLPF_tc); // t=28us
-      PERFORMANCE(BM_OTHER);
-    } else {
-      PERFORMANCE(BM_RC_DECODE);
-      evaluateRCIntegrating(); // gives rollRCSpeed, pitchRCSpeed
-      utilLP_int(&pitchAngleSet, pitchPhiSet, 0.01);
-      utilLP_int(&rollAngleSet, rollPhiSet, 0.01);
-      PERFORMANCE(BM_OTHER);
-    }
+    evaluateRCControl();
     evaluateRCSwitch();
-    // RC Pitch function
-    if (rcData[RC_DATA_PITCH].isValid) {
-      if (config.rcAbsolute == 1) {
-        pitchPhiSet = rcData[RC_DATA_PITCH].setpoint;
-      } else {
-        if (fabs(rcData[RC_DATA_PITCH].rcSpeed) > 0.01) {
-  	pitchPhiSet += rcData[RC_DATA_PITCH].rcSpeed * 0.01;
-        }
-      }
-    } else {
-      pitchPhiSet = 0;
-    }
-    if (config.minRCPitch < config.maxRCPitch) {
-      pitchPhiSet = constrain_f(pitchPhiSet, config.minRCPitch, config.maxRCPitch);
-    } else {
-      pitchPhiSet = constrain_f(pitchPhiSet, config.maxRCPitch, config.minRCPitch);
-    }
-
-     // RC roll function
-     if (rcData[RC_DATA_ROLL].isValid) {
-       if (config.rcAbsolute == 1) {
-         rollPhiSet = rcData[RC_DATA_ROLL].setpoint;
-       } else {
-         if (fabs(rcData[RC_DATA_ROLL].rcSpeed) > 0.01) {
-  	 rollPhiSet += rcData[RC_DATA_ROLL].rcSpeed * 0.01;
-         }
-       }
-     } else {
-       rollPhiSet = 0;
-     }
-     if (config.minRCRoll < config.maxRCRoll) {
-       rollPhiSet = constrain_f(rollPhiSet, config.minRCRoll, config.maxRCRoll);
-     } else {
-       rollPhiSet = constrain_f(rollPhiSet, config.maxRCRoll, config.minRCRoll);
-     }
-     */
 }
 
 void slowTask() {
@@ -200,7 +148,6 @@ void slowTask() {
      debug();
    }
 
-   checkRcTimeouts();
    sCmd.readSerial();
 
 #ifdef STACKHEAPCHECK_ENABLE

@@ -38,11 +38,11 @@ extern uint8_t pwmSinMotorRoll[N_SIN];
 
 struct RCData_t {
 	uint16_t microsRisingEdge;
-	uint16_t microsLastUpdate;
+	//uint16_t microsLastUpdate;
 	uint16_t rx;
-	bool isFresh;
+	uint8_t timeout;
+	// bool newPulse;
 	bool isValid;
-	int16_t rcSpeed;
 	int16_t setpoint;
 };
 

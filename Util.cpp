@@ -14,6 +14,7 @@ uint32_t stackBottom = 0;
 uint32_t heapTop = 0;
 uint32_t heapBottom = 0xffffffff;
 uint8_t timer1Extension;
+uint16_t timer1ExtensionExtension;
 #include "Globals.h"
 
 #ifdef DO_PERFORMANCE
@@ -110,6 +111,13 @@ uint16_t time() {
       return (ext<<9) + after;
     }
   }
+}
+
+// same as time() but with a wider result.
+uint32_t time32() {
+	cli();
+	uint16_t t = time();
+	return t + ((uint32_t)timer1ExtensionExtension << 16);
 }
 
 /*
