@@ -146,29 +146,24 @@ void setTransients() {
 	char * axisName;
 	char * paraValue;
 	uint8_t axis = 0;
-	int16_t val = 0;
+	int16_t val = 10;
 
-	if ((axisName = sCmd.next()) == NULL) {
-		// do nothing
-	} else {
+	if ((axisName = sCmd.next()) != NULL) {
+		if (!strcmp_P(axisName, PSTR("roll"))) {
+			axis = 1;
+		} else if (!strcmp_P(axisName, PSTR("pitch"))) {
+			axis = 2;
+		} else if (!strcmp_P(axisName, PSTR("both"))) {
+			axis = 3;
+		}
 		paraValue = sCmd.next();
-		if (paraValue == NULL)
-			val = 10;
-		else {
+		if (paraValue != NULL) {
 			val = atol(paraValue);
 			if (val < -500)
 				val = -500;
 			else if (val > 500)
 				val = 500;
 		}
-	}
-
-	if (!strcmp_P(axisName, PSTR("roll"))) {
-		axis = 1;
-	} else if (!strcmp_P(axisName, PSTR("pitch"))) {
-		axis = 2;
-	} else if (!strcmp_P(axisName, PSTR("both"))) {
-		axis = 3;
 	}
 	transients(axis, val);
 }

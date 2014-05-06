@@ -270,13 +270,13 @@ void slowLoop() {
 				rollOscDir = -1;
 			else if (oscRoll <= xformRCToInt16(config.RCRoll.minAngle))
 				rollOscDir = 1;
-			oscRoll += rollOscDir * oscSpeed;
+			oscRoll += rollOscDir * oscSpeed * 5;
 
 			if (oscPitch >= xformRCToInt16(config.RCPitch.maxAngle))
 				pitchOscDir = -1;
 			else if (oscPitch <= xformRCToInt16(config.RCPitch.minAngle))
 				pitchOscDir = 1;
-			oscPitch += pitchOscDir * oscSpeed;
+			oscPitch += pitchOscDir * oscSpeed * 7;
 		}
 
 		if (ticked && !transientsDivider) {
