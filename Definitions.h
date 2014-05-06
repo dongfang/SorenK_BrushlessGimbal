@@ -45,14 +45,14 @@
 #define LED_LATCH (MEDIUMLOOP_FREQ/LED_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
-#define OSCILLATION_FREQ 50
-#define OSCILLATION_LATCH (OSCILLATION_FREQ/SOFTSTART_FREQ)
+#define OSCILLATION_FREQ 250
+#define OSCILLATION_LATCH (MEDIUMLOOP_FREQ/OSCILLATION_FREQ)
 
 #define POUT_FREQ 4      // rate of ACC print output in Hz, 25 Hz is default
 #define LOCK_TIME_SEC 0  // gimbal fast lock time at startup
 
 // LP filter coefficient
-#define LOWPASS_K_FLOAT(TAU) (MEDIUMLOOP_DT_F_S/(TAU+MEDIUMLOOP_DT_F_S))
+// #define LOWPASS_K_FLOAT(TAU) (MEDIUMLOOP_DT_F_S/(TAU+MEDIUMLOOP_DT_F_S))
 
 // Number of sinus values for full 360 deg.
 // NOW FIXED TO 256 !!!

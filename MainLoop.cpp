@@ -119,8 +119,8 @@ int16_t getRollTarget() {
 }
 
 void oscillation(uint8_t val) {
+	oscSpeed = val;
 	if (val) {
-		oscSpeed = val;
 		oscPitch = getPitchTarget();
 		oscRoll = getRollTarget();
 		targetSource = OSC;
@@ -132,6 +132,8 @@ void oscillation(uint8_t val) {
 void transients(uint8_t axes, int16_t val) {
 	transientsAxes = axes;
 	transientsMag = val;
+	pitchTransient = 0;
+	rollTransient = 0;
 }
 
 void mediumTask() {
@@ -270,21 +272,21 @@ void slowLoop() {
 				rollOscDir = -1;
 			else if (oscRoll <= xformRCToInt16(config.RCRoll.minAngle))
 				rollOscDir = 1;
-			oscRoll += rollOscDir * oscSpeed * 5;
+			oscRoll += rollOscDir * oscSpeed;
 
 			if (oscPitch >= xformRCToInt16(config.RCPitch.maxAngle))
 				pitchOscDir = -1;
 			else if (oscPitch <= xformRCToInt16(config.RCPitch.minAngle))
 				pitchOscDir = 1;
-			oscPitch += pitchOscDir * oscSpeed * 7;
+			oscPitch += pitchOscDir * oscSpeed;
 		}
 
 		if (ticked && !transientsDivider) {
-			transientsDivider = MEDIUMLOOP_FREQ;
+			transientsDivider = MEDIUMLOOP_FREQ; // 1Hz
 			if (!rollTransient && (transientsAxes & 1))
 				rollTransient = transientsMag;
 			else
-				pitchTransient = 0;
+				rollTransient = 0;
 			if (!pitchTransient && (transientsAxes & 2))
 				pitchTransient = transientsMag;
 			else

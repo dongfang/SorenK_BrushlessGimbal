@@ -126,15 +126,15 @@ void parameterMod() {
 void oscillation(uint8_t val);
 void setOscillation() {
 	char * paraValue;
-	uint16_t val = 0;
+	int16_t val = 0;
 
 	paraValue = sCmd.next();
 	if (paraValue == NULL) {
 		val = 10;
 	} else {
 		val = atol(paraValue);
-		if (val < 1)
-			val = 1;
+		if (val < 0)
+			val = 0;
 		else if (val > 255)
 			val = 255;
 	}

@@ -15,7 +15,7 @@ void Configuration::setDefaults() {
 	versEEPROM = VERSION_EEPROM;
 	pitchKp = 1100;
 	pitchKi = 1500;
-	pitchKd = 175;
+	pitchKd = 200;
 	rollKp = 800;
 	rollKi = 800;
 	rollKd = 500;
@@ -26,13 +26,13 @@ void Configuration::setDefaults() {
 	maxPWMmotorPitch = 110;
 
 	RCRoll.defaultAngle = 0;
-	RCRoll.minAngle = -20;
-	RCRoll.maxAngle = 20;
+	RCRoll.minAngle = -200;
+	RCRoll.maxAngle = 200;
 	RCRoll.speed = 10;
 
 	RCPitch.defaultAngle = 0;
-	RCPitch.minAngle = -60;
-	RCPitch.maxAngle = 10;
+	RCPitch.minAngle = -900;
+	RCPitch.maxAngle = 100;
 	RCPitch.speed = 10;
 
 	rollSpeedLimit = 20;
