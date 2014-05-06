@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include "Util.h"
-#include "Board.h"
 
 extern MPU6050 mpu; // ouch thats ugly.
 
@@ -18,18 +17,21 @@ public:
 	int16_t Kd;
 
 	int32_t errorIntegral;
+	int32_t ILimit;
 
-	PID() {}
+	PID() {
+	}
 
 	PID(int16_t Kp, int16_t Ki, int16_t Kd) :
 			Kp(Kp), Ki(Ki), Kd(Kd) {
 	}
 
-	void setCoefficients(int16_t Kp, int16_t Ki, int16_t Kd) {
+	void setCoefficients(int16_t Kp, int16_t Ki, int16_t Kd, int32_t ILimit) {
 		this->Kp = Kp;
 		this->Ki = Ki;
 		this->Kd = Kd;
-		errorIntegral =  0;
+		this->ILimit = ILimit;
+		errorIntegral = 0;
 	}
 
 	// Yes I have checked if int16's would do and the answer was no.
@@ -37,12 +39,19 @@ public:
 		int32_t error = target - actual;
 		int32_t Ierror = error * Ki;
 
-		Ierror = constrain_int32(Ierror, -10000L, 10000L);
+		if (Ierror < -ILimit) {
+			LEDEvent(I_LIMIT_MASK);
+			Ierror = -ILimit;
+		} else if (Ierror > ILimit) {
+			LEDEvent(I_LIMIT_MASK);
+			Ierror = ILimit;
+		}
+
 		errorIntegral += Ierror; // The integration
 
 		// The >> shift count is just an arbitrary number I came up with,
 		// to make reasonably valued Kd factors.
-		int32_t out = (int32_t)Kp * error + errorIntegral - ((int32_t)Kd * d >> (mpu.logGyroToDeg_s()-3));
+		int32_t out = (int32_t) Kp * error + errorIntegral - ((int32_t) Kd * d >> (mpu.logGyroToDeg_s() - 3));
 
 		// This is not the "same" division by 4096 as in Martinez: The subsequent division by 8
 		// in MainLoop has been removed. The angles (error and target) are to a different scale.

@@ -33,6 +33,8 @@ public:
 	int16_t rollKi;
 	int16_t rollKd;
 
+	int32_t ILimit;
+
 // Output settings
 	uint8_t maxPWMmotorRoll;
 	uint8_t maxPWMmotorPitch;
@@ -69,6 +71,11 @@ public:
 	// Experiment: Seems to help against tumbling motors when losing sync.
 	uint8_t pitchSpeedLimit;
 	uint8_t rollSpeedLimit;
+
+	// in 1:16 units.
+	uint8_t frozenGimbalPower;
+
+	uint8_t LEDMask;
 
 	uint16_t crc16;
 

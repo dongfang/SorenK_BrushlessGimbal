@@ -55,7 +55,7 @@ bool doubleFault __attribute__ ((section (".noinit")));
 uint8_t syncCounter;
 
 uint8_t motorPhases[2][3];
-uint8_t softStart;
+volatile uint8_t softStart;
 
 uint8_t pwmSinMotorPitch[N_SIN];
 uint8_t pwmSinMotorRoll[N_SIN];
@@ -63,7 +63,7 @@ uint8_t pwmSinMotorRoll[N_SIN];
 RCData_t rcData[RC_DATA_SIZE];
 int8_t switchPos = SW_UNKNOWN;
 
-extern void slowTask();
+extern void slowLoop();
 
 // D'uh!
 int _putchar(char c, FILE* f) {
@@ -207,12 +207,13 @@ int main() {
 	wdt_enable(WDT_TIMEOUT);
 	printf_P(PSTR("Go!\r\n"));
 
+	runFastTask = true;
+	runMediumTask = true;
+
 	// Enable Timer1 Interrupt for timing
 	TIMSK1 |= 1<<TOIE1;
-	// doesnt work anyway (why?)
+
 	mpu.startRotationRatesAsync();
-	while(1) {
-		slowTask();
-		//printf("%d, %d\r\n", debug_i2c_status[0], debug_i2c_status[1]);
-	}
+
+	slowLoop();
 }

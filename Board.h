@@ -18,8 +18,16 @@
 // RCTimer board: 0
 // #define LED_BIT			0
 
+// By Martinez board (V3?)
+// A0 C0
+// A1 C1
+// A2 C2
+// C1 D2
+// C3 D4
+// C4 B4
+
 // I2C Frequency
 //#define I2C_SPEED 400000L   //400kHz fast mode
-#define I2C_SPEED 500000L   // slightly tune the bus.
+#define I2C_SPEED 600000L   // slightly tune the bus.
 
 #endif

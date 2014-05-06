@@ -31,7 +31,7 @@ extern int16_t pitchPIDVal;
 extern int16_t pitchPIDDelta;
 
 extern uint8_t motorPhases[2][3];
-extern uint8_t softStart;
+extern volatile uint8_t softStart;
 
 extern uint8_t pwmSinMotorPitch[N_SIN];
 extern uint8_t pwmSinMotorRoll[N_SIN];
@@ -48,6 +48,10 @@ struct RCData_t {
 
 extern RCData_t rcData[RC_DATA_SIZE];
 extern int8_t switchPos;
+
+extern volatile bool runFastTask;
+extern volatile bool runMediumTask;
+extern volatile bool mediumTaskHasRun;
 
 extern float rcLPF_tc;
 

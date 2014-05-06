@@ -63,9 +63,10 @@ public:
 	float estG[3];
 
 	// Now in units depending on the acc. meters scale.
-	uint32_t accMagnitude;
-	uint32_t minAccMagnitude;
-	uint32_t maxAccMagnitude;
+	// This is not necessary to to.
+	// uint32_t accMagnitude;
+	// uint32_t minAccMagnitude;
+	// uint32_t maxAccMagnitude;
 
 	int16_t angle_i16[2];  // absolute angle inclination in int16-degrees
 

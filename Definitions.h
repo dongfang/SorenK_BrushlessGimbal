@@ -12,13 +12,41 @@
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // Drotek MPU breakout board
 //#define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_HIGH
 
-#define FASTLOOP_FREQ 1000
+#define FASTLOOP_FREQ 1050
 #define FASTLOOP_DT_F_S  (1.0/FASTLOOP_FREQ)   	    // loop controller sample period dT
 #define FASTLOOP_DT_I_MS (1000/FASTLOOP_FREQ)
 
-#define MEDIUMLOOP_FREQ 500
+// Must be an integral fraction of FASTLOOP_FREQ
+#define MEDIUMLOOP_FREQ 525
 #define MEDIUMLOOP_DT_F_S  (1.0/MEDIUMLOOP_FREQ)       // loop controller sample period dT
 #define MEDIUMLOOP_DT_I_MS (1000/MEDIUMLOOP_FREQ)
+
+// Must be an integral fraction of MEDIUMLOOP_FREQ
+#define RC_FREQ 100
+#define RC_LATCH (MEDIUMLOOP_FREQ/RC_FREQ)
+
+// Must be an integral fraction of MEDIUMLOOP_FREQ
+#define SOFTSTART_FREQ 80
+#define SOFTSTART_LATCH (MEDIUMLOOP_FREQ/SOFTSTART_FREQ)
+
+// Must be an integral fraction of MEDIUMLOOP_FREQ
+#define HUMAN_DEBUG_FREQ 5
+#define HUMAN_DEBUG_LATCH (MEDIUMLOOP_FREQ/HUMAN_DEBUG_FREQ)
+
+// Must be an integral fraction of MEDIUMLOOP_FREQ
+#define ACCMAG_FREQ 5
+#define ACCMAG_LATCH (MEDIUMLOOP_FREQ/ACCMAG_FREQ)
+
+// Must be an integral fraction of MEDIUMLOOP_FREQ
+#define UI_DEBUG_FREQ 20
+
+// Must be an integral fraction of MEDIUMLOOP_FREQ
+#define LED_FREQ 10
+#define LED_LATCH (MEDIUMLOOP_FREQ/LED_FREQ)
+
+// Must be an integral fraction of MEDIUMLOOP_FREQ
+#define OSCILLATION_FREQ 50
+#define OSCILLATION_LATCH (OSCILLATION_FREQ/SOFTSTART_FREQ)
 
 #define POUT_FREQ 4      // rate of ACC print output in Hz, 25 Hz is default
 #define LOCK_TIME_SEC 0  // gimbal fast lock time at startup

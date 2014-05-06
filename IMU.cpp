@@ -41,9 +41,9 @@ void IMU::init() {
 	}
 
 	uint32_t temp = (uint32_t)mpu->accToG() * mpu->accToG();
-	accMagnitude = temp;
-	minAccMagnitude = temp * 2/3;
-	maxAccMagnitude = temp * 3/2;
+	//accMagnitude = temp;
+	//minAccMagnitude = temp * 2/3;
+	//maxAccMagnitude = temp * 3/2;
 }
 
 void IMU::readRotationRates() {
@@ -63,7 +63,8 @@ void IMU::blendGyrosToAttitude() {
 	rotateV(estG, deltaGyroAngle);
 }
 
-// Called from slow-loop in main.
+// Not needed.
+/*
 void IMU::updateAccMagnitude() {
 	uint8_t axis;
 
@@ -77,13 +78,15 @@ void IMU::updateAccMagnitude() {
 	accMagnitude = tmp_accMagnitude;
 	sei();
 }
+*/
+
 void IMU::blendAccToAttitude() {
 	uint8_t axis;
 	// 255 us
 	// Apply complimentary filter (Gyro drift correction)
 	// If accel magnitude >1.4G or <0.6G and ACC vector outside of the limit range => we neutralize the effect of accelerometers in the angle estimation.
 	// To do that, we just skip filter, as EstV already rotated by Gyro
-	if ((minAccMagnitude < accMagnitude && accMagnitude < maxAccMagnitude)) {
+	//if ((minAccMagnitude < accMagnitude && accMagnitude < maxAccMagnitude)) {
 		for (axis = 0; axis < 3; axis++) {
 			cli();
 			int16_t _acc = acc[axis];
@@ -94,7 +97,7 @@ void IMU::blendAccToAttitude() {
 			estG[axis] = _eg;
 			sei();
 		}
-	}
+	//}
 }
 
 void IMU::calculateAttitudeAngles() {

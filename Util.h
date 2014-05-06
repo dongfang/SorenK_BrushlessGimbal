@@ -9,11 +9,25 @@
 #include <avr/pgmspace.h>
 //#include "Globals.h"
 
+extern uint8_t LEDFlags;
+
 // DEBUG only
 extern uint32_t stackTop;
 extern uint32_t stackBottom;
 extern uint32_t heapTop;
 extern uint32_t heapBottom;
+
+// Some LED event masks. They are supposed to be set by event, and automatically be reset after some time by LED driver.
+#define I_LIMIT_MASK 1
+#define SCHEDULER_OVERLOAD_MASK 2
+#define SPEED_LIMIT_MASK 4
+#define OSCILLATION_DETECT_MASK 8
+#define I2C_TIMEOUT_MASK 16
+#define HEARTBEAT_MASK 32
+
+inline void LEDEvent(uint8_t mask) {
+	LEDFlags |= mask;
+}
 
 inline void stackCheck() {
   int localVar;
@@ -61,17 +75,6 @@ inline bool isprint(char c) {
 
 // TODO: Proper C++ overloading possible?
 inline int16_t constrain_int16(int16_t x, int16_t l, int16_t h) {
-	if (x <= l) {
-		return l;
-	} else if (x >= h) {
-		return h;
-	} else {
-		return x;
-	}
-}
-
-// TODO: Proper C++ overloading possible?
-inline int32_t constrain_int32(int32_t x, int32_t l, int32_t h) {
 	if (x <= l) {
 		return l;
 	} else if (x >= h) {

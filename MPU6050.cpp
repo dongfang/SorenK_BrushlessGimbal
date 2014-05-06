@@ -227,8 +227,8 @@ void MPU6050::recalibrateSensor(void (*complain)(), uint8_t whichMotion) {
 	int32_t sensorOffsetSums[3];
 	int calibGCounter = SENSOR_ITERATIONS;
 
-	// wait 1 second
-	for (i = 0; i < 100; i++) {
+	// wait 1.5 second
+	for (i = 0; i < 150; i++) {
 		wdt_reset();
 		_delay_ms(10);
 	}

@@ -15,14 +15,15 @@ void Configuration::setDefaults() {
 	versEEPROM = VERSION_EEPROM;
 	pitchKp = 1100;
 	pitchKi = 1500;
-	pitchKd = 220;
+	pitchKd = 175;
 	rollKp = 800;
 	rollKi = 800;
-	rollKd = 700;
+	rollKd = 500;
+	ILimit = 20000;
 
 	accTimeConstant = 4;
-	maxPWMmotorRoll = 110;
-	maxPWMmotorPitch = 95;
+	maxPWMmotorRoll = 160;
+	maxPWMmotorPitch = 110;
 
 	RCRoll.defaultAngle = 0;
 	RCRoll.minAngle = -20;
@@ -41,6 +42,10 @@ void Configuration::setDefaults() {
 	axisReverseZ = true;
 	axisSwapXY = false;
 	majorAxis = 2;
+
+	frozenGimbalPower = 10;
+
+	LEDMask = HEARTBEAT_MASK;
 }
 
 uint16_t Configuration::CRC() {
@@ -73,7 +78,7 @@ void Configuration::readEEPROMOrDefault() {
 // Fixme
 extern void recalcMotorStuff();
 
-static inline void fixme_initIMU() {
+static void fixme_initIMU() {
 	imu.init();
 }
 
@@ -98,6 +103,8 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "rollKi", INT16, &config.rollKi, &initPIDs },
 { "rollKd", INT16, &config.rollKd, &initPIDs },
 
+{ "ILimit", INT32, &config.ILimit, &initPIDs },
+
 { "accTime", UINT8, &config.accTimeConstant, &fixme_initIMU },
 
 { "pitchPower", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
@@ -106,22 +113,21 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "pitchLimit", UINT8, &config.pitchSpeedLimit, NULL },
 { "rollLimit", UINT8, &config.rollSpeedLimit, NULL },
 
-{ "rollMin", INT16, &config.RCRoll.minAngle, NULL },
-{ "rollMax", INT16, &config.RCRoll.maxAngle, NULL },
+{ "rollMin", INT16, &config.RCRoll.minAngle, },
+{ "rollMax", INT16, &config.RCRoll.maxAngle, },
 { "rollSpeed", INT8, &config.RCRoll.speed, NULL },
-{ "rollDefault", INT16, &config.RCRoll.defaultAngle, NULL },
+{ "rollDefault", INT16, &config.RCRoll.defaultAngle, },
 
-{ "pitchMin", INT16, &config.RCPitch.minAngle, NULL },
-{ "pitchMax", INT16, &config.RCPitch.maxAngle, NULL },
+{ "pitchMin", INT16, &config.RCPitch.minAngle,  },
+{ "pitchMax", INT16, &config.RCPitch.maxAngle,  },
 { "pitchSpeed", INT8, &config.RCPitch.speed, NULL },
-{ "pitchDefault", INT16, &config.RCPitch.defaultAngle, NULL },
-
-//{ "rcFilter", INT16, &config.rcLPF, &initRCFilter },
+{ "pitchDefault", INT16, &config.RCPitch.defaultAngle, },
 
 { "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
 { "majorAxis", UINT8, &config.majorAxis, 		&fixme_initSensorOrientation },
 { "reverseZ", BOOL, &config.axisReverseZ, 	&fixme_initSensorOrientation },
 { "swapXY", BOOL, &config.axisSwapXY, 		&fixme_initSensorOrientation },
+{ "LEDMask", UINT8, &config.LEDMask, 		NULL },
 { "", BOOL, NULL, NULL } // terminating NULL required !!
 };
 
@@ -182,6 +188,6 @@ void updateAllParameters() {
 }
 
 void initPIDs(void) {
-	rollPID.setCoefficients(config.rollKp, config.rollKi / 10, config.rollKd);
-	pitchPID.setCoefficients(config.pitchKp, config.pitchKi / 10, config.pitchKd);
+	rollPID.setCoefficients(config.rollKp, config.rollKi / 10, config.rollKd, config.ILimit);
+	pitchPID.setCoefficients(config.pitchKp, config.pitchKi / 10, config.pitchKd, config.ILimit);
 }

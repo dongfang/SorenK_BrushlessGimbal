@@ -12,6 +12,11 @@ extern uint16_t timer1ExtensionExtension;
 #define IDLE 0
 #define RUNNING 1
 #define DONE 2
+
+volatile bool runFastTask;
+volatile bool runMediumTask;
+volatile bool mediumTaskHasRun;
+
 extern void fastTask();
 extern void mediumTask();
 
@@ -49,7 +54,7 @@ ISR (TIMER1_OVF_vect) {
 		  DEBUG_PORT |= 1<<DEBUG_BIT1;
 		  fastDivider = FAST_PERIOD;
 		  sei();
-		  fastTask();
+		  if (runFastTask) fastTask();
 		  fastState = DONE;
 		  DEBUG_PORT &= ~(1<<DEBUG_BIT1);
 		  mediumDivider--;
@@ -60,19 +65,20 @@ ISR (TIMER1_OVF_vect) {
 				  mediumState = RUNNING;
 				  mediumDivider = MEDIUM_SUBPERIOD;
 				  sei();
-				  mediumTask();
+				  if (runMediumTask) mediumTask();
+				  mediumTaskHasRun = true; // To assist the slow-task stuff to sync
 				  mediumState = IDLE;
 				  DEBUG_PORT &= ~(1<<DEBUG_BIT2);
 			  } else {
 				  // Medium task collision has occured.
-				  printf_P(PSTR("BANG: MC\r\n"));
+				  LEDEvent(SCHEDULER_OVERLOAD_MASK);
 				  // try to save it.
 				  mediumDivider = 1;
 			  }
 		  }
 	  } else {
 		  // Fast task collision has occured.
-		  printf_P(PSTR("BANG: FC\r\n"));
+		  LEDEvent(SCHEDULER_OVERLOAD_MASK);
 		  // try to save it.
 		  fastDivider = 1;
 	  }
