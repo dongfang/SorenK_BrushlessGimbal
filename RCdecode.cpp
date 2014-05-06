@@ -14,6 +14,7 @@ void decodePWM(RCData_t* rcData, uint16_t microsFallingEdge) {
   // update if within expected RC range
   rcData->rx = pulseInPWMtmp;
   rcData->timeout = 0;
+  LEDEvent(RC_MASK);
   if ((pulseInPWMtmp >= MIN_RC) && (pulseInPWMtmp <= MAX_RC)) {
     rcData->isValid=true;
   }
@@ -117,8 +118,7 @@ void initRC() {
 
   for (uint8_t id = 0; id < RC_DATA_SIZE; id++) {
     cli();
-    rcData[id].rx               = MID_RC;	// raw pulse
-    rcData[id].setpoint         = 0;		// cooked
+    rcData[id].isValid = false;
     sei();
   }
 }

@@ -23,7 +23,8 @@ extern uint32_t heapBottom;
 #define SPEED_LIMIT_MASK 4
 #define OSCILLATION_DETECT_MASK 8
 #define I2C_TIMEOUT_MASK 16
-#define HEARTBEAT_MASK 32
+#define RC_MASK 32
+#define HEARTBEAT_MASK 64
 
 inline void LEDEvent(uint8_t mask) {
 	LEDFlags |= mask;
