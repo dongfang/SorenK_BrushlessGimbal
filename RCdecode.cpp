@@ -14,7 +14,6 @@ void decodePWM(RCData_t* rcData, uint16_t microsFallingEdge) {
   // update if within expected RC range
   rcData->rx = pulseInPWMtmp;
   rcData->timeout = 0;
-  LEDEvent(RC_MASK);
   if ((pulseInPWMtmp >= MIN_RC) && (pulseInPWMtmp <= MAX_RC)) {
     rcData->isValid=true;
   }
@@ -110,7 +109,7 @@ void initRC() {
 	//pinMode(A2, INPUT); digitalWrite(A2, HIGH);
     //pinMode(A1, INPUT); digitalWrite(A1, HIGH);
     //pinMode(A0, INPUT); digitalWrite(A0, HIGH);
-	DDRC |= 1<<0 | 1<<1 | 1<<2;
+	DDRC &= ~( 1<<0 | 1<<1 | 1<<2);
 	PORTC |= 1<<0 | 1<<1 | 1<<2;
 
     PCMSK1 |= (1<<PCINT8) | (1<<PCINT9) | (1<<PCINT10);
@@ -133,7 +132,7 @@ void evalRCChannelIntegrating(RCData_t* rcData, RCChannelDef* def) {
         if (live >= 0) return;
     }
 
-    rcData->setpoint += def->speed * live/(MAX_RC-MIN_RC);
+    rcData->setpoint += def->speed * live / ((MAX_RC-MIN_RC)/2);
     if (rcData->setpoint > def->maxAngle) rcData->setpoint = def->maxAngle;
     if (rcData->setpoint < def->minAngle) rcData->setpoint = def->minAngle;
 }
@@ -143,12 +142,15 @@ void evalRCChannelIntegrating(RCData_t* rcData, RCChannelDef* def) {
 // Absolute
 //******************************************
 void evalRCChannelAbsolute(RCData_t* rcData, RCChannelDef* def) {
-  int8_t k;
+	static int32_t pladder;
 	// Typically in the range 16000/1000, about 16 for a 90 degree setting, less for less
 	// Not really precise but who cares.
-    k = (def->maxAngle - def->minAngle) / (MAX_RC - MIN_RC);
     // defaultAngle is our center point. NO, it makes no sense. Drop it.
-    int16_t result = (rcData->rx-MID_RC) * k + (def->maxAngle - def->minAngle)/2;
+
+	int32_t result = def->maxAngle + ((int32_t)rcData->rx-MID_RC) * ((int32_t)def->maxAngle - def->minAngle) / (MAX_RC - MIN_RC);
+
+	result = (result + pladder * 15) / 16;
+	pladder = result;
 
     // Check endpoints again
     if (result > def->maxAngle) result = def->maxAngle;

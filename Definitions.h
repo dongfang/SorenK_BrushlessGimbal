@@ -22,7 +22,7 @@
 #define MEDIUMLOOP_DT_I_MS (1000/MEDIUMLOOP_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
-#define RC_FREQ 100
+#define RC_FREQ 250
 #define RC_LATCH (MEDIUMLOOP_FREQ/RC_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
@@ -73,8 +73,7 @@
 #define MIN_RC 1050
 #define MID_RC 1500
 #define MAX_RC 1950
-#define RC_DEADBAND 50U
-#define RC_TIMEOUT 1000000UL
+#define RC_DEADBAND 50
 
 // PPM Decoder
 // #define RC_PPM_GUARD_TIME 4000

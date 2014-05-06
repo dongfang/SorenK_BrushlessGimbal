@@ -235,6 +235,7 @@ void slowLoop() {
 		if (ticked && !RCDivider) {
 			RCDivider = RC_LATCH;
 			// Evaluate RC-Signals
+			checkRcTimeouts();
 			evaluateRCControl();
 			evaluateRCSwitch();
 			updateGimbalState();
