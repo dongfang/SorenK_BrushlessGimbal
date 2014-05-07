@@ -71,63 +71,16 @@ ISR (TIMER1_OVF_vect) {
 				  DEBUG_PORT &= ~(1<<DEBUG_BIT2);
 			  } else {
 				  // Medium task collision has occured.
-				  LEDEvent(SCHEDULER_OVERLOAD_MASK);
+				  LEDEvent(LED_SCHEDULER_OVERLOAD_MASK);
 				  // try to save it.
 				  mediumDivider = 1;
 			  }
 		  }
 	  } else {
 		  // Fast task collision has occured.
-		  LEDEvent(SCHEDULER_OVERLOAD_MASK);
+		  LEDEvent(LED_SCHEDULER_OVERLOAD_MASK);
 		  // try to save it.
 		  fastDivider = 1;
 	  }
   }
 }
-
-/*
-if (faststate == RUNNING) return;
-if (faststate == DONE) lastchout to motors; faststate = IDLE;
-if (faststate == IDLE) {
-	if ([time for fast loop]) {
-		faststate = RUNNING;
-		reschedule
-		fastLoop()
-		faststate = DONE;
-	}
-	if(mediumstate == DONE && [time for medium loop]) {
-		mediumstate = RUNNING;
-		reschedule
-		mediumLoop();
-		mediumstate = DONE;
-	}
-}
-
- * Oh shit
-struct Task {
-	uint8_t state;
-	int nextTime;
-	int period;
-	void (*task)();
-	void (*postTask)(); // if there is something that much be synced to the timer's overflow
-}
-
-ISR(timern_OVF) {
-	uint8_t i;
-	int t = timerExtension;
-	sei();
-	for (i=0; i<NUM_TASKS; i++) {
-		if (tasks[i].state == DONE) {
-			if (tasks[i].postTask()!=0) tasks[i].postTask();
-			tasks[i].state = IDLE;
-		}
-		// Oh shit here we need to check that no higher priority stuff is waiting.. too comlicated or I lack the right idea right now.
-		if (tasks[i].state == IDLE && t >= tasks[i].nextTime) {
-			tasks[i] = RUNNING;
-			tasks[i].nextTime += tasks[i].period;
-			tasks[i].task();
-			tasks[i] = DONE;
-		}
-	}
-}
-*/

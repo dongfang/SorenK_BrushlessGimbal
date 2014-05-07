@@ -37,13 +37,13 @@ extern uint8_t pwmSinMotorPitch[N_SIN];
 extern uint8_t pwmSinMotorRoll[N_SIN];
 
 struct RCData_t {
-	uint16_t microsRisingEdge;
-	//uint16_t microsLastUpdate;
-	uint16_t rx;
+	//uint16_t microsRisingEdge;
+	//uint16_t microsFallingEdge;
+	uint16_t m_16;
+	bool pulseComplete;
 	uint8_t timeout;
-	// bool newPulse;
-	bool isValid;
 	int16_t setpoint;
+	inline bool isTimedOut() { return timeout >= 200; }
 };
 
 extern RCData_t rcData[RC_DATA_SIZE];
@@ -56,3 +56,4 @@ extern volatile bool mediumTaskHasRun;
 extern float rcLPF_tc;
 
 #endif
+

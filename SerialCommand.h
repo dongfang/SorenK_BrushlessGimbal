@@ -73,6 +73,7 @@ class SerialCommand {
 void setSerialProtocol();
 void updateAllParameters();
 void debug();
+void GUIDebug();
 void calibrateSensor(uint8_t which);
 
 #endif //SerialCommand_h

@@ -26,17 +26,17 @@ void Configuration::setDefaults() {
 	maxPWMmotorPitch = 110;
 
 	RCRoll.defaultAngle = 0;
-	RCRoll.minAngle = -200;
-	RCRoll.maxAngle = 200;
+	RCRoll.minAngle = TO_NERD_DEGREES(-20);
+	RCRoll.maxAngle = TO_NERD_DEGREES(20);
 	RCRoll.speed = 10;
 
-	RCPitch.defaultAngle = 0;
-	RCPitch.minAngle = -900;
-	RCPitch.maxAngle = 100;
+	RCPitch.defaultAngle = TO_NERD_DEGREES(0);
+	RCPitch.minAngle = TO_NERD_DEGREES(-120);
+	RCPitch.maxAngle = TO_NERD_DEGREES(120);
 	RCPitch.speed = 10;
 
-	rollSpeedLimit = 20;
-	pitchSpeedLimit = 20;
+	rollOutputRateLimit = 20;
+	pitchOutputRateLimit = 20;
 
 	rcAbsolute = true;
 	axisReverseZ = true;
@@ -45,7 +45,7 @@ void Configuration::setDefaults() {
 
 	frozenGimbalPower = 10;
 
-	LEDMask = HEARTBEAT_MASK;
+	LEDMask = LED_HEARTBEAT_MASK;
 }
 
 uint16_t Configuration::CRC() {
@@ -110,17 +110,17 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "pitchPower", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
 { "rollPower", UINT8, &config.maxPWMmotorRoll, &recalcMotorStuff },
 
-{ "pitchLimit", UINT8, &config.pitchSpeedLimit, NULL },
-{ "rollLimit", UINT8, &config.rollSpeedLimit, NULL },
+{ "pitchRateLimit", UINT8, &config.pitchOutputRateLimit, NULL },
+{ "rollRateLimit", UINT8, &config.rollOutputRateLimit, NULL },
 
 { "rollMin", INT16, &config.RCRoll.minAngle, },
 { "rollMax", INT16, &config.RCRoll.maxAngle, },
-{ "rollSpeed", INT8, &config.RCRoll.speed, NULL },
+{ "rollSpeed", UINT8, &config.RCRoll.speed, NULL },
 { "rollDefault", INT16, &config.RCRoll.defaultAngle, },
 
 { "pitchMin", INT16, &config.RCPitch.minAngle,  },
 { "pitchMax", INT16, &config.RCPitch.maxAngle,  },
-{ "pitchSpeed", INT8, &config.RCPitch.speed, NULL },
+{ "pitchSpeed", UINT8, &config.RCPitch.speed, NULL },
 { "pitchDefault", INT16, &config.RCPitch.defaultAngle, },
 
 { "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
@@ -133,6 +133,7 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 
 /*
  * Is now case insensitive.
+ * FIXME: Stops too early on prefix match. Eg. versEEPROM gets vers.
  */
 ConfigDef_t * getConfigDef(char* name) {
 	bool found = false;
@@ -148,7 +149,7 @@ ConfigDef_t * getConfigDef(char* name) {
 		for (i = 0; i < CONFIGNAME_MAX_LEN && !found; i++) {
 			char stored = configUnion.asConfig.name[i];
 			char given = name[i];
-			if (stored == 0) found = true;
+			if (given == 0) found = true;
 			else if (tolower(stored) != tolower(given)) break;
 		}
 		if (found) {

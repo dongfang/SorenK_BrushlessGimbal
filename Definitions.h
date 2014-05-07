@@ -34,6 +34,12 @@
 #define HUMAN_DEBUG_LATCH (MEDIUMLOOP_FREQ/HUMAN_DEBUG_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
+// We can send about 10k chars / sec, that is 250 lines/sec.
+// However we are almost out of steam.
+#define GUI_DEBUG_FREQ 10
+#define GUI_DEBUG_LATCH (MEDIUMLOOP_FREQ/GUI_DEBUG_FREQ)
+
+// Must be an integral fraction of MEDIUMLOOP_FREQ
 #define ACCMAG_FREQ 5
 #define ACCMAG_LATCH (MEDIUMLOOP_FREQ/ACCMAG_FREQ)
 
@@ -70,10 +76,10 @@
 // #define RC_PIN_PPM_A1
 // #define RC_PIN_PPM_A0
 
-#define MIN_RC 1050
-#define MID_RC 1500
-#define MAX_RC 1950
-#define RC_DEADBAND 50
+#define MIN_RC (1100*16)
+#define MID_RC (1500*16)
+#define MAX_RC (1900*16)
+#define RC_DEADBAND (50*16)
 
 // PPM Decoder
 // #define RC_PPM_GUARD_TIME 4000
@@ -120,3 +126,17 @@
 // Let's use int16-degrees.
 // -pi-->-(1<<15) to pi->(1<<15)-1
 #define ANGLE_SCALING (32768.0/M_PI)
+
+// Some LED event masks. They are supposed to be set by event, and automatically be reset after some time by LED driver.
+#define LED_I_LIMIT_MASK 1
+#define LED_SCHEDULER_OVERLOAD_MASK 2
+#define LED_SPEED_LIMIT_MASK 4
+#define LED_OSCILLATION_DETECT_MASK 8
+#define LED_I2C_TIMEOUT_MASK 16
+#define LED_RC_MASK 32
+#define LED_RC_MISSED 64
+#define LED_HEARTBEAT_MASK 128
+
+#define TO_NERD_DEGREES(a) ((int16_t)(a) * 65536L / 360L)
+#define FROM_NERD_DEGREES(a) ((a) * 360L / 65536L)
+

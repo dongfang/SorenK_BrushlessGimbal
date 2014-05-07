@@ -69,8 +69,8 @@ public:
 	//int16_t rollAngleOffset;
 
 	// Experiment: Seems to help against tumbling motors when losing sync.
-	uint8_t pitchSpeedLimit;
-	uint8_t rollSpeedLimit;
+	uint8_t pitchOutputRateLimit;
+	uint8_t rollOutputRateLimit;
 
 	// in 1:16 units.
 	uint8_t frozenGimbalPower;

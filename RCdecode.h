@@ -4,7 +4,6 @@
 
 // init RC config variables
 void initRC();
-void checkRcTimeouts();
 void evaluateRCControl();
 void evaluateRCSwitch();
 

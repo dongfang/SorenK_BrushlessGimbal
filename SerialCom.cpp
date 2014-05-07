@@ -223,6 +223,7 @@ void unrecognized(const char *command) {
 #define DEBUG_DGYRO 6
 #define DEBUG_I2C 7
 #define DEBUG_RC 8
+#define DEBUG_END 9
 
 static const char DEBUG_OFF_ARG[] PROGMEM = "off";
 static const char DEBUG_ACCVALUES_ARG[] PROGMEM = "acc";
@@ -339,18 +340,31 @@ void debug() {
 		printf_P(PSTR("errors %u\r\n"), i2c_errors_count);
 		break;
 	case DEBUG_RC:
-		printf_P(PSTR("rc: switch %d\troll %d\tvalid %S\tpitch %d\tvalid %S\r\n"), switchPos,
-				rcData[RC_DATA_ROLL].setpoint, (rcData[RC_DATA_ROLL].isValid ? PSTR("y") : PSTR("n")),
-				rcData[RC_DATA_PITCH].setpoint, (rcData[RC_DATA_PITCH].isValid ? PSTR("y") : PSTR("n")));
+		/*
+		printf_P(PSTR("rc: switch %d\troll %d\tsignal %S\tpitch %d\tsignal %S\r\n"), switchPos,
+				rcData[RC_DATA_ROLL].rx, (rcData[RC_DATA_ROLL].isTimedOut() ? PSTR("-") : PSTR("*")),
+				rcData[RC_DATA_PITCH].rx, (rcData[RC_DATA_PITCH].isTimedOut() ? PSTR("-") : PSTR("*")));
+				*/
+		printf_P(PSTR("rc: switch %d\troll %d\tsignal %d\tpitch %d\tsignal %d\r\n"), switchPos,
+				//rcData[RC_DATA_ROLL].setpoint, rcData[RC_DATA_ROLL].timeout,
+				rcData[RC_DATA_PITCH].m_16 - MID_RC, rcData[RC_DATA_PITCH].timeout,
+				(rcData[RC_DATA_PITCH].setpoint), rcData[RC_DATA_PITCH].timeout
+				);
+
 		break;
 	default:
 		break;
 	}
 }
 
+/// Send all categories.
+void GUIDebug() {
+}
+
 void reset() {
 	watchdogResetWasIntended = true;
 	wdt_enable(WDTO_15MS);
+	cli();
 	while (1)
 		;
 }

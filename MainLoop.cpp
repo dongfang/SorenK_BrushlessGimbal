@@ -58,19 +58,19 @@ void fastTask() {
 	rollPIDDelta = rollPIDVal - prevRollPIDVal;
 	pitchPIDDelta = pitchPIDVal - prevPitchPIDVal;
 
-	if (rollPIDDelta > config.rollSpeedLimit) {
-		LEDEvent(SPEED_LIMIT_MASK);
-		rollPIDVal = prevRollPIDVal + config.rollSpeedLimit;
-	} else if (rollPIDDelta < -config.rollSpeedLimit) {
-		LEDEvent(SPEED_LIMIT_MASK);
-		rollPIDVal = prevRollPIDVal - config.rollSpeedLimit;
+	if (rollPIDDelta > config.rollOutputRateLimit) {
+		LEDEvent(LED_SPEED_LIMIT_MASK);
+		rollPIDVal = prevRollPIDVal + config.rollOutputRateLimit;
+	} else if (rollPIDDelta < -config.rollOutputRateLimit) {
+		LEDEvent(LED_SPEED_LIMIT_MASK);
+		rollPIDVal = prevRollPIDVal - config.rollOutputRateLimit;
 	}
-	if (pitchPIDDelta > config.pitchSpeedLimit) {
-		LEDEvent(SPEED_LIMIT_MASK);
-		pitchPIDVal = prevPitchPIDVal + config.pitchSpeedLimit;
-	} else if (pitchPIDDelta < -config.pitchSpeedLimit) {
-		LEDEvent(SPEED_LIMIT_MASK);
-		pitchPIDVal = prevPitchPIDVal - config.pitchSpeedLimit;
+	if (pitchPIDDelta > config.pitchOutputRateLimit) {
+		LEDEvent(LED_SPEED_LIMIT_MASK);
+		pitchPIDVal = prevPitchPIDVal + config.pitchOutputRateLimit;
+	} else if (pitchPIDDelta < -config.pitchOutputRateLimit) {
+		LEDEvent(LED_SPEED_LIMIT_MASK);
+		pitchPIDVal = prevPitchPIDVal - config.pitchOutputRateLimit;
 	}
 
 	prevRollPIDVal = rollPIDVal;
@@ -99,7 +99,7 @@ int16_t xformRCToInt16(int16_t a) {
 int16_t getPitchTarget() {
 	int16_t result = 0;
 	if (targetSource == RC) {
-		result = xformRCToInt16(rcData[RC_DATA_PITCH].setpoint);
+		result = rcData[RC_DATA_PITCH].setpoint; //xformRCToInt16(rcData[RC_DATA_PITCH].setpoint);
 	}
 	if (targetSource == OSC) {
 		result = oscPitch;
@@ -110,7 +110,7 @@ int16_t getPitchTarget() {
 int16_t getRollTarget() {
 	int16_t result = 0;
 	if (targetSource == RC) {
-		result = xformRCToInt16(rcData[RC_DATA_ROLL].setpoint);
+		result = rcData[RC_DATA_ROLL].setpoint; //xformRCToInt16(rcData[RC_DATA_ROLL].setpoint);
 	}
 	if (targetSource == OSC) {
 		result = oscRoll;
@@ -208,8 +208,9 @@ void calibrateSensor(uint8_t which) {
 }
 
 void slowLoop() {
-	static uint8_t debugDivider;
-	static uint8_t RCDivider;
+	static uint8_t humanDebugDivider;
+	static uint8_t GUIDebugDivider;
+	//static uint8_t RCDivider;
 	static uint8_t softstartDivider;
 	static uint8_t LEDDivider;
 	static uint8_t heartbeatDivider;
@@ -221,8 +222,6 @@ void slowLoop() {
 	static int8_t rollOscDir = 1;
 
 	while (true) {
-		sCmd.readSerial();
-
 		bool ticked = checkMediumLoop();
 
 		/* No need for this, it did more harm than good.
@@ -231,28 +230,33 @@ void slowLoop() {
 		 imu.updateAccMagnitude();
 		 }
 		 */
-
-		if (ticked && !RCDivider) {
-			RCDivider = RC_LATCH;
+		if (ticked) {
+			// RCDivider = RC_LATCH;
 			// Evaluate RC-Signals
-			checkRcTimeouts();
 			evaluateRCControl();
 			evaluateRCSwitch();
 			updateGimbalState();
 		}
+
+		sCmd.readSerial();
 
 		if (ticked && !softstartDivider) {
 			softstartDivider = SOFTSTART_LATCH;
 			updateSoftStart();
 		}
 
-		if (ticked && !debugDivider) {
-			debugDivider = HUMAN_DEBUG_LATCH;
+		if (ticked && !humanDebugDivider) {
+			humanDebugDivider = HUMAN_DEBUG_LATCH;
 			debug();
 		}
 
+		if (ticked && !GUIDebugDivider) {
+			GUIDebugDivider = GUI_DEBUG_LATCH;
+			GUIDebug();
+		}
+
 		if (ticked && !heartbeatDivider) {
-			LEDEvent(HEARTBEAT_MASK);
+			LEDEvent(LED_HEARTBEAT_MASK);
 			heartbeatDivider = LED_LATCH*2;
 		}
 
@@ -299,8 +303,8 @@ void slowLoop() {
 
 		if (ticked) {
 			// --accMagDivider;
-			--debugDivider;
-			--RCDivider;
+			--humanDebugDivider;
+			--GUIDebugDivider;
 			--softstartDivider;
 			--LEDDivider;
 			--heartbeatDivider;

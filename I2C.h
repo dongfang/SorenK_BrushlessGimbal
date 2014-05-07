@@ -2,6 +2,7 @@
 #define __I2C_H
 
 #include "Util.h"
+#include "Definitions.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <avr/io.h>
@@ -37,7 +38,7 @@ void i2c_wait_async_done();
 inline bool i2c_is_async_done() {
 	bool result = (i2c_async_status == I2C_ASYNC_DONE);
 	if (result) return true;
-	LEDEvent(I2C_TIMEOUT_MASK);
+	LEDEvent(LED_I2C_TIMEOUT_MASK);
 	_delay_us(5);
 	result = (i2c_async_status == I2C_ASYNC_DONE);
 	if (!result) i2c_errors_count++;

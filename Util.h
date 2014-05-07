@@ -17,15 +17,6 @@ extern uint32_t stackBottom;
 extern uint32_t heapTop;
 extern uint32_t heapBottom;
 
-// Some LED event masks. They are supposed to be set by event, and automatically be reset after some time by LED driver.
-#define I_LIMIT_MASK 1
-#define SCHEDULER_OVERLOAD_MASK 2
-#define SPEED_LIMIT_MASK 4
-#define OSCILLATION_DETECT_MASK 8
-#define I2C_TIMEOUT_MASK 16
-#define RC_MASK 32
-#define HEARTBEAT_MASK 64
-
 inline void LEDEvent(uint8_t mask) {
 	LEDFlags |= mask;
 }

@@ -40,10 +40,10 @@ public:
 		int32_t Ierror = error * Ki;
 
 		if (Ierror < -ILimit) {
-			LEDEvent(I_LIMIT_MASK);
+			LEDEvent(LED_I_LIMIT_MASK);
 			Ierror = -ILimit;
 		} else if (Ierror > ILimit) {
-			LEDEvent(I_LIMIT_MASK);
+			LEDEvent(LED_I_LIMIT_MASK);
 			Ierror = ILimit;
 		}
 
