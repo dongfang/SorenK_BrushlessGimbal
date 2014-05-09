@@ -13,17 +13,28 @@ ConfigUnion_t configUnion;
 void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
+	/*
 	pitchKp = 1100;
 	pitchKi = 1500;
 	pitchKd = 200;
 	rollKp = 800;
 	rollKi = 800;
 	rollKd = 500;
+	*/
+	pitchKp = 500;
+	pitchKi = 800;
+	pitchKd = 300;
+	rollKp = 500;
+	rollKi = 800;
+	rollKd = 300;
+
 	ILimit = 20000;
 
 	accTimeConstant = 4;
-	maxPWMmotorRoll = 160;
-	maxPWMmotorPitch = 110;
+
+	// default nothing at all.
+	maxPWMmotorRoll = 0;
+	maxPWMmotorPitch = 0;
 
 	RCRoll.defaultAngle = 0;
 	RCRoll.minAngle = TO_NERD_DEGREES(-20);
@@ -31,8 +42,8 @@ void Configuration::setDefaults() {
 	RCRoll.speed = 10;
 
 	RCPitch.defaultAngle = TO_NERD_DEGREES(0);
-	RCPitch.minAngle = TO_NERD_DEGREES(-120);
-	RCPitch.maxAngle = TO_NERD_DEGREES(120);
+	RCPitch.minAngle = TO_NERD_DEGREES(-90);
+	RCPitch.maxAngle = TO_NERD_DEGREES(0);
 	RCPitch.speed = 10;
 
 	rollOutputRateLimit = 20;
@@ -41,7 +52,7 @@ void Configuration::setDefaults() {
 	rcAbsolute = true;
 	axisReverseZ = true;
 	axisSwapXY = false;
-	majorAxis = 2;
+	majorAxis = 0;
 
 	frozenGimbalPower = 10;
 

@@ -75,24 +75,37 @@ void MPU6050::setSleepEnabled(bool enabled) {
 	i2c_writeReg(devAddr, MPU6050_RA_PWR_MGMT_1, i2c_buffer[0]);
 }
 
-// this is useless for IMU but it will show 1:1 what comes out of the MPU chip with the debug acc / debug gyro commands.
-void MPU6050::initSensorOrientationRaw() {
-	sensorDef.gyro[ROLL].idx = 0;
-	sensorDef.gyro[PITCH].idx = 1;
-	sensorDef.gyro[YAW].idx = 2;
 
-	sensorDef.acc[X].idx = 0;
-	sensorDef.acc[Y].idx = 1;
-	sensorDef.acc[Z].idx = 2;
+struct SensorAxisDef {
+  uint8_t idx;		// index of physical sensor
+  int  dir;			// sign of logical sensor
+} SensorAxisDef_t;
 
-	// direction
-	sensorDef.gyro[ROLL].dir = 1;
-	sensorDef.gyro[PITCH].dir = 1;
-	sensorDef.gyro[YAW].dir = 1;
+struct SensorOrientationDef {
+  SensorAxisDef gyro[3];
+  SensorAxisDef acc[3];
+};
 
-	sensorDef.acc[X].dir = 1;
-	sensorDef.acc[Y].dir = 1;
-	sensorDef.acc[Z].dir = 1;
+const SensorOrientationDef initialOrientation PROGMEM = {{{1,1},{0,1},{2,1}},{{0,-1},{1,1},{2,1}}};
+
+void MPU6050::tryRotate() {
+	uint8_t tmpAxis = sensorDef.gyro[ROLL].idx;
+	int8_t tmpDir	= sensorDef.gyro[ROLL].dir;
+	sensorDef.gyro[ROLL].idx = sensorDef.gyro[PITCH].idx;
+	sensorDef.gyro[ROLL].dir = sensorDef.gyro[PITCH].dir;
+	sensorDef.gyro[PITCH].idx = sensorDef.gyro[YAW].idx;
+	sensorDef.gyro[PITCH].dir = sensorDef.gyro[YAW].dir;
+	sensorDef.gyro[YAW].idx = tmpAxis;
+	sensorDef.gyro[YAW].dir = tmpDir;
+
+	tmpAxis = sensorDef.acc[X].idx;
+	tmpDir	= sensorDef.acc[X].dir;
+	sensorDef.acc[X].idx = sensorDef.acc[Z].idx;
+	sensorDef.acc[X].dir = -sensorDef.acc[Z].dir;
+	sensorDef.acc[Z].idx = sensorDef.acc[Y].idx;
+	sensorDef.acc[Z].dir = sensorDef.acc[Y].dir;
+	sensorDef.acc[Y].idx = tmpAxis;
+	sensorDef.acc[Y].dir = -tmpDir;
 }
 
 void MPU6050::initSensorOrientationFaceUp() {
@@ -119,38 +132,38 @@ void MPU6050::initSensorOrientationChipTextRightSideUp() {
 	sensorDef.gyro[PITCH].idx = 2;
 	sensorDef.gyro[YAW].idx = 1;
 
-	sensorDef.acc[ROLL].idx = 2;
-	sensorDef.acc[PITCH].idx = 0;
-	sensorDef.acc[YAW].idx = 1;
+	sensorDef.acc[X].idx = 2;
+	sensorDef.acc[Y].idx = 0;
+	sensorDef.acc[Z].idx = 1;
 
 	// direction
-	sensorDef.gyro[ROLL].dir = 1;
+	sensorDef.gyro[ROLL].dir = -1;
 	sensorDef.gyro[PITCH].dir = -1;
 	sensorDef.gyro[YAW].dir = -1;
 
-	sensorDef.acc[ROLL].dir = 1;
-	sensorDef.acc[PITCH].dir = 1;
-	sensorDef.acc[YAW].dir = -1;
+	sensorDef.acc[X].dir = 1;
+	sensorDef.acc[Y].dir = 1;
+	sensorDef.acc[Z].dir = -1;
 }
 
 void MPU6050::initSensorOrientationChipTextStandingOnEnd() {
 	// channel assignment
-	sensorDef.gyro[ROLL].idx = 1;
-	sensorDef.gyro[PITCH].idx = 2;
-	sensorDef.gyro[YAW].idx = 0;
+	sensorDef.gyro[ROLL].idx = 1;	//2
+	sensorDef.gyro[PITCH].idx = 2;	//1
+	sensorDef.gyro[YAW].idx = 0;	//0
 
-	sensorDef.acc[ROLL].idx = 2;
-	sensorDef.acc[PITCH].idx = 1;
-	sensorDef.acc[YAW].idx = 0;
+	sensorDef.acc[X].idx = 2;
+	sensorDef.acc[Y].idx = 1;
+	sensorDef.acc[Z].idx = 0;
 
 	// direction
-	sensorDef.gyro[ROLL].dir = 1;
+	sensorDef.gyro[ROLL].dir = 1;	// -1
 	sensorDef.gyro[PITCH].dir = -1;
 	sensorDef.gyro[YAW].dir = 1;
 
-	sensorDef.acc[ROLL].dir = 1;
-	sensorDef.acc[PITCH].dir = 1;
-	sensorDef.acc[YAW].dir = 1;
+	sensorDef.acc[X].dir = 1;
+	sensorDef.acc[Y].dir = 1;
+	sensorDef.acc[Z].dir = 1;
 }
 
 // set sensor orientation according config (TODO: separate config from class. Not important)
@@ -163,20 +176,11 @@ void MPU6050::initSensorOrientationChipTextStandingOnEnd() {
 //        true  ... swap XY (means exchange Roll/Pitch)
 
 void MPU6050::initSensorOrientation(uint8_t majorAxis, bool reverseZ, bool swapXY) {
-	switch (majorAxis) {
-	case 0:
-		initSensorOrientationFaceUp();
-		break;
-	case 1:
-		initSensorOrientationChipTextRightSideUp();
-		break;
-	case 2:
-		initSensorOrientationChipTextStandingOnEnd();
-		break;
-	case 3:
-		initSensorOrientationRaw();
-		break;
-	}
+	initSensorOrientationFaceUp();
+	if (majorAxis)
+		tryRotate();
+	if (majorAxis == 2)
+		tryRotate();
 
 	if (reverseZ) {
 		// flip over roll
@@ -221,7 +225,7 @@ bool MPU6050::loadGyroCalibration() {
 // Board should be still for some seconds
 void MPU6050::recalibrateSensor(void (*complain)(), uint8_t whichMotion) {
 	uint8_t i;
-	int16_t tolerance = whichMotion == GYRO ? 64 : 256;
+	int16_t tolerance = whichMotion == GYRO ? 64 : 280                                                                                                                                            ;
 #define SENSOR_ITERATIONS 2000
 	int16_t prevSensor[3], sensor[3];
 	int32_t sensorOffsetSums[3];

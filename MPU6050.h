@@ -209,6 +209,8 @@ private:
 	void transformRotationRates(int16_t* gyro);
 	void transformAccelerations(int16_t* acc);
 
+	void tryRotate();
+
 	// swap two char items
 	inline void swap_uint8(uint8_t * a, uint8_t * b) {
 		uint8_t tmp = *a;
