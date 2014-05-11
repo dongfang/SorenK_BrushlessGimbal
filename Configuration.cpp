@@ -21,20 +21,20 @@ void Configuration::setDefaults() {
 	rollKi = 800;
 	rollKd = 500;
 	*/
-	pitchKp = 500;
-	pitchKi = 800;
-	pitchKd = 300;
-	rollKp = 500;
+	pitchKp = 400;
+	pitchKi = 600;
+	pitchKd = 180;
+	rollKp = 800;
 	rollKi = 800;
-	rollKd = 300;
+	rollKd = 700;
 
 	ILimit = 20000;
 
 	accTimeConstant = 4;
 
 	// default nothing at all.
-	maxPWMmotorRoll = 0;
-	maxPWMmotorPitch = 0;
+	rollMotorPower = 0;
+	pitchMotorPower = 0;
 
 	RCRoll.defaultAngle = 0;
 	RCRoll.minAngle = TO_NERD_DEGREES(-20);
@@ -51,12 +51,12 @@ void Configuration::setDefaults() {
 
 	rcAbsolute = true;
 	axisReverseZ = true;
-	axisSwapXY = false;
+	axisRotateZ  = 0;
 	majorAxis = 0;
 
 	frozenGimbalPower = 10;
 
-	LEDMask = LED_HEARTBEAT_MASK;
+	LEDMask = LED_SERIAL_RX;
 }
 
 uint16_t Configuration::CRC() {
@@ -87,14 +87,14 @@ void Configuration::readEEPROMOrDefault() {
 }
 
 // Fixme
-extern void recalcMotorStuff();
+extern void recalcMotorPower();
 
 static void fixme_initIMU() {
 	imu.init();
 }
 
 static inline void fixme_initSensorOrientation() {
-	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
+	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisRotateZ);
 }
 
 /*
@@ -118,8 +118,8 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 
 { "accTime", UINT8, &config.accTimeConstant, &fixme_initIMU },
 
-{ "pitchPower", UINT8, &config.maxPWMmotorPitch, &recalcMotorStuff },
-{ "rollPower", UINT8, &config.maxPWMmotorRoll, &recalcMotorStuff },
+{ "pitchPower", UINT8, &config.pitchMotorPower, static_cast <void(*)()>(&recalcMotorPower) },
+{ "rollPower", UINT8, &config.rollMotorPower, static_cast <void(*)()>(&recalcMotorPower) },
 
 { "pitchRateLimit", UINT8, &config.pitchOutputRateLimit, NULL },
 { "rollRateLimit", UINT8, &config.rollOutputRateLimit, NULL },
@@ -137,7 +137,7 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
 { "majorAxis", UINT8, &config.majorAxis, 		&fixme_initSensorOrientation },
 { "reverseZ", BOOL, &config.axisReverseZ, 	&fixme_initSensorOrientation },
-{ "swapXY", BOOL, &config.axisSwapXY, 		&fixme_initSensorOrientation },
+{ "rotateZ", UINT8, &config.axisRotateZ, 		&fixme_initSensorOrientation },
 { "LEDMask", UINT8, &config.LEDMask, 		NULL },
 { "", BOOL, NULL, NULL } // terminating NULL required !!
 };
@@ -193,10 +193,10 @@ void writeConfig(ConfigDef_t* def, int32_t val) {
 }
 
 void updateAllParameters() {
-	recalcMotorStuff();
+	recalcMotorPower();
 	initPIDs();
 	// mpu.setDLPFMode(config.mpuLPF);
-	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
+	fixme_initSensorOrientation();
 }
 
 void initPIDs(void) {

@@ -57,8 +57,8 @@ uint8_t syncCounter;
 uint8_t motorPhases[2][3];
 volatile uint8_t softStart;
 
-uint8_t pwmSinMotorPitch[N_SIN];
 uint8_t pwmSinMotorRoll[N_SIN];
+uint8_t pwmSinMotorPitch[N_SIN];
 
 RCData_t rcData[RC_DATA_SIZE];
 int8_t switchPos = SW_UNKNOWN;
@@ -70,10 +70,10 @@ int _putchar(char c, FILE* f) {
 	serial0.put(c);
 	return c;
 }
+
 int _getchar(FILE* f) {
 	return serial0.get();
 }
-
 
 void initSerial() {
 	serial0.init(115200, _FDEV_SETUP_RW);
@@ -104,7 +104,9 @@ if (mpu.testConnection()) {
 void initHW() {
 	// HW
 	LED_DDR |= (1<<LED_BIT);
+#ifdef DEBUG_SIGNALS
 	DEBUG_DDR |= 1<<DEBUG_BIT1 | 1<<DEBUG_BIT2;
+#endif
 
 	// We don't use this, whatever it was.
 	// CH2_PINMODE
@@ -148,24 +150,24 @@ void initState() {
 	config.readEEPROMOrDefault();
 
 	// Init Sinus Arrays and Motor Stuff
-	recalcMotorStuff();
+	recalcMotorPower();
 
 	// Init PIDs to reduce floating point operations.
 	initPIDs();
 
-	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisSwapXY);
+	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisRotateZ);
 	//mpu.setDLPFMode(config.mpuLPF);
 
 	// set sensor orientation (from config)
 	// This needs a working acc. sensor.
 	imu.init();
 
-	if (!mpu.loadGyroCalibration()) {
+	if (!mpu.loadSensorCalibration()) {
 		calibrateSensor(MPU6050::GYRO);
 		mpu.resetAccCalibration();
 	}
 
-	printf_P(PSTR("GO! Type \"help\" for help.\r\n"));
+	printf_P(PSTR("Type \"help\" for help.\r\n"));
 }
 
 void checkwatchdog(void) __attribute__((naked))
@@ -207,8 +209,7 @@ int main() {
 	wdt_enable(WDT_TIMEOUT);
 	printf_P(PSTR("Go!\r\n"));
 
-	runFastTask = true;
-	runMediumTask = true;
+	gimbalState = BACKGROUND_TASKS_RUN | PIDS_ARE_OUTPUT | MOTORS_POWERED;
 
 	// Enable Timer1 Interrupt for timing
 	TIMSK1 |= 1<<TOIE1;

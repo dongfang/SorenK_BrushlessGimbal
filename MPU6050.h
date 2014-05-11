@@ -175,10 +175,10 @@ public:
 		return 1; // should never happen
 	}
 
-	void initSensorOrientation(uint8_t majorAxis, bool reverseZ, bool swapXY);
+	void initSensorOrientation(uint8_t majorAxis, bool reverseZ, uint8_t rotateXY);
 
 	// Load EEPROM-stored offsets. Return true if success.
-	bool loadGyroCalibration();
+	bool loadSensorCalibration();
 	// Do the calibration ritual and store result in EEPROM.
 	void recalibrateSensor(void (*complain)(), uint8_t whichMotion);
 
@@ -198,10 +198,11 @@ public:
 	int16_t sensorOffset[3+3+1];
 
 private:
-	void initSensorOrientationRaw();
-	void initSensorOrientationFaceUp();
-	void initSensorOrientationChipTextRightSideUp();
-	void initSensorOrientationChipTextStandingOnEnd();
+	void initialOrientation();
+	//void initSensorOrientationRaw();
+	//void initSensorOrientationFaceUp();
+	//void initSensorOrientationChipTextRightSideUp();
+	//void initSensorOrientationChipTextStandingOnEnd();
 
 	uint16_t CRC();
 	void getSensor(int16_t* result, uint8_t which);
@@ -209,7 +210,7 @@ private:
 	void transformRotationRates(int16_t* gyro);
 	void transformAccelerations(int16_t* acc);
 
-	void tryRotate();
+	void rotateMajorAxis();
 
 	// swap two char items
 	inline void swap_uint8(uint8_t * a, uint8_t * b) {

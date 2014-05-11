@@ -24,6 +24,8 @@ extern bool watchdogResetWasIntended;
 extern uint8_t syncCounter;		// Timer1 overflow divider to mainloop frequency.
 extern bool doubleFault;		// Set true after a WDT reset. Set false after mainloop completion.
 								// If true at WDT reset time, init not only HW but also state.
+extern int16_t rollAngleSet;
+extern int16_t pitchAngleSet;
 
 extern int16_t rollPIDVal;
 extern int16_t rollPIDDelta;
@@ -49,11 +51,14 @@ struct RCData_t {
 extern RCData_t rcData[RC_DATA_SIZE];
 extern int8_t switchPos;
 
-extern volatile bool runFastTask;
-extern volatile bool runMediumTask;
+//extern int16_t pitchTransient;
+//extern int16_t rollTransient;
+
+extern volatile bool newPWMData;
+extern volatile uint8_t gimbalState;
 extern volatile bool mediumTaskHasRun;
 
-extern float rcLPF_tc;
+extern uint8_t interfaceState;
 
 #endif
 

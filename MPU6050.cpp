@@ -86,9 +86,15 @@ struct SensorOrientationDef {
   SensorAxisDef acc[3];
 };
 
-const SensorOrientationDef initialOrientation PROGMEM = {{{1,1},{0,1},{2,1}},{{0,-1},{1,1},{2,1}}};
+const SensorOrientationDef _initialOrientation PROGMEM = {{{1,1},{0,1},{2,1}},{{0,-1},{1,1},{2,1}}};
 
-void MPU6050::tryRotate() {
+void MPU6050::initialOrientation() {
+	uint8_t i;
+	for (i=0; i<sizeof(_initialOrientation); i++)
+		*(((uint8_t*)&sensorDef)+i) = pgm_read_byte(((uint8_t*)&_initialOrientation)+i);
+}
+
+void MPU6050::rotateMajorAxis() {
 	uint8_t tmpAxis = sensorDef.gyro[ROLL].idx;
 	int8_t tmpDir	= sensorDef.gyro[ROLL].dir;
 	sensorDef.gyro[ROLL].idx = sensorDef.gyro[PITCH].idx;
@@ -108,6 +114,7 @@ void MPU6050::tryRotate() {
 	sensorDef.acc[Y].dir = -tmpDir;
 }
 
+/*
 void MPU6050::initSensorOrientationFaceUp() {
 	sensorDef.gyro[ROLL].idx = 1;
 	sensorDef.gyro[PITCH].idx = 0;
@@ -126,61 +133,16 @@ void MPU6050::initSensorOrientationFaceUp() {
 	sensorDef.acc[Y].dir = 1;
 	sensorDef.acc[Z].dir = 1;
 }
+*/
 
-void MPU6050::initSensorOrientationChipTextRightSideUp() {
-	sensorDef.gyro[ROLL].idx = 0;
-	sensorDef.gyro[PITCH].idx = 2;
-	sensorDef.gyro[YAW].idx = 1;
+void MPU6050::initSensorOrientation(uint8_t majorAxis, bool reverseZ, uint8_t rotateXY) {
+	uint8_t i;
 
-	sensorDef.acc[X].idx = 2;
-	sensorDef.acc[Y].idx = 0;
-	sensorDef.acc[Z].idx = 1;
+	initialOrientation();
 
-	// direction
-	sensorDef.gyro[ROLL].dir = -1;
-	sensorDef.gyro[PITCH].dir = -1;
-	sensorDef.gyro[YAW].dir = -1;
-
-	sensorDef.acc[X].dir = 1;
-	sensorDef.acc[Y].dir = 1;
-	sensorDef.acc[Z].dir = -1;
-}
-
-void MPU6050::initSensorOrientationChipTextStandingOnEnd() {
-	// channel assignment
-	sensorDef.gyro[ROLL].idx = 1;	//2
-	sensorDef.gyro[PITCH].idx = 2;	//1
-	sensorDef.gyro[YAW].idx = 0;	//0
-
-	sensorDef.acc[X].idx = 2;
-	sensorDef.acc[Y].idx = 1;
-	sensorDef.acc[Z].idx = 0;
-
-	// direction
-	sensorDef.gyro[ROLL].dir = 1;	// -1
-	sensorDef.gyro[PITCH].dir = -1;
-	sensorDef.gyro[YAW].dir = 1;
-
-	sensorDef.acc[X].dir = 1;
-	sensorDef.acc[Y].dir = 1;
-	sensorDef.acc[Z].dir = 1;
-}
-
-// set sensor orientation according config (TODO: separate config from class. Not important)
-//
-//   config.axisReverseZ
-//        false ... sensor mounted on top
-//        true  ... sensor mounted upside down
-//   config.axisSwapXY
-//        false ... default XY axes
-//        true  ... swap XY (means exchange Roll/Pitch)
-
-void MPU6050::initSensorOrientation(uint8_t majorAxis, bool reverseZ, bool swapXY) {
-	initSensorOrientationFaceUp();
-	if (majorAxis)
-		tryRotate();
-	if (majorAxis == 2)
-		tryRotate();
+	for(i=0; i<majorAxis; i++) {
+		rotateMajorAxis();
+	}
 
 	if (reverseZ) {
 		// flip over roll
@@ -190,7 +152,7 @@ void MPU6050::initSensorOrientation(uint8_t majorAxis, bool reverseZ, bool swapX
 		sensorDef.gyro[YAW].dir *= -1;
 	}
 
-	if (swapXY) {
+	for(i=0; i<rotateXY; i++) {
 		// swap gyro axis
 		swap_uint8(&sensorDef.gyro[ROLL].idx, &sensorDef.gyro[PITCH].idx);
 		swap_int(&sensorDef.gyro[ROLL].dir, &sensorDef.gyro[PITCH].dir);
@@ -212,7 +174,7 @@ void MPU6050::saveSensorCalibration() {
 	eeprom_write_block(sensorOffset, gyroOffsetInEEPROM, sizeof(sensorOffset));
 }
 
-bool MPU6050::loadGyroCalibration() {
+bool MPU6050::loadSensorCalibration() {
 	wdt_reset();
 	eeprom_read_block(sensorOffset, gyroOffsetInEEPROM, sizeof(sensorOffset));
 	bool ok = (uint16_t)sensorOffset[6] == CRC();
@@ -253,7 +215,7 @@ void MPU6050::recalibrateSensor(void (*complain)(), uint8_t whichMotion) {
 		}
 
 		getSensor(sensor, whichMotion);
-		wdt_reset();
+		//wdt_reset();
 		for (i = 0; i < 3; i++) {
 			if (abs16(prevSensor[i] - sensor[i]) > tolerance) {
 				motionDetected = true;
@@ -265,7 +227,7 @@ void MPU6050::recalibrateSensor(void (*complain)(), uint8_t whichMotion) {
 
 		calibGCounter--;
 		if (motionDetected) {
-			wdt_reset();
+			//wdt_reset();
 			complain();
 			calibGCounter = SENSOR_ITERATIONS;
 		}
@@ -309,6 +271,7 @@ void MPU6050::startRotationRatesAsync() {
 }
 
 void MPU6050::getRotationRatesAsync(int16_t* gyro) {
+	// We assume it is okay (!)
 	// i2c_wait_async_done();
 	transformRotationRates(gyro);
 }

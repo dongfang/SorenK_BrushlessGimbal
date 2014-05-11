@@ -11,10 +11,9 @@ extern uint16_t timer1ExtensionExtension;
 
 #define IDLE 0
 #define RUNNING 1
-#define DONE 2
 
-volatile bool runFastTask;
-volatile bool runMediumTask;
+volatile uint8_t gimbalState;
+volatile bool newPWMData;
 volatile bool mediumTaskHasRun;
 
 extern void fastTask();
@@ -37,7 +36,7 @@ ISR (TIMER1_OVF_vect) {
   fastDivider--;	// decrements at F_CPU/256 so after time T it is T*F_CPU/256
   if (!(++timer1Extension))
 	  timer1ExtensionExtension++;
-  if (fastState == DONE) {
+  if (newPWMData) {
     // As a further experiment, try put this at exit time of mainLoop (unsynced PWM out).
     PWM_A_MOTOR0 = motorPhases[0][0];
     PWM_B_MOTOR0 = motorPhases[0][1];
@@ -45,30 +44,40 @@ ISR (TIMER1_OVF_vect) {
     PWM_A_MOTOR1 = motorPhases[1][0];
     PWM_B_MOTOR1 = motorPhases[1][1];
     PWM_C_MOTOR1 = motorPhases[1][2];
-    fastState = IDLE;
+    newPWMData = false;
   }
-  if (!fastDivider) {
+
+  if ((gimbalState & BACKGROUND_TASKS_RUN) && !fastDivider) {
 	  if (fastState == IDLE) {
 		  cli();
 		  fastState = RUNNING;
+#ifdef DEBUG_SIGNALS
 		  DEBUG_PORT |= 1<<DEBUG_BIT1;
+#endif
 		  fastDivider = FAST_PERIOD;
 		  sei();
-		  if (runFastTask) fastTask();
-		  fastState = DONE;
+		  fastTask();
+		  fastState = IDLE;
+		  // TODO: Maybe move to fast-loop itself.
+#ifdef DEBUG_SIGNALS
 		  DEBUG_PORT &= ~(1<<DEBUG_BIT1);
+#endif
 		  mediumDivider--;
 		  if (!mediumDivider) {
 			  if (mediumState == IDLE) {
 				  cli();
+#ifdef DEBUG_SIGNALS
 				  DEBUG_PORT |= 1<<DEBUG_BIT2;
+#endif
 				  mediumState = RUNNING;
 				  mediumDivider = MEDIUM_SUBPERIOD;
 				  sei();
-				  if (runMediumTask) mediumTask();
+				  mediumTask();
 				  mediumTaskHasRun = true; // To assist the slow-task stuff to sync
 				  mediumState = IDLE;
+#ifdef DEBUG_SIGNALS
 				  DEBUG_PORT &= ~(1<<DEBUG_BIT2);
+#endif
 			  } else {
 				  // Medium task collision has occured.
 				  LEDEvent(LED_SCHEDULER_OVERLOAD_MASK);

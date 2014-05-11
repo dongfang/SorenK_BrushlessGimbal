@@ -1,6 +1,7 @@
 #include "SerialStream.h"
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
+#include <avr/io.h>
 
 UARTSerial serial0(128, 128, &UBRR0H, &UBRR0L, &UCSR0A, &UCSR0B, &UDR0);
 
@@ -21,18 +22,25 @@ void UARTSerial::put(uint8_t c) {
 	*_ucsra |= (1 << TXC0);
 }
 
-int UARTSerial::get() {
+int Serial::get() {
 	if (_rxBuf.head == _rxBuf.tail) return -1;
 	uint8_t result = _rxBuf.data[_rxBuf.tail];
 	_rxBuf.tail = (_rxBuf.tail+1) & _rxBuf.mask;
 	return result;
 }
 
+int Serial::peek() {
+	if (_rxBuf.head == _rxBuf.tail) return -1;
+	uint8_t result = _rxBuf.data[_rxBuf.tail];
+	return result;
+}
+extern void LEDEvent(uint8_t);
 void UARTSerial::receive(uint8_t c) {
 	uint8_t next = (_rxBuf.head+1) & _rxBuf.mask;
 	if (next != _rxBuf.tail) {
 		_rxBuf.data[_rxBuf.head] = UDR0;
 		_rxBuf.head = next;
+if (UDR0 == 32)		LEDEvent(8);
 	}
 }
 
@@ -49,10 +57,14 @@ size_t Serial::available() {
 	// Example : Tail = 100, head = 2, mask = 127:
 	// head - tail = -98 = 0b10011110
 	// (head - tail) & mask = 0b10011110 & 0b01111111 = 0b00011110 = 30
-	return (/*_rxBuf.mask + 1 + */ _rxBuf.head -_rxBuf.tail) & _rxBuf.mask;
+	return (_rxBuf.mask + 1 + _rxBuf.head -_rxBuf.tail) & _rxBuf.mask;
 }
 
-void Serial::waitFlushed() {
+void Serial::clear() {
+	_rxBuf.tail = _rxBuf.head;
+}
+
+void Serial::flush() {
 	while (_txBuf.head != _txBuf.tail)
 		wdt_reset();
 }
@@ -69,17 +81,26 @@ void UARTSerial::init(uint32_t baud, int direction) {
 
 #if defined(USART0_RX_vect)
 ISR(USART0_RX_vect) {
-	serial1.receive(UDR1);
+	serial0.receive(UDR0);
 }
 ISR(USART_UDRE0_vect) {
 	serial0.udre();
 }
 #endif
+
+#if defined(USART1_RX_vect)
+ISR(USART0_RX_vect) {
+	serial1.receive(UDR1);
+}
+ISR(USART_UDRE0_vect) {
+	serial1.udre();
+}
+#endif
+
 #if defined(USART_RX_vect)
 ISR(USART_RX_vect) {
 	serial0.receive(UDR0);
 }
-
 ISR(USART_UDRE_vect) {
 	serial0.udre();
 }

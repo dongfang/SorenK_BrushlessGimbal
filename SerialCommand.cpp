@@ -65,7 +65,7 @@ void SerialCommand::readSerial() {
 		char inChar = getchar(); // Read single available character, there may be more waiting
 		if (inChar == '\r' || inChar == '\n') { // Check for the terminator (default '\r') meaning end of command
 			if (wasCRLF) continue;
-			else wasCRLF = true;
+			wasCRLF = true;
 			char *command = strtok_r(buffer, delim, &last); // Search for command at start of buffer
 			if (command != NULL) {
 				bool matched = false;
@@ -83,8 +83,7 @@ void SerialCommand::readSerial() {
 				if (!matched && (defaultHandler != NULL)) {
 					(*defaultHandler)(command);
 				}
-			}
-			// Serial.println(F("BruGi> ")); // TODO: BruGi prompt string
+			} else printf_P(PSTR("null command\r\n"));
 			clearBuffer();
 		} else {
 			wasCRLF = false;
@@ -93,7 +92,6 @@ void SerialCommand::readSerial() {
 					buffer[bufPos++] = inChar; // Put character into buffer
 					buffer[bufPos] = '\0'; // Null terminate
 				}
-				//if (echo) putchar(inChar);
 			}
 		}
 	}

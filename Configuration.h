@@ -21,9 +21,18 @@ public:
 	uint8_t accTimeConstant;
 	//int8_t mpuLPF; // mpu LPF 0..6, 0=fastest(256Hz) 6=slowest(5Hz)
 	bool calibrateGyro; // Else use EEPROM value
-	uint8_t majorAxis;
-	bool axisReverseZ;
-	bool axisSwapXY;
+	uint8_t majorAxis;		// valid values are 0, 1, 2		(3)
+	bool axisReverseZ;		// true, false					(2)
+	uint8_t axisRotateZ;	// valid values are 0, 1, 2, 3 	(4)
+							// total combinations			3*2*4 = 24
+	// How to auto-config:
+	// 1) Ask user to set gimbal about horizontal
+	// 2) Perform test roll rotation 1 way
+	// 3) Ask user which way that was (now we know both gyro and motor sign)
+	// 5) Perform test pitch rotation 1 way
+	// 6) Ask user which way that was (now we know both gyro and motor sign)
+	// 7) We should now be able to infer majorAxis and Z rotation.
+	// 8) The only thing missing is yaw gyro sign.
 
 // PID settings
 	int16_t pitchKp;
@@ -36,8 +45,8 @@ public:
 	int32_t ILimit;
 
 // Output settings
-	uint8_t maxPWMmotorRoll;
-	uint8_t maxPWMmotorPitch;
+	uint8_t rollMotorPower;
+	uint8_t pitchMotorPower;
 
 	// There should be no need for these. One can just swap and turn the connectors.
 	//uint8_t motorNumberPitch;

@@ -20,23 +20,32 @@ public:
 	 * The direction param is a _FDEV_SETUP_* from stdio.h
 	 */
 	void init(uint32_t baud, int direction);
+
 	/*
 	 * Get a char, or -1 if inbuffer is empty.
 	 */
 	int get();
+	int peek();
+
 	/*
 	 * Put a char.
 	 */
 	void put(uint8_t c);
+
 	/*
 	 * Number of chars available for get.
 	 */
-
 	size_t available();
+
+	/*
+	 * Throw away all inbuffer data.
+	 */
+	void clear();
+
 	/*
 	 * Block thread till outbuffer is empty.
 	 */
-	void waitFlushed();
+	void flush();
 protected:
 	Serial(size_t txBufsiz, size_t rxBufsiz) {
 		_txBuf.mask = txBufsiz - 1;
@@ -97,7 +106,6 @@ public:
 		_udr(udr) {
 	}
 	void init(uint32_t baud, int direction);
-	int get();
 	void put(uint8_t c);
 };
 

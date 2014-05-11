@@ -50,10 +50,14 @@ void calcSinusArray(uint8_t maxPWM, uint8_t *array) {
   }
 }
 
-void recalcMotorStuff() {
+void recalcMotorPower(uint8_t rollPower, uint8_t pitchPower) {
+  calcSinusArray(rollPower, pwmSinMotorRoll);
+  calcSinusArray(pitchPower, pwmSinMotorPitch);
+}
+
+void recalcMotorPower() {
   cli();
-  calcSinusArray(config.maxPWMmotorPitch, pwmSinMotorPitch);
-  calcSinusArray(config.maxPWMmotorRoll, pwmSinMotorRoll);
+  recalcMotorPower(config.rollMotorPower, config.pitchMotorPower);
   sei();
 }
 

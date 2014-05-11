@@ -159,10 +159,10 @@ void setTransients() {
 		paraValue = sCmd.next();
 		if (paraValue != NULL) {
 			val = atol(paraValue);
-			if (val < -500)
-				val = -500;
-			else if (val > 500)
-				val = 500;
+			if (val < -1000)
+				val = -1000;
+			else if (val > 1000)
+				val = 1000;
 		}
 	}
 	transients(axis, val);
@@ -184,6 +184,7 @@ void printHelpUsage() {
 	printf_P(PSTR("we    Writes active config to eeprom\r\n"));
 	printf_P(PSTR("re    Restores values from eeprom to active config\r\n"));
 	printf_P(PSTR("cal   Recalibrates the gyro\r\n"));
+	printf_P(PSTR("ac	 Autoconf\r\n"));
 	printf_P(PSTR("level Sets level (place gimbal firmly level and run)\r\n"));
 	printf_P(PSTR("debug <category> Prints troubleshooting info\r\n"));
 	printf_P(PSTR("        debug usage:\r\n"));
@@ -318,7 +319,7 @@ void debug() {
 		y = imu.gyro[Y];
 		z = imu.gyro[Z];
 		sei();
-		printf_P(PSTR("gyro: xt %d\t y %d\t z %d\r\n"), x, y, z);
+		printf_P(PSTR("gyro: x %d\t y %d\t z %d\r\n"), x, y, z);
 		break;
 	case DEBUG_ESTG:
 		cli();
@@ -383,11 +384,14 @@ void showSensorCal() {
 	printf_P(PSTR("Acc X\t%d, Y\t%d, Z\t%d\r\n"), mpu.sensorOffset[3], mpu.sensorOffset[4], mpu.sensorOffset[5]);
 }
 
+extern void startAutosetup();
+
 void setSerialProtocol() {
 	// Setup callbacks for SerialCommand commands
 	sCmd.addCommand("sd", setDefaultParametersAndUpdate);
 	sCmd.addCommand("we", writeEEPROM);
 	sCmd.addCommand("re", readEEPROM);
+	sCmd.addCommand("ac", startAutosetup);
 	sCmd.addCommand("par", parameterMod);
 	sCmd.addCommand("cal", calibrateGyro);
 	sCmd.addCommand("level", calibrateAcc);

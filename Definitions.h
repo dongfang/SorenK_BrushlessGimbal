@@ -26,7 +26,7 @@
 #define RC_LATCH (MEDIUMLOOP_FREQ/RC_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
-#define SOFTSTART_FREQ 80
+#define SOFTSTART_FREQ 100
 #define SOFTSTART_LATCH (MEDIUMLOOP_FREQ/SOFTSTART_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
@@ -107,10 +107,6 @@
 #define Y		1
 #define Z		2
 
-#define GIMBAL_OFF 0
-#define GIMBAL_FROZEN 1
-#define GIMBAL_RUNNING 2
-
 #define GIMBAL_ON_DELAY 10
 #define DEBUG_DELAY 255
 
@@ -131,7 +127,7 @@
 #define LED_I_LIMIT_MASK 1
 #define LED_SCHEDULER_OVERLOAD_MASK 2
 #define LED_SPEED_LIMIT_MASK 4
-#define LED_OSCILLATION_DETECT_MASK 8
+#define LED_SERIAL_RX 8
 #define LED_I2C_TIMEOUT_MASK 16
 #define LED_RC_MASK 32
 #define LED_RC_MISSED 64
@@ -140,3 +136,47 @@
 #define TO_NERD_DEGREES(a) ((int16_t)(a) * 65536L / 360L)
 #define FROM_NERD_DEGREES(a) ((a) * 360L / 65536L)
 
+// Whether the motors should be turned on or off. This should get a power ramp routine in the
+// medium task to ramp up or down the softstart.
+// When changing this, always clear POWER_RAMPING_COMPLETE and wait for it to come true again.
+// If medium loop does not run, this will not happen automatically.
+#define MOTORS_POWERED 1
+// Set to get the synced interrupt handler to output to hardware.
+// Should be set after the pwm-out table was updated. The timer1 interrupt reads, outputs and resets.
+// #define MOTORS_NEW_DATA 2
+// Whether softstart ramping has completed
+#define POWER_RAMPING_COMPLETE 2
+// Whether PIDs are output to the PWM-out table
+#define PIDS_ARE_OUTPUT 4
+// Whether fast and medium loops should run (reason not to: They use I2C and expect being exclusive)
+#define BACKGROUND_TASKS_RUN 8
+// When BACKGROUND_TASKS_RUN is cleared, setting this will cause another routine to run in the interrupt.
+#define SETUP_TASK_RUNS 16
+#define SETUP_AXIS 32
+#define SETUP_RESET 64
+
+#define GIMBAL_STATE_RUN 	(MOTORS_POWERED | PIDS_ARE_OUTPUT | BACKGROUND_TASKS_RUN)
+#define GIMBAL_STATE_FREEZE (MOTORS_POWERED | BACKGROUND_TASKS_RUN)
+#define GIMBAL_STATE_SENSORCAL 0
+#define GIMBAL_STATE_AUTOCAL (MOTORS_POWERED | AUTOCONF_TASK_RUNS)
+
+// Start gimbal: Set MOTORS_POWERED, PIDS_ARE_OUTPUT and BACKGROUND_TASKS_RUN.
+// Freeze gimbal: Set MOTORS_POWERED and BACKGROUND_TASKS_RUN. clear PIDS_ARE_OUTPUT
+// Calibrate gimbal etc: Clear MOTORS_POWERED, wait till POWER_RAMPING_COMPLETE set, then clear BACKGROUND_TASKS_RUN.
+//   I2C is now available
+// Test-run for autoconf: clear BACKGROUND_TASKS_RUN. From test-run routine, set MOTORS_NEW_DATA whenever
+//   a new output value from the test run was output. Possible refinement: In timer1 interrupt handler, when
+//   BACKGROUND_TASKS_RUN is false. check for another flag to run other tasks instead.
+
+#define TARGET_SOURCE_RC 0
+#define TARGET_SOURCE_OSC 1
+#define TARGET_SOURCE_AUTOCAL 2
+
+#define INTERFACE_STATE_CONSOLE 0
+#define INTERFACE_STATE_AUTOSETUP 1
+#define INTERFACE_STATE_MAVLINK 2
+
+// maybe about 10 degrees/s. That is 70 (or 72) e-degrees a sec, or 72*256/1000 microsteps per millisecond. About 18
+#define SETUP_MOVE_DIVIDER 20
+// 15 degrees, or about 100 e-degrees, or about (wtf?) 71 microsteps
+#define SETUP_MOVE_LIMIT 80
