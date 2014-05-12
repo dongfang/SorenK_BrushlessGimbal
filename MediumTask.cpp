@@ -28,6 +28,7 @@ extern int16_t getPitchTarget();
 void mediumTask() {
 	static uint8_t softStartDivider;
 
+	imu.blendGyrosToAttitude();
 	imu.blendAccToAttitude();
 	imu.calculateAttitudeAngles();
 

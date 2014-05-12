@@ -224,7 +224,7 @@ int main() {
 	// Enable Timer1 Interrupt for timing
 	TIMSK1 |= 1<<TOIE1;
 
-	mpu.startRotationRatesAsync();
+	mpu.startAllSensorsAsync();
 
 	slowLoop();
 }

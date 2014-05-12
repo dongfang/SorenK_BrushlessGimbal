@@ -189,10 +189,14 @@ public:
 	// Get motion data
 	void getAccelerations(int16_t* acc);
 
+	/*
 	void startRotationRatesAsync();
 	void startAccelerationsAsync();
 	void getRotationRatesAsync(int16_t* gyro);
 	void getAccelerationsAsync(int16_t* acc);
+	*/
+	void getAllSensorsAsync(int16_t* gyro, int16_t* acc);
+	void startAllSensorsAsync();
 
 	// gyro calibration value. Only public for debug's sake.
 	int16_t sensorOffset[3+3+1];

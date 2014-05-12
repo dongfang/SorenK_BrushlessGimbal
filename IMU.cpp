@@ -29,6 +29,8 @@
 // Do not run this in hot starts.
 void IMU::init() {
 	// 102us
+	// TODO: Decide whether to use every 2nd gyr0 sample for attitude, or add together pairs of samples.
+	// 1st option: need mediumloop time here, 2nd option: need fastloop time.
 	gyroADCToRad_dt = FASTLOOP_DT_F_S * M_PI / mpu->gyroToDeg_s() / 180.0;
 	accComplFilterConstant = (float) MEDIUMLOOP_DT_F_S / (config.accTimeConstant + MEDIUMLOOP_DT_F_S);
 	uint8_t axis;
@@ -40,12 +42,13 @@ void IMU::init() {
 		estG[axis] = acc[axis];
 	}
 
-	uint32_t temp = (uint32_t)mpu->accToG() * mpu->accToG();
+	//uint32_t temp = (uint32_t)mpu->accToG() * mpu->accToG();
 	//accMagnitude = temp;
 	//minAccMagnitude = temp * 2/3;
 	//maxAccMagnitude = temp * 3/2;
 }
 
+/*
 void IMU::readRotationRates() {
 	mpu->getRotationRatesAsync(gyro);
 }
@@ -53,12 +56,13 @@ void IMU::readRotationRates() {
 void IMU::readAccelerations() {
 	mpu->getAccelerationsAsync(acc);
 }
+*/
 
 void IMU::blendGyrosToAttitude() {
 	uint8_t axis;
 	float deltaGyroAngle[3];
 	for (axis = 0; axis < 3; axis++) {
-		deltaGyroAngle[axis] = gyro[axis] * gyroADCToRad_dt;
+		deltaGyroAngle[axis] = gyroSum[axis] * gyroADCToRad_dt;
 	}
 	rotateV(estG, deltaGyroAngle);
 }

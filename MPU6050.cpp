@@ -187,7 +187,7 @@ bool MPU6050::loadSensorCalibration() {
 // Board should be still for some seconds
 void MPU6050::recalibrateSensor(void (*complain)(), uint8_t whichMotion) {
 	uint8_t i;
-	int16_t tolerance = whichMotion == GYRO ? 64 : 280                                                                                                                                            ;
+	uint16_t tolerance = whichMotion == GYRO ? 64 : 280                                                                                                                                            ;
 #define SENSOR_ITERATIONS 2000
 	int16_t prevSensor[3], sensor[3];
 	int32_t sensorOffsetSums[3];
@@ -251,10 +251,11 @@ void MPU6050::transformRotationRates(int16_t* gyro) {
 
 	for (axis=0; axis<3; axis++) {
 		idx = sensorDef.gyro[axis].idx;
-		gyro[axis] = (((int16_t)i2c_buffer[idx<<1]) << 8) | i2c_buffer[(idx<<1)+1];
-		gyro[axis] -= sensorOffset[idx];
+		int16_t result = (((int16_t)i2c_buffer[idx<<1]) << 8) | i2c_buffer[(idx<<1)+1];
+		result -= sensorOffset[idx];
 		if (sensorDef.gyro[axis].dir == -1)
-			gyro[axis] = -gyro[axis];
+			result = -result;
+		gyro[axis] = result;
 	}
 }
 
@@ -266,6 +267,7 @@ void MPU6050::getSensor(int16_t* result, uint8_t which) {
     result[2] = (((int16_t)i2c_buffer[4]) << 8) | i2c_buffer[5];
 }
 
+/*
 void MPU6050::startRotationRatesAsync() {
 	i2c_read_regs_async(devAddr, MPU6050_RA_GYRO_XOUT_H, 6);
 }
@@ -275,6 +277,7 @@ void MPU6050::getRotationRatesAsync(int16_t* gyro) {
 	// i2c_wait_async_done();
 	transformRotationRates(gyro);
 }
+*/
 
 void MPU6050::transformAccelerations(int16_t* acc) {
 	uint8_t idx;
@@ -295,6 +298,7 @@ void MPU6050::getAccelerations(int16_t* acc) {
     transformAccelerations(acc);
 }
 
+/*
 void MPU6050::startAccelerationsAsync() {
 	i2c_read_regs_async(devAddr, MPU6050_RA_ACCEL_XOUT_H, 6);
 }
@@ -309,4 +313,22 @@ void MPU6050::getAccelerationsAsync(int16_t* acc) {
 		}
 	}
     transformAccelerations(acc);
+}
+*/
+
+void MPU6050::getAllSensorsAsync(int16_t* gyro, int16_t* acc) {
+	if (!i2c_is_async_done()) {
+		_delay_us(10); // Sometimes it is almost done.
+		if (!i2c_is_async_done()) {
+			i2c_shutdown();
+			i2c_init();
+			return;
+		}
+	}
+    transformAccelerations(acc);
+	transformRotationRates(gyro);
+}
+
+void MPU6050::startAllSensorsAsync() {
+	i2c_read_regs_async(devAddr, MPU6050_RA_ACCEL_XOUT_H, 12);
 }

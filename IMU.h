@@ -29,25 +29,19 @@ public:
 
 	// Get attitude data
 	void fastUpdateCycle() {
-		// There is a case of optimistic scheduling here: We start the background
-		// fetching of acc. data before the gyro data has been read from the (same)
-		// buffer. It should be verified that there is no collision.
-		// OK at first, we just execute it the safe way around, missing the opportunity
-		// to start acc.meter sampling early.
-		mpu->getRotationRatesAsync(gyro);
-	    mpu->startAccelerationsAsync();
+		uint8_t i;
+		mpu->getAllSensorsAsync(gyro, acc);
+	    mpu->startAllSensorsAsync();
 	    // TODO: This should be doable at the medium rate too. Might work just fine.
 	    // Can maybe increase fast rate to even faster, and medium also.
-	    blendGyrosToAttitude();
+	    // blendGyrosToAttitude();
 	    prepareRates();
-	    readAccelerations();
-	    // blendAccToAttitude();
-	    // PERFORMANCE(BM_CALCULATE_AA);
-	    //calculateAttitudeAngles();
-	    mpu->startRotationRatesAsync();
+	    for (i=0; i<3; i++)
+	    	gyroSum[i] += gyro[i];
 	}
 
 	int16_t gyro[3];
+	int16_t gyroSum[3];
 	int16_t acc[3];
 
 	// Public just so we can debug them. They are of no public use.
@@ -72,6 +66,8 @@ public:
 
 	int16_t angle_i16[2];  // absolute angle inclination in int16-degrees
 
+	void blendGyrosToAttitude();
+
 private:
 	MPU6050* mpu;
 	// TODO: This sensor orientation stuff is hardware related only.
@@ -81,9 +77,8 @@ private:
 	float accComplFilterConstant;  // filter constant for complementary filter
 	int32_t tmp_accMagnitude_g_2;
 
-	void readRotationRates();
-	void readAccelerations();
-	void blendGyrosToAttitude();
+	//void readRotationRates();
+	//void readAccelerations();
 	// Rotate Estimated vector(s) with small angle approximation, according to the gyro data
 	// needs angle in radian units !
 	inline void rotateV(float* v, float* delta) {

@@ -13,7 +13,7 @@ uint8_t i2c_interrupt_hits[8];
 
 // Okay this is not pretty.
 // We could make a struct representing this and let caller pass a pointer to one, if we need to.
-uint8_t i2c_buffer[6];
+uint8_t i2c_buffer[12];
 volatile uint8_t i2c_async_status;
 static volatile uint8_t i2c_async_sladr;
 static volatile uint8_t i2c_async_reg;
