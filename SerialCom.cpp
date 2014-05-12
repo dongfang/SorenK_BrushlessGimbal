@@ -184,7 +184,9 @@ void printHelpUsage() {
 	printf_P(PSTR("we    Writes active config to eeprom\r\n"));
 	printf_P(PSTR("re    Restores values from eeprom to active config\r\n"));
 	printf_P(PSTR("cal   Recalibrates the gyro\r\n"));
-	printf_P(PSTR("ac	 Autoconf\r\n"));
+#if SUPPORT_AUTOSETUP == 1
+	printf_P(PSTR("setup Autosetup\r\n"));
+#endif
 	printf_P(PSTR("level Sets level (place gimbal firmly level and run)\r\n"));
 	printf_P(PSTR("debug <category> Prints troubleshooting info\r\n"));
 	printf_P(PSTR("        debug usage:\r\n"));
@@ -391,7 +393,9 @@ void setSerialProtocol() {
 	sCmd.addCommand("sd", setDefaultParametersAndUpdate);
 	sCmd.addCommand("we", writeEEPROM);
 	sCmd.addCommand("re", readEEPROM);
-	sCmd.addCommand("ac", startAutosetup);
+#if SUPPORT_AUTOSETUP == 1
+	sCmd.addCommand("setup", startAutosetup);
+#endif
 	sCmd.addCommand("par", parameterMod);
 	sCmd.addCommand("cal", calibrateGyro);
 	sCmd.addCommand("level", calibrateAcc);

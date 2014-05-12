@@ -76,7 +76,7 @@ int _getchar(FILE* f) {
 }
 
 void initSerial() {
-	serial0.init(115200, _FDEV_SETUP_RW);
+	serial0.init(config.serialBaudRate, _FDEV_SETUP_RW);
 	fdevopen(_putchar, _getchar);
 }
 
@@ -101,6 +101,16 @@ if (mpu.testConnection()) {
 	}
 }
 */
+
+void initMPU6050() {
+	// HW
+	// TODO: Only unjam in case of jam.
+	// TODO: Auto addressing. Combine with unjam?
+	mpu.setAddr(config.mpu6050Address);
+	mpu.unjam();
+	mpu.init();
+}
+
 void initHW() {
 	// HW
 	LED_DDR |= (1<<LED_BIT);
@@ -147,7 +157,7 @@ void initState() {
 	setSerialProtocol();
 
 	// Read Config, fill with default settings if versions do not match or CRC fails
-	config.readEEPROMOrDefault();
+	// config.readEEPROMOrDefault();
 
 	// Init Sinus Arrays and Motor Stuff
 	recalcMotorPower();
@@ -189,7 +199,7 @@ void checkwatchdog(void) {
 
 int main() {
 	// TODO: Can this be moved down?
-	// wdt_disable();
+	config.checkRAMImageValid();
 
 	initHW();
 	sei();

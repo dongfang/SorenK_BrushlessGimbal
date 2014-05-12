@@ -17,6 +17,9 @@ public:
 	uint8_t vers;
 	uint8_t versEEPROM;
 
+	uint32_t serialBaudRate;
+	uint8_t mpu6050Address;
+
 // Input settings
 	uint8_t accTimeConstant;
 	//int8_t mpuLPF; // mpu LPF 0..6, 0=fastest(256Hz) 6=slowest(5Hz)
@@ -83,13 +86,17 @@ public:
 
 	// in 1:16 units.
 	uint8_t frozenGimbalPower;
-
 	uint8_t LEDMask;
+
+	uint8_t mavlinkSystemId;
+	uint8_t mavlinkComponentId;
+	bool mavlinkUseRelativealtitudes;
 
 	uint16_t crc16;
 
 	void setDefaults();
 	void readEEPROMOrDefault();
+	void checkRAMImageValid();
 	void writeEEPROM();
 
 private:

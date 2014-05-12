@@ -57,6 +57,10 @@ void Configuration::setDefaults() {
 	frozenGimbalPower = 10;
 
 	LEDMask = LED_SERIAL_RX;
+
+	mavlinkSystemId = 42;
+	mavlinkComponentId = 1;
+	mavlinkUseRelativealtitudes = true;
 }
 
 uint16_t Configuration::CRC() {
@@ -86,8 +90,15 @@ void Configuration::readEEPROMOrDefault() {
 	}
 }
 
-// Fixme
+void Configuration::checkRAMImageValid() {
+	if (crc16 != CRC()) {
+		readEEPROMOrDefault();
+	}
+}
+
 extern void recalcMotorPower();
+extern void initSerial();
+extern void initMPU6050();
 
 static void fixme_initIMU() {
 	imu.init();
@@ -96,12 +107,6 @@ static void fixme_initIMU() {
 static inline void fixme_initSensorOrientation() {
 	mpu.initSensorOrientation(config.majorAxis, config.axisReverseZ, config.axisRotateZ);
 }
-
-/*
-static inline void fixme_initMPUlpf() {
-	mpu.setDLPFMode(config.mpuLPF);
-}
-*/
 
 const ConfigDef_t PROGMEM configListPGM[] = {
 { "vers", UINT8, &config.vers, NULL },
@@ -138,7 +143,15 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "majorAxis", UINT8, &config.majorAxis, 		&fixme_initSensorOrientation },
 { "reverseZ", BOOL, &config.axisReverseZ, 	&fixme_initSensorOrientation },
 { "rotateZ", UINT8, &config.axisRotateZ, 		&fixme_initSensorOrientation },
+
 { "LEDMask", UINT8, &config.LEDMask, 		NULL },
+{ "MPU6050Addr", UINT8, &config.mpu6050Address, &initMPU6050 },
+{ "baudRate", UINT32, &config.serialBaudRate, &initSerial },
+
+{ "systemId", UINT8, &config.mavlinkSystemId, NULL },
+{ "componentId", UINT8, &config.mavlinkComponentId, NULL },
+{ "relativeAlt", UINT32, &config.mavlinkUseRelativealtitudes, NULL },
+
 { "", BOOL, NULL, NULL } // terminating NULL required !!
 };
 

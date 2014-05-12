@@ -180,3 +180,6 @@
 #define SETUP_MOVE_DIVIDER 20
 // 15 degrees, or about 100 e-degrees, or about (wtf?) 71 microsteps
 #define SETUP_MOVE_LIMIT 80
+
+#define SUPPORT_AUTOSETUP 1
+#define SUPPORT_MAVLINK 1

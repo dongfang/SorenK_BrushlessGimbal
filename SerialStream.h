@@ -87,8 +87,28 @@ private:
 	friend void ::USART_UDRE_vect(void);
 	friend void ::USART_RX_vect(void);
 #endif
-	inline void receive(uint8_t c);
-	inline void udre();
+
+	//extern void LEDEvent(uint8_t);
+	inline void receive(uint8_t c) {
+		uint8_t next = (_rxBuf.head+1) & _rxBuf.mask;
+		if (next != _rxBuf.tail) {
+			_rxBuf.data[_rxBuf.head] = c;
+			//if (_rxBuf.data[_rxBuf.head] == 32)	LEDEvent(8);
+			_rxBuf.head = next;
+		}
+	}
+
+	inline void udre() {
+		if (_txBuf.head == _txBuf.tail) {
+			*_ucsrb &= ~(1<<UDRIE0);
+		} else {
+			*_udr = _txBuf.data[_txBuf.tail];
+			_txBuf.tail = (_txBuf.tail+1) & _txBuf.mask;
+		}
+	}
+
+	//inline void receive(uint8_t c);
+	//inline void udre();
 public:
 	UARTSerial (
 			size_t txBufsiz,
