@@ -36,6 +36,8 @@ public:
 		// to start acc.meter sampling early.
 		mpu->getRotationRatesAsync(gyro);
 	    mpu->startAccelerationsAsync();
+	    // TODO: This should be doable at the medium rate too. Might work just fine.
+	    // Can maybe increase fast rate to even faster, and medium also.
 	    blendGyrosToAttitude();
 	    prepareRates();
 	    readAccelerations();
