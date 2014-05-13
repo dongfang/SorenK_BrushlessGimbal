@@ -40,7 +40,7 @@ void IMU::init() {
 		estG[axis] = acc[axis];
 	}
 
-	uint32_t temp = (uint32_t)mpu->accToG() * mpu->accToG();
+	//uint32_t temp = (uint32_t)mpu->accToG() * mpu->accToG();
 	//accMagnitude = temp;
 	//minAccMagnitude = temp * 2/3;
 	//maxAccMagnitude = temp * 3/2;
@@ -84,7 +84,8 @@ void IMU::blendAccToAttitude() {
 	uint8_t axis;
 	// 255 us
 	// Apply complimentary filter (Gyro drift correction)
-	// If accel magnitude >1.4G or <0.6G and ACC vector outside of the limit range => we neutralize the effect of accelerometers in the angle estimation.
+	// If accel magnitude >1.4G or <0.6G and ACC vector outside of the limit range => we don't care. That never happens in flight but only
+	// in self oscillation, and the average shasken acc. vector is still better than nothing.
 	// To do that, we just skip filter, as EstV already rotated by Gyro
 	//if ((minAccMagnitude < accMagnitude && accMagnitude < maxAccMagnitude)) {
 		for (axis = 0; axis < 3; axis++) {
