@@ -10,7 +10,7 @@ void updateGimbalState() {
 	// if (switchPos < 0) balahblah .. implement switch to state logic here.
 	// except when in autosetup, oops.
 	if (interfaceState != INTERFACE_STATE_AUTOSETUP)
-		gimbalState = GIMBAL_STATE_RUN;
+		gimbalState = PIDS_ARE_OUTPUT | MOTORS_POWERED;
 }
 
 inline bool checkMediumLoop() {

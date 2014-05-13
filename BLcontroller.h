@@ -22,27 +22,6 @@ void initBlController() {
   OCR0B = 0;  //D5 
 }
 
-// Only for testing?
-/*
-void fastMoveMotor(uint8_t motorNumber, int dirStep, uint8_t* pwmSin) {
-  if (motorNumber == 0) {
-    currentStepMotor0 += dirStep;
-    currentStepMotor0 &= 0xff;
-    PWM_A_MOTOR0 = pwmSin[currentStepMotor0];
-    PWM_B_MOTOR0 = pwmSin[(uint8_t)(currentStepMotor0 + 85)];
-    PWM_C_MOTOR0 = pwmSin[(uint8_t)(currentStepMotor0 + 170)];
-  }
- 
-  if (motorNumber == 1) {
-    currentStepMotor1 += dirStep;
-    currentStepMotor1 &= 0xff;
-    PWM_A_MOTOR1 = pwmSin[currentStepMotor1] ;
-    PWM_B_MOTOR1 = pwmSin[(uint8_t)(currentStepMotor1 + 85)] ;
-    PWM_C_MOTOR1 = pwmSin[(uint8_t)(currentStepMotor1 + 170)] ;
-  }
-}
-*/
-
 void calcSinusArray(uint8_t maxPWM, uint8_t *array) {
   for(int i=0; i<N_SIN; i++) {
 //    array[i] = maxPWM / 2.0 + sin(2.0 * i / N_SIN * 3.14159265) * maxPWM / 2.0;
@@ -60,37 +39,3 @@ void recalcMotorPower() {
   recalcMotorPower(config.rollMotorPower, config.pitchMotorPower);
   sei();
 }
-
-/*
-// switch off motor power
-// TODO: for some reason motor control gets noisy, if call from ISR
-inline void motorOff(uint8_t motorNumber, uint8_t* pwmSin) {
-  if (motorNumber == 0) {
-    PWM_A_MOTOR0 = pwmSin[0];
-    PWM_B_MOTOR0 = pwmSin[0];
-    PWM_C_MOTOR0 = pwmSin[0];
-  }
- 
-  if (motorNumber == 1) {
-    PWM_A_MOTOR1 = pwmSin[0];
-    PWM_B_MOTOR1 = pwmSin[0];
-    PWM_C_MOTOR1 = pwmSin[0];
-  }
-}
-*/
-
-/*
-void motorTest() {
-  #define MOT_DEL 100
-  cli();
-  _delay_ms(10 * CC_FACTOR);
-  // Move Motors to ensure function
-  for(int i=0; i<100; i++) { fastMoveMotor(config.motorNumberPitch, 1,pwmSinMotorPitch); _delay_ms(MOT_DEL * CC_FACTOR); }
-  for(int i=0; i<100; i++) { fastMoveMotor(config.motorNumberPitch, -1,pwmSinMotorPitch); _delay_ms(MOT_DEL * CC_FACTOR); }
-  _delay_ms(200 * CC_FACTOR);
-  for(int i=0; i<100; i++) { fastMoveMotor(config.motorNumberRoll, 1,pwmSinMotorRoll); _delay_ms(MOT_DEL * CC_FACTOR); }
-  for(int i=0; i<100; i++) { fastMoveMotor(config.motorNumberRoll, -1,pwmSinMotorRoll); _delay_ms(MOT_DEL * CC_FACTOR); }
-  sei();  
-}
-*/
-

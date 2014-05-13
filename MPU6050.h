@@ -2,6 +2,7 @@
 #define __MPU6050_H
 
 #include "Definitions.h"
+#include "I2C.h"
 #include <avr/pgmspace.h>
 
 #define MPU6050_GYRO_FS_250         0x00
@@ -91,8 +92,12 @@ private:
 	uint8_t devAddr;
 //	uint8_t buffer[6];
 public:
-	static const uint8_t GYRO = 0;
-	static const uint8_t ACC = 1;
+	static const uint8_t GYRO = 1;
+	static const uint8_t ACC = 0;
+
+	int16_t gyro[3];
+	int16_t gyroSum[3];
+	int16_t acc[3];
 
 	struct SensorAxisDef {
 	  uint8_t idx;		// index of physical sensor
@@ -100,8 +105,8 @@ public:
 	} SensorAxisDef_t;
 
 	struct SensorOrientationDef {
-	  SensorAxisDef gyro[3];
 	  SensorAxisDef acc[3];
+	  SensorAxisDef gyro[3];
 	};
 
 	// Reset signal paths. Often jammed at startup.
@@ -175,44 +180,68 @@ public:
 		return 1; // should never happen
 	}
 
+	// Orientation of the MPU6550 chip - 3*2*4 possibilities.
 	void initSensorOrientation(uint8_t majorAxis, bool reverseZ, uint8_t rotateXY);
 
 	// Load EEPROM-stored offsets. Return true if success.
 	bool loadSensorCalibration();
+
 	// Do the calibration ritual and store result in EEPROM.
 	void recalibrateSensor(void (*complain)(), uint8_t whichMotion);
 
-	void resetAccCalibration() {
-		sensorOffset[3] = sensorOffset[4] = sensorOffset[5] = 0;
+	inline void resetAccCalibration() {
+		sensorOffset[0] = sensorOffset[1] = sensorOffset[2] = 0;
 	}
 
-	// Get motion data
-	void getAccelerations(int16_t* acc);
+	inline void getAllSensorsAsync() {
+		if (!i2c_is_async_done()) {
+			i2c_shutdown();
+			i2c_init();
+			return;
+		}
 
-	/*
-	void startRotationRatesAsync();
-	void startAccelerationsAsync();
-	void getRotationRatesAsync(int16_t* gyro);
-	void getAccelerationsAsync(int16_t* acc);
-	*/
-	void getAllSensorsAsync(int16_t* gyro, int16_t* acc);
-	void startAllSensorsAsync();
+		uint8_t physicalOffset;
+		uint8_t logicalAxis;
+
+		for (logicalAxis=0; logicalAxis<3; logicalAxis++) {
+			physicalOffset = sensorDef.acc[logicalAxis].idx;
+			acc[logicalAxis] = (((int16_t)i2c_buffer[physicalOffset<<1]) << 8) | i2c_buffer[(physicalOffset<<1)+1];
+			acc[logicalAxis] -= sensorOffset[physicalOffset];
+			if (sensorDef.acc[logicalAxis].dir == -1)
+				acc[logicalAxis] = -acc[logicalAxis];
+		}
+
+		for (logicalAxis=0; logicalAxis<3; logicalAxis++) {
+			physicalOffset = (sensorDef.gyro[logicalAxis].idx) + 4; // TODO: A hack to get to the gyro data.
+			int16_t result = (((int16_t)i2c_buffer[physicalOffset<<1]) << 8) | i2c_buffer[(physicalOffset<<1)+1];
+			result -= sensorOffset[physicalOffset];
+			if (sensorDef.gyro[logicalAxis].dir == -1)
+				result = -result;
+			gyro[logicalAxis] = result;
+	    	gyroSum[logicalAxis] += result;
+		}
+	}
+
+	inline void startAllSensorsAsync() {
+		i2c_read_regs_async(devAddr, MPU6050_RA_ACCEL_XOUT_H, 14);
+	}
+
+	inline void resetGyroSums() {
+		gyroSum[X] = 0;
+		gyroSum[Y] = 0;
+		gyroSum[Z] = 0;
+	}
 
 	// gyro calibration value. Only public for debug's sake.
-	int16_t sensorOffset[3+3+1];
+	// 3 acc, 1 thermometer (not used), 3 gyro, 1 CRC
+	int16_t sensorOffset[3+1+3+1];
 
 private:
 	void initialOrientation();
-	//void initSensorOrientationRaw();
-	//void initSensorOrientationFaceUp();
-	//void initSensorOrientationChipTextRightSideUp();
-	//void initSensorOrientationChipTextStandingOnEnd();
 
 	uint16_t CRC();
-	void getSensor(int16_t* result, uint8_t which);
+	//void getSensor(int16_t* result, uint8_t which);
 	void saveSensorCalibration();
-	void transformRotationRates(int16_t* gyro);
-	void transformAccelerations(int16_t* acc);
 
 	void rotateMajorAxis();
 

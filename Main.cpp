@@ -130,7 +130,7 @@ void initHW() {
 	// HW
 	// TODO: Only unjam in case of jam.
 	// TODO: Auto addressing. Combine with unjam?
-	mpu.setAddr(0x68);
+	mpu.setAddr(config.mpu6050Address);
 	mpu.unjam();
 	mpu.init();
 
@@ -141,6 +141,9 @@ void initHW() {
 
 	// Init RC-Input
 	initRC();
+
+	// Enable Timer1 Interrupt for timing
+	TIMSK1 |= 1<<TOIE1;
 }
 
 /**********************************************/
@@ -172,12 +175,7 @@ void initState() {
 	// This needs a working acc. sensor.
 	imu.init();
 
-	if (!mpu.loadSensorCalibration()) {
-		calibrateSensor(MPU6050::GYRO);
-		mpu.resetAccCalibration();
-	}
-
-	printf_P(PSTR("Type \"help\" for help.\r\n"));
+//	printf_P(PSTR("Type \"help\" for help.\r\n"));
 }
 
 void checkwatchdog(void) __attribute__((naked))
@@ -197,6 +195,8 @@ void checkwatchdog(void) {
 	//	main();
 }
 
+extern void updateGimbalState();
+
 int main() {
 	// TODO: Can this be moved down?
 	config.checkRAMImageValid();
@@ -206,8 +206,7 @@ int main() {
 
 	// If it was not a WDT reset
 	// if (watchdogResetWasIntended || doubleFault || !(mcusr_mirror & (1<<3))) {
-	if (true)
-	{
+	if (true) {
 		initState();
 		watchdogResetWasIntended = false;
 		doubleFault = false;
@@ -216,15 +215,19 @@ int main() {
 		doubleFault = true;
 	}
 
+	// Start the I2C and fast/medium loop mill, now already.
+	mpu.startAllSensorsAsync();
+
+	// TODO: IMU may load a bad vectors because not yet calibrated.
+	if (!mpu.loadSensorCalibration()) {
+		calibrateSensor(MPU6050::GYRO);
+		mpu.resetAccCalibration();
+	}
+
 	wdt_enable(WDT_TIMEOUT);
 	printf_P(PSTR("Go!\r\n"));
 
-	gimbalState = BACKGROUND_TASKS_RUN | PIDS_ARE_OUTPUT | MOTORS_POWERED;
-
-	// Enable Timer1 Interrupt for timing
-	TIMSK1 |= 1<<TOIE1;
-
-	mpu.startAllSensorsAsync();
+	updateGimbalState();
 
 	slowLoop();
 }

@@ -14,27 +14,29 @@ void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
 	/*
-	pitchKp = 1100;
-	pitchKi = 1500;
-	pitchKd = 200;
-	rollKp = 800;
+	pitchKp = 400;
+	pitchKi = 1000;
+	pitchKd = 160;
+	rollKp = 750;
+	rollKi = 1200;
+	rollKd = 400;
+	*/
+	pitchKp = 300;
+	pitchKi = 600;
+	pitchKd = 150;
+	rollKp = 650;
 	rollKi = 800;
 	rollKd = 500;
-	*/
-	pitchKp = 400;
-	pitchKi = 600;
-	pitchKd = 180;
-	rollKp = 800;
-	rollKi = 800;
-	rollKd = 700;
 
-	ILimit = 20000;
+	ILimit = 15000;
 
 	accTimeConstant = 4;
 
 	// default nothing at all.
-	rollMotorPower = 0;
-	pitchMotorPower = 0;
+	//rollMotorPower = 180;
+	//pitchMotorPower = 165;
+	rollMotorPower = 75;
+	pitchMotorPower = 75;
 
 	RCRoll.defaultAngle = 0;
 	RCRoll.minAngle = TO_NERD_DEGREES(-20);
@@ -46,8 +48,8 @@ void Configuration::setDefaults() {
 	RCPitch.maxAngle = TO_NERD_DEGREES(0);
 	RCPitch.speed = 10;
 
-	rollOutputRateLimit = 20;
-	pitchOutputRateLimit = 20;
+	rollOutputRateLimit = 35;
+	pitchOutputRateLimit = 35;
 
 	rcAbsolute = true;
 	axisReverseZ = true;
@@ -56,11 +58,14 @@ void Configuration::setDefaults() {
 
 	frozenGimbalPower = 10;
 
-	LEDMask = LED_SERIAL_RX;
+	LEDMask = LED_SCHEDULER_OVERLOAD_MASK;
+	serialBaudRate = 115200;
 
 	mavlinkSystemId = 42;
 	mavlinkComponentId = 1;
 	mavlinkUseRelativealtitudes = true;
+
+	mpu6050Address = 0x68;
 }
 
 uint16_t Configuration::CRC() {
@@ -150,7 +155,7 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 
 { "systemId", UINT8, &config.mavlinkSystemId, NULL },
 { "componentId", UINT8, &config.mavlinkComponentId, NULL },
-{ "relativeAlt", UINT32, &config.mavlinkUseRelativealtitudes, NULL },
+{ "relativeAlt", BOOL, &config.mavlinkUseRelativealtitudes, NULL },
 
 { "", BOOL, NULL, NULL } // terminating NULL required !!
 };

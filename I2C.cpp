@@ -9,11 +9,11 @@
 #define I2C_PULLUPS_DISABLE        PORTC &= ~(1<<4); PORTC &= ~(1<<5);
 
 volatile uint8_t i2c_errors_count;
-uint8_t i2c_interrupt_hits[8];
+uint8_t i2c_interrupt_hits[10];
 
 // Okay this is not pretty.
 // We could make a struct representing this and let caller pass a pointer to one, if we need to.
-uint8_t i2c_buffer[12];
+uint8_t i2c_buffer[14];
 volatile uint8_t i2c_async_status;
 static volatile uint8_t i2c_async_sladr;
 static volatile uint8_t i2c_async_reg;
