@@ -59,7 +59,7 @@ extern void recalcMotorPower();
 #define GYRO_FILTER 32L
 
 void runAutosetup() {
-#if SUPPORT_AUTOSETUP == 1
+#ifdef SUPPORT_AUTOSETUP
 	static uint8_t resultingMajorAxis;
 	static uint8_t resultingZRotation;
 	static bool resultingZReversal;

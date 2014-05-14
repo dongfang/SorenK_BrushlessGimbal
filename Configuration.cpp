@@ -10,6 +10,13 @@ Configuration config;
 ConfigDef_t configDef;
 ConfigUnion_t configUnion;
 
+LiveControlAxisDef liveControlDefs[2];
+
+void initControlLimits() {
+	liveControlDefs[ROLL].convertFrom(&config.controlInput[ROLL]);
+	liveControlDefs[PITCH].convertFrom(&config.controlInput[PITCH]);
+}
+
 void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
@@ -38,18 +45,21 @@ void Configuration::setDefaults() {
 	rollMotorPower = 75;
 	pitchMotorPower = 75;
 
-	RCRoll.defaultAngle = 0;
-	RCRoll.minAngle = TO_NERD_DEGREES(-20);
-	RCRoll.maxAngle = TO_NERD_DEGREES(20);
-	RCRoll.speed = 10;
+	controlInput[ROLL].defaultAngle = 0;
+	controlInput[ROLL].minAngle = -20;
+	controlInput[ROLL].maxAngle = 20;
+	controlInput[ROLL].speed = 10;
 
-	RCPitch.defaultAngle = TO_NERD_DEGREES(0);
-	RCPitch.minAngle = TO_NERD_DEGREES(-90);
-	RCPitch.maxAngle = TO_NERD_DEGREES(0);
-	RCPitch.speed = 10;
+	controlInput[PITCH].defaultAngle = 0;
+	controlInput[PITCH].minAngle = -90;
+	controlInput[PITCH].maxAngle = 0;
+	controlInput[PITCH].speed = 10;
 
 	rollOutputRateLimit = 35;
 	pitchOutputRateLimit = 35;
+
+	yawServoLimit = 90;
+	yawServoDirection = 1;
 
 	rcAbsolute = true;
 	axisReverseZ = true;
@@ -92,12 +102,14 @@ void Configuration::readEEPROMOrDefault() {
 		printf_P(PSTR("EEPROM CRC failed, initialize EEPROM\r\n"));
 		setDefaults();
 		writeEEPROM();
+
 	}
 }
 
 void Configuration::checkRAMImageValid() {
 	if (crc16 != CRC()) {
 		readEEPROMOrDefault();
+		updateAllParameters();
 	}
 }
 
@@ -134,15 +146,15 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "pitchRateLimit", UINT8, &config.pitchOutputRateLimit, NULL },
 { "rollRateLimit", UINT8, &config.rollOutputRateLimit, NULL },
 
-{ "rollMin", INT16, &config.RCRoll.minAngle, },
-{ "rollMax", INT16, &config.RCRoll.maxAngle, },
-{ "rollSpeed", UINT8, &config.RCRoll.speed, NULL },
-{ "rollDefault", INT16, &config.RCRoll.defaultAngle, },
+{ "rollMin", INT8, &config.controlInput[ROLL].minAngle, &initControlLimits },
+{ "rollMax", INT8, &config.controlInput[ROLL].maxAngle, &initControlLimits },
+{ "rollSpeed", UINT8, &config.controlInput[ROLL].speed, &initControlLimits },
+{ "rollDefault", INT8, &config.controlInput[ROLL].defaultAngle, &initControlLimits },
 
-{ "pitchMin", INT16, &config.RCPitch.minAngle,  },
-{ "pitchMax", INT16, &config.RCPitch.maxAngle,  },
-{ "pitchSpeed", UINT8, &config.RCPitch.speed, NULL },
-{ "pitchDefault", INT16, &config.RCPitch.defaultAngle, },
+{ "pitchMin", INT8, &config.controlInput[PITCH].minAngle, &initControlLimits },
+{ "pitchMax", INT8, &config.controlInput[PITCH].maxAngle, &initControlLimits },
+{ "pitchSpeed", UINT8, &config.controlInput[PITCH].speed, &initControlLimits },
+{ "pitchDefault", INT8, &config.controlInput[PITCH].defaultAngle, &initControlLimits },
 
 { "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
 { "majorAxis", UINT8, &config.majorAxis, 		&fixme_initSensorOrientation },
@@ -210,14 +222,15 @@ void writeConfig(ConfigDef_t* def, int32_t val) {
 		def->updateFunction();
 }
 
-void updateAllParameters() {
-	recalcMotorPower();
-	initPIDs();
-	// mpu.setDLPFMode(config.mpuLPF);
-	fixme_initSensorOrientation();
-}
-
 void initPIDs(void) {
 	rollPID.setCoefficients(config.rollKp, config.rollKi / 10, config.rollKd, config.ILimit);
 	pitchPID.setCoefficients(config.pitchKp, config.pitchKi / 10, config.pitchKd, config.ILimit);
 }
+
+void updateAllParameters() {
+	recalcMotorPower();
+	initPIDs();
+	initControlLimits();
+	fixme_initSensorOrientation();
+}
+

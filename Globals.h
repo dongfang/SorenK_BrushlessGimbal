@@ -7,65 +7,58 @@
 #include "MPU6050.h"
 #include "IMU.h"
 #include "PID.h"
+#include "Board.h"
 
-extern uint8_t mcusr_mirror;	// Why did the CPU reset status
+extern uint8_t mcusr_mirror;		// Why did the CPU reset status
 
-extern MPU6050 mpu;
-extern IMU imu;
-extern SerialCommand sCmd;     	// Create SerialCommand object
-extern PID pitchPID;
-extern PID rollPID;
-extern UARTSerial serial0;		// Serial stream
-extern Configuration config;
+extern MPU6050 mpu;					// The inertial sensor abstraction
+extern IMU imu;						// The IMU/AHRS instance, calculating attitude
+extern SerialCommand sCmd;     		// Serial command object
+extern PID pitchPID;				// PID controller
+extern PID rollPID;					// PID controller
+extern UARTSerial serial0;			// Serial stream
+extern Configuration config;		// Static config
+extern LiveControlAxisDef liveControlDefs[];	// Angles in converted units
 
-extern volatile bool runMainLoop;
-extern bool watchdogResetWasIntended;
+extern bool watchdogResetWasIntended; // The reset command uses a WDT timeout to reset system; in this case we want no warning about it.
 
-extern uint8_t syncCounter;		// Timer1 overflow divider to mainloop frequency.
-extern bool doubleFault;		// Set true after a WDT reset. Set false after mainloop completion.
-								// If true at WDT reset time, init not only HW but also state.
-extern int16_t rollAngleSet;
-extern int16_t pitchAngleSet;
+extern bool doubleFault;			// Set true after a WDT reset. Set false after mainloop completion.
+									// If true at WDT reset time, init not only HW but also state.
 
-extern int16_t rollPIDVal;
-extern int16_t rollPIDDelta;
+extern int16_t rollAngleSet;		// Roll angle the gimbal should aim at (in Nerd Degrees, 1 full circle = 1<<16)
+extern int16_t pitchAngleSet;		// Pitch angle the gimbal should aim at (in Nerd Degrees, 1 full circle = 1<<16)
+
+extern int16_t rollPIDVal;			// Latest PID output
+extern int16_t rollPIDDelta;		// Difference from previous one
 extern int16_t pitchPIDVal;
 extern int16_t pitchPIDDelta;
 
-// Output signals, 2x3 phases
-extern uint8_t motorPhases[2][3];
-// 0..15
-extern volatile uint8_t softStart;
+
+extern uint8_t motorPhases[2][3];	// Output signals, 2x3 phases
+extern volatile uint8_t softStart;	// 0..15
 
 extern uint8_t pwmSinMotorPitch[N_SIN];
 extern uint8_t pwmSinMotorRoll[N_SIN];
 
-struct RCData_t {
-	// Number of 1/16 micros
-	uint16_t m_16;
-	// is pulse complete
-	bool pulseComplete;
-	// counter, for how many update cycles was there no new pulse
-	uint8_t timeout;
-	// the value of the channel
-	int16_t setpoint;
-	inline bool isTimedOut() { return timeout >= 200; }
-};
-
 extern RCData_t rcData[RC_DATA_SIZE];
 extern int8_t switchPos;
 
-extern volatile bool newPWMData;
-extern volatile uint8_t gimbalState;
-extern volatile bool mediumTaskHasRun;
+extern volatile bool newPWMData;		// Whether there is new output data to latch out
+extern volatile uint8_t gimbalState;	// Control flags for gimbal control
+extern volatile bool mediumTaskHasRun;	// Sync main loop to medium task
 
-extern uint8_t interfaceState;
+extern uint8_t interfaceState;			// Control flags for serial interface
 
 /*
  * How often was the max. PID output rotation rates exceeded,
  * this is indicative of self-oscillation / runaway
  */
 extern volatile uint8_t overrate;
+
+extern int16_t targetSources[][2];
+extern uint8_t targetSource;
+
+extern int16_t transient[2];
 
 #endif
 

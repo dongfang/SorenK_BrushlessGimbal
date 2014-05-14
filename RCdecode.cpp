@@ -49,20 +49,20 @@ ISR(PCINT1_vect) {
 	// If PPM is desired, make an check and branch here.
 	if (change & 1) {
 		if (pin & 1) {
-			rcData[RC_DATA_ROLL].m_16 = frozenTime;
-			rcData[RC_DATA_ROLL].pulseComplete = false;
+			rcData[ROLL].m_16 = frozenTime;
+			rcData[ROLL].pulseComplete = false;
 		} else {
-			rcData[RC_DATA_ROLL].m_16 = frozenTime - rcData[RC_DATA_ROLL].m_16;
-			rcData[RC_DATA_ROLL].pulseComplete = true;
+			rcData[ROLL].m_16 = frozenTime - rcData[ROLL].m_16;
+			rcData[ROLL].pulseComplete = true;
 		}
 	}
 	if (change & 2) {
 		if (pin & 2) {
-			rcData[RC_DATA_PITCH].m_16 = frozenTime;
-			rcData[RC_DATA_PITCH].pulseComplete = false;
+			rcData[PITCH].m_16 = frozenTime;
+			rcData[PITCH].pulseComplete = false;
 		} else {
-			rcData[RC_DATA_PITCH].m_16 = frozenTime - rcData[RC_DATA_PITCH].m_16;
-			rcData[RC_DATA_PITCH].pulseComplete = true;
+			rcData[PITCH].m_16 = frozenTime - rcData[PITCH].m_16;
+			rcData[PITCH].pulseComplete = true;
 		}
 	}
 	if (change & 4) {
@@ -98,23 +98,22 @@ void initRC() {
 //******************************************
 // Integrating
 //******************************************
-void evalRCChannelIntegrating(RCData_t* rcData, RCChannelDef* def) {
+void evalRCChannelIntegrating(uint8_t ch) {
+	RCData_t* rcData = rcData + ch;
+	LiveControlAxisDef* def = liveControlDefs + ch;
+
 	cli();
 	uint16_t rx = rcData->m_16;
 	sei();
 	int16_t live = rx - MID_RC - RC_DEADBAND;
-	if (live <= 0) {
+	if (live <= 0) { 							// below top of deadband
 		live = rx - MID_RC + RC_DEADBAND;
-		if (live >= 0)
+		if (live >= 0)							// in deadband
 			return;
 	}
 
-	rcData->setpoint += (int32_t)def->speed * live / 16384L;
-
-	if (rcData->setpoint > def->maxAngle)
-		rcData->setpoint = def->maxAngle;
-	if (rcData->setpoint < def->minAngle)
-		rcData->setpoint = def->minAngle;
+	// live is in the order [-500*16..500*16]
+	targetSources[TARGET_SOURCE_RC][ch] += (int32_t) def->maxSlewRate * live / (RC_RANGE/2);
 }
 
 //******************************************
@@ -124,50 +123,39 @@ void evalRCChannelIntegrating(RCData_t* rcData, RCChannelDef* def) {
 // in this system. Got to find a way to
 // eliminate that.
 //******************************************
-void evalRCChannelAbsolute(RCData_t* rcData, RCChannelDef* def) {
+void evalRCChannelAbsolute(uint8_t ch) {
 	static int16_t pladder;
 
+	// RCData_t* rcData = rcData + ch;
+	// LiveControlAxisDef* def = liveControlDefs + ch;LiveControlAxisDef* def = liveControlDefs + ch;
+
 	cli();
-	uint16_t rx = rcData->m_16;
+	uint16_t rx = rcData[ch].m_16;
 	sei();
 	int16_t result = rx - MID_RC;
-	result = (result + pladder*1023L)/1024L;
+	result = (result + pladder * 1023L) / 1024L;
 	pladder = result;
-	result += (def->maxAngle-def->minAngle)/2;
 
-	if (result > def->maxAngle)
-		result = def->maxAngle;
-	if (result < def->minAngle)
-		result = def->minAngle;
-
-	rcData->setpoint = result;
+	result += liveControlDefs[ch].midAngleND;
+	targetSources[TARGET_SOURCE_RC][ch] = result;
 }
 
 void evaluateRCControl() {
-	if (rcData[RC_DATA_ROLL].pulseComplete) {
-		rcData[RC_DATA_ROLL].timeout = 0;
-		if (config.rcAbsolute)
-			evalRCChannelAbsolute(&rcData[RC_DATA_ROLL], &config.RCRoll);
-		else
-			evalRCChannelIntegrating(&rcData[RC_DATA_ROLL], &config.RCRoll);
-	} else {
-		if (rcData[RC_DATA_ROLL].isTimedOut())
-			rcData[RC_DATA_ROLL].setpoint = config.RCRoll.defaultAngle;
-		else
-			rcData[RC_DATA_ROLL].timeout++;
-	}
+	uint8_t ch;
 
-	if (rcData[RC_DATA_PITCH].pulseComplete) {
-		rcData[RC_DATA_PITCH].timeout = 0;
-		if (config.rcAbsolute)
-			evalRCChannelAbsolute(&rcData[RC_DATA_PITCH], &config.RCPitch);
-		else
-			evalRCChannelIntegrating(&rcData[RC_DATA_PITCH], &config.RCPitch);
-	} else {
-		if (rcData[RC_DATA_PITCH].isTimedOut())
-			rcData[RC_DATA_PITCH].setpoint = config.RCPitch.defaultAngle;
-		else
-			rcData[RC_DATA_PITCH].timeout++;
+	for (ch = ROLL; ch <= PITCH; ch++) {
+		if (rcData[ch].pulseComplete) {
+			rcData[ch].timeout = 0;
+			if (config.rcAbsolute)
+				evalRCChannelAbsolute(ch);
+			else
+				evalRCChannelIntegrating(ch);
+		} else {
+			if (rcData[ch].isTimedOut())
+				targetSources[TARGET_SOURCE_RC][ch] = liveControlDefs[ch].defaultAngleND;
+			else
+				rcData[ch].timeout++;
+		}
 	}
 }
 
@@ -176,15 +164,16 @@ void evaluateRCControl() {
  * It is simply -1 or 1 after evaluation.
  */
 void evaluateRCSwitch() {
-	if (!rcData[RC_DATA_SWITCH].timeout > 0) {
+	RCData_t* swData = rcData + RC_DATA_SWITCH;
+	if (swData->pulseComplete) {
 		cli();
-		uint16_t rx = rcData->m_16;
+		uint16_t rx = swData->m_16;
 		sei();
 		// Do something predictable, such as setting it default-locked.
-		uint16_t lThreshold = MIN_RC/2 + MID_RC/2;
+		uint16_t lThreshold = MIN_RC / 2 + MID_RC / 2;
 		if (switchPos < 0)
 			lThreshold += RC_DEADBAND;
-		uint16_t hThreshold = MID_RC/2 + MAX_RC/2;
+		uint16_t hThreshold = MID_RC / 2 + MAX_RC / 2;
 		if (switchPos > 0)
 			hThreshold -= RC_DEADBAND;
 		if (rx <= lThreshold)
@@ -193,9 +182,8 @@ void evaluateRCSwitch() {
 			switchPos = 1;
 		else
 			switchPos = 0;
-	}
-	else if (rcData[RC_DATA_SWITCH].isTimedOut())
+	} else if (swData->isTimedOut())
 		switchPos = 1;
 	else
-		rcData[RC_DATA_SWITCH].timeout--;
+		swData->timeout++;
 }

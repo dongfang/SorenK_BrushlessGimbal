@@ -87,7 +87,6 @@ float Rajan_FastArcTan2(float y, float x) {
 }
 
 uint16_t time() {
-  uint8_t sreg = SREG;
   cli();
   uint8_t fine = TCNT1;
   uint8_t after;
@@ -98,7 +97,7 @@ uint16_t time() {
 
   uint8_t ext = timer1Extension;
   uint8_t flags = TIFR1;
-  SREG = sreg;
+  sei();
 
   if (flags & (1<<TOV1)) {
 // We simulate the interrupt has happened and the fine timer is zero.
@@ -114,10 +113,19 @@ uint16_t time() {
 }
 
 // same as time() but with a wider result.
+/*
 uint32_t time32() {
-	cli();
 	uint16_t t = time();
 	return t + ((uint32_t)timer1ExtensionExtension << 16);
+}
+*/
+
+// In units of 510/F_CPU
+uint32_t coarseTime() {
+	cli();
+	uint32_t t = timer1Extension + ((uint32_t)timer1ExtensionExtension<<8);
+	sei();
+	return t;
 }
 
 /*
@@ -153,6 +161,14 @@ void setBits(uint8_t* writtenTo, uint8_t bitStart, uint8_t length, uint8_t newBi
 	newBits &= mask; // zero all non-important bits in data
 	*writtenTo &= ~(mask); // zero all important bits in existing byte
 	*writtenTo |= newBits; // combine data with existing byte
+}
+
+int16_t degreesToND(int8_t a) {
+	return a * (65536L / 360);
+}
+
+int8_t NDToDegrees(int16_t a) {
+	return (a * 360L) / 65536;
 }
 
 #ifdef DO_PERFORMANCE

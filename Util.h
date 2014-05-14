@@ -123,9 +123,17 @@ inline uint32_t abs32(int32_t z) {
 	return z < 0 ? -z : z;
 }
 
+#define COARSE_TIME_UNITS (510.0/F_CPU)
+// In CPU cycles
 uint16_t time();
-void wait_16_micros(uint8_t n);
 
+// In units of 510/F_CPU
+uint32_t coarseTime();
+
+//void wait_16_micros(uint8_t n);
+
+int16_t degreesToND(int8_t a);
+int8_t NDToDegrees(int16_t a);
 
 uint8_t selectBits(uint8_t data, uint8_t bitStart, uint8_t length);
 void setBits(uint8_t* writtenTo, uint8_t bitStart, uint8_t length, uint8_t newBits);

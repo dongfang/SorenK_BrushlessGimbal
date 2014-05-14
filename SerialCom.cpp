@@ -180,14 +180,33 @@ void printHelpUsage() {
 	printf_P(PSTR("\r\n"));
 	printf_P(PSTR("These are the preferred commands, use them for new GUIs.\r\n"));
 	printf_P(PSTR("\r\n"));
+	printf_P(PSTR("Configuration:\r\n"));
 	printf_P(PSTR("sd    Set Defaults\r\n"));
 	printf_P(PSTR("we    Writes active config to eeprom\r\n"));
 	printf_P(PSTR("re    Restores values from eeprom to active config\r\n"));
-	printf_P(PSTR("cal   Recalibrates the gyro\r\n"));
-#if SUPPORT_AUTOSETUP == 1
-	printf_P(PSTR("setup Autosetup\r\n"));
+	printf_P(PSTR("par   <parName> <parValue>   General parameter read/set command\r\n"));
+	printf_P(PSTR("        example usage:\r\n"));
+	printf_P(PSTR("        par                     ... list all config parameters\r\n"));
+	printf_P(PSTR("        par pitchKi             ... list pitchKi\r\n"));
+	printf_P(PSTR("        par pitchKi 12000       ... set pitchKi to 12000\r\n"));
+#ifdef SUPPORT_AUTOSETUP
+	printf_P(PSTR("setup Autosetup (of sensor orientation and motor directions)\r\n"));
 #endif
+	printf_P(PSTR("\r\n"));
+	printf_P(PSTR("Tuning:\r\n"));
+	printf_P(PSTR("cal   Recalibrates the gyro\r\n"));
 	printf_P(PSTR("level Sets level (place gimbal firmly level and run)\r\n"));
+	printf_P(PSTR("osc <n> Starts oscillation with speed n (0 to stop)\r\n"));
+	printf_P(PSTR("trans <rol|pitch|both|off> n Starts transients with amplitude ntest\r\n"));
+	printf_P(PSTR("\r\n"));
+	printf_P(PSTR("Run-state:\r\n"));
+	printf_P(PSTR("run	  Resume running normally\r\n"));
+	printf_P(PSTR("stop	  Freeze gimbal\r\n"));
+	printf_P(PSTR("off	  Cut output power\r\n"));
+	printf_P(PSTR("reset  Restart system\r\n"));
+	printf_P(PSTR("ml	  Switch to MAVLink control\r\n"));
+	printf_P(PSTR("\r\n"));
+	printf_P(PSTR("Diags:\r\n"));
 	printf_P(PSTR("debug <category> Prints troubleshooting info\r\n"));
 	printf_P(PSTR("        debug usage:\r\n"));
 	printf_P(PSTR("        debug off               ... turns off debug\r\n"));
@@ -195,21 +214,10 @@ void printHelpUsage() {
 	printf_P(PSTR("        debug gyro              ... prints gyro values\r\n"));
 	printf_P(PSTR("        debug att               ... prints attitude\r\n"));
 	printf_P(PSTR("        debug pid               ... prints PID outputs\r\n"));
-	printf_P(PSTR("par   <parName> <parValue>   General parameter read/set command\r\n"));
-	printf_P(PSTR("        example usage:\r\n"));
-	printf_P(PSTR("        par                     ... list all config parameters\r\n"));
-	printf_P(PSTR("        par pitchKi             ... list pitchKi\r\n"));
-	printf_P(PSTR("        par pitchKi 12000       ... set pitchKi to 12000\r\n"));
 #ifdef DO_PERFORMANCE
 	printf_P(PSTR("perf	 Prints performace info\r\n"));
 #endif
-	printf_P(PSTR("\r\n"));
-	printf_P(PSTR("osc <n> Starts oscillation with speed n (0 to stop)\r\n"));
-	printf_P(PSTR("trans <rol|pitch|both|off> n Starts transients with amplitude ntest\r\n"));
-	printf_P(PSTR("\r\n"));
-	printf_P(PSTR("reset  Reboot system\r\n"));
 	printf_P(PSTR("help   print this output\r\n"));
-	printf_P(PSTR("\r\n"));
 	printf_P(PSTR("Commands and parameter names are case-insensitive.\r\n"));
 }
 
@@ -303,9 +311,9 @@ void debug() {
 		x = imu.angle_i16[ROLL];
 		y = imu.angle_i16[PITCH];
 		sei();
-		sprintf_P(temp, PSTR("%d"), x / (32768 / 1800));
+		sprintf_P(temp, PSTR("%d"), NDToDegrees(x));
 		printf_P(PSTR("att: roll %s"), temp);
-		sprintf_P(temp, PSTR("%d"), y / (32768 / 1800));
+		sprintf_P(temp, PSTR("%d"), NDToDegrees(y));
 		//insertComma(temp);
 		printf_P(PSTR("\tpitch %s\r\n"), temp);
 		break;
@@ -346,8 +354,8 @@ void debug() {
 		break;
 	case DEBUG_RC:
 		printf_P(PSTR("rc: switch %d\troll %d\talive %S\tpitch %d\tsignal %S\r\n"), switchPos,
-				rcData[RC_DATA_ROLL].setpoint, (rcData[RC_DATA_ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
-				rcData[RC_DATA_PITCH].setpoint, (rcData[RC_DATA_PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
+				rcData[ROLL].setpoint, (rcData[ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
+				rcData[PITCH].setpoint, (rcData[PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
 
 		break;
 	case DEBUG_ORATE:
@@ -391,7 +399,7 @@ void setSerialProtocol() {
 	sCmd.addCommand("sd", setDefaultParametersAndUpdate);
 	sCmd.addCommand("we", writeEEPROM);
 	sCmd.addCommand("re", readEEPROM);
-#if SUPPORT_AUTOSETUP == 1
+#ifdef SUPPORT_AUTOSETUP
 	sCmd.addCommand("setup", startAutosetup);
 #endif
 	sCmd.addCommand("par", parameterMod);

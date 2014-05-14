@@ -1,3 +1,8 @@
+#ifndef __DEFINITIONS_H
+#define __DEFINITIONS_H
+
+#include "Util.h"
+
 /*************************/
 /* Definitions           */
 /*************************/
@@ -67,8 +72,8 @@
 
 // RC data size and channel assigment
 #define RC_DATA_SIZE  3
-#define RC_DATA_PITCH 0
-#define RC_DATA_ROLL  1
+//#define RC_DATA_PITCH 0
+//#define RC_DATA_ROLL  1
 #define RC_DATA_SWITCH  2
 
 // RC PPM pin A0, A1 or A2
@@ -79,6 +84,7 @@
 #define MIN_RC (1100*16)
 #define MID_RC (1500*16)
 #define MAX_RC (1900*16)
+#define RC_RANGE (1000*16)
 #define RC_DEADBAND (50*16)
 
 // PPM Decoder
@@ -127,7 +133,7 @@
 #define LED_I_LIMIT_MASK 1
 #define LED_SCHEDULER_OVERLOAD_MASK 2
 #define LED_SPEED_LIMIT_MASK 4
-#define LED_SERIAL_RX 8
+#define LED_MAVLINK_RX 8
 #define LED_I2C_TIMEOUT_MASK 16
 #define LED_RC_MASK 32
 #define LED_RC_MISSED 64
@@ -170,11 +176,14 @@
 
 #define TARGET_SOURCE_RC 0
 #define TARGET_SOURCE_OSC 1
-#define TARGET_SOURCE_AUTOCAL 2
+#define TARGET_SOURCE_AUTOSETUP 2
+#define TARGET_SOURCE_MAVLINK 3
+#define TARGET_SOURCES_END 4
 
 #define INTERFACE_STATE_CONSOLE 0
 #define INTERFACE_STATE_AUTOSETUP 1
-#define INTERFACE_STATE_MAVLINK 2
+#define INTERFACE_STATE_GUI 2
+#define INTERFACE_STATE_MAVLINK 3
 
 // maybe about 10 degrees/s. That is 70 (or 72) e-degrees a sec, or 72*256/1000 microsteps per millisecond. About 18
 #define SETUP_MOVE_DIVIDER 20
@@ -183,3 +192,48 @@
 
 #define SUPPORT_AUTOSETUP 1
 #define SUPPORT_MAVLINK 1
+
+
+/*
+ * RC signal input
+ */
+struct RCData_t {
+	// Number of 1/16 micros
+	uint16_t m_16;
+	// is pulse complete
+	bool pulseComplete;
+	// counter, for how many update cycles was there no new pulse
+	uint8_t timeout;
+	inline bool isTimedOut() { return timeout >= 200; }
+};
+
+/*
+ * For storage, with human readable scaling in degrees
+ */
+struct ControlAxisDef {
+	int8_t minAngle;
+	int8_t maxAngle;
+	int8_t defaultAngle;				// if no signal
+	uint8_t maxSlewRate;
+};
+
+/*
+ * Above struct in Nerd Degrees (ND), 1 full circle = 1<<16 ND
+ */
+struct LiveControlAxisDef {
+	int16_t defaultAngleND;
+	int16_t minAngleND;
+	int16_t maxAngleND;
+	int16_t midAngleND;
+	uint8_t maxSlewRate;
+
+	void convertFrom(ControlAxisDef* source) {
+		defaultAngleND = degreesToND(source->defaultAngle);
+		minAngleND = degreesToND(source->minAngle);
+		maxAngleND = degreesToND(source->maxAngle);
+		maxSlewRate = source->maxSlewRate;
+		midAngleND = (maxAngleND-minAngleND)/2;
+	}
+};
+
+#endif

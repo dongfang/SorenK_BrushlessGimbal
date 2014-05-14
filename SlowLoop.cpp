@@ -2,6 +2,7 @@
 #include "Definitions.h"
 #include "Board.h"
 #include "RCdecode.h"
+#include "Mavlink.h"
 
 uint8_t interfaceState;
 
@@ -25,6 +26,7 @@ inline bool checkMediumLoop() {
 extern void transientTask();
 extern void oscillationTask();
 extern void runAutosetup();
+extern void debug();
 
 void slowLoop() {
 	static uint8_t humanDebugDivider;
@@ -47,38 +49,32 @@ void slowLoop() {
 		 }
 		 */
 		if (ticked) {
-			// RCDivider = RC_LATCH;
-			// Evaluate RC-Signals
-			evaluateRCControl();
-			evaluateRCSwitch();
+			// Evaluate RC-Signals. Out of laziness, we ignore these if MAVLink is controlling.
+			if (interfaceState != INTERFACE_STATE_MAVLINK) {
+				evaluateRCControl();
+				evaluateRCSwitch();
+			}
 			updateGimbalState();
 		}
 
-		/*
-		int c = serial0.peek();
-		if (c >= 0)
-			printf_P(PSTR("Peek %d\r\n"), c);
-			*/
-
 		if (interfaceState == INTERFACE_STATE_CONSOLE)
 			sCmd.readSerial();
-		else if (SUPPORT_AUTOSETUP && interfaceState == INTERFACE_STATE_AUTOSETUP)
+#ifdef SUPPORT_AUTOSETUP
+		else if (interfaceState == INTERFACE_STATE_AUTOSETUP)
 			runAutosetup();
-		else if (interfaceState == INTERFACE_STATE_MAVLINK) ;
-
-		/*
-		if (ticked && !softstartDivider) {
-			softstartDivider = SOFTSTART_LATCH;
-			updateSoftStart();
+#endif
+		else if (interfaceState == INTERFACE_STATE_MAVLINK) {
+			if (mavlink_parse()) {
+				LEDEvent(LED_MAVLINK_RX);
+			}
 		}
-		*/
 
-		if (ticked && !humanDebugDivider) {
+		if (interfaceState == INTERFACE_STATE_CONSOLE && ticked && !humanDebugDivider) {
 			humanDebugDivider = HUMAN_DEBUG_LATCH;
 			debug();
 		}
 
-		if (ticked && !GUIDebugDivider) {
+		if (interfaceState == INTERFACE_STATE_GUI && ticked && !GUIDebugDivider) {
 			GUIDebugDivider = GUI_DEBUG_LATCH;
 			GUIDebug();
 		}

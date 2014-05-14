@@ -16,6 +16,19 @@ volatile uint8_t gimbalState;
 volatile bool newPWMData;
 volatile bool mediumTaskHasRun;
 
+#ifdef USE_YAWSERVO
+volatile uint16_t yawServoPauseLength;
+volatile uint8_t yawServoPulseLength;
+
+void setServoOut(uint8_t pulse) {
+	cli();
+	yawServoPulseLength = pulse;
+	yawServoPauseLength = 627 - pulse; // for about 50Hz repeat rate.
+	sei();
+}
+
+#endif
+
 void fastTask();
 void mediumTask();
 
@@ -32,7 +45,20 @@ ISR (TIMER1_OVF_vect) {
   static uint8_t mediumState = IDLE;
   static uint8_t fastDivider = FAST_PERIOD;
   static uint8_t mediumDivider = MEDIUM_SUBPERIOD;
+  static bool yawServoBit;
+  static uint16_t yawServoDivider;
   sei();
+#ifdef USE_YAWSERVO
+  if (!--yawServoDivider) {
+	  if (yawServoBit && (gimbalState & MOTORS_POWERED)) {
+		  YAWSERVO_PORT |= 1<<YAWSERVO_BIT;
+		  yawServoDivider = yawServoPauseLength;
+	  } else {
+		  YAWSERVO_PORT &= ~(1<<YAWSERVO_BIT);
+		  yawServoDivider = yawServoPulseLength;
+	  }
+  }
+#endif
   fastDivider--;	// decrements at F_CPU/256 so after time T it is T*F_CPU/256
   if (!(++timer1Extension)) {			// Overflows at 122.55 Hz
 	  timer1ExtensionExtension++;

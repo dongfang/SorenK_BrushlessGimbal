@@ -1,8 +1,33 @@
 #include "Globals.h"
 #include "Definitions.h"
 
-extern int16_t getRollTarget();
-extern int16_t getPitchTarget();
+uint8_t targetSource;
+int16_t targetSources[TARGET_SOURCES_END][2];
+
+int16_t getTarget(uint8_t axis) {
+	static int16_t lastResults[2];
+
+	int16_t result = targetSources[targetSource][axis];
+	int16_t diff = result - lastResults[axis];
+
+	if (diff) {
+		if (diff > config.controlInput[PITCH].maxSlewRate) {
+			result = lastResults[axis] + config.controlInput[PITCH].maxSlewRate;
+		} else if (diff < -config.controlInput[PITCH].maxSlewRate) {
+			result = lastResults[axis] - config.controlInput[PITCH].maxSlewRate;
+		}
+
+		LiveControlAxisDef* def = liveControlDefs + axis;
+
+		if (result > def->maxAngleND)
+			result = def->maxAngleND;
+		if (result < def->minAngleND)
+			result = def->minAngleND;
+
+		lastResults[axis] = result;
+	}
+	return result + transient[axis];
+}
 
 void mediumTask() {
 	static uint8_t softStartDivider;
@@ -12,8 +37,8 @@ void mediumTask() {
 	imu.calculateAttitudeAngles();
 
 	// and the target-angles:
-	rollAngleSet = getRollTarget();
-	pitchAngleSet = getPitchTarget();
+	rollAngleSet = getTarget(ROLL);
+	pitchAngleSet = getTarget(PITCH);
 
 	if (!softStartDivider) {
 		softStartDivider = SOFTSTART_LATCH;
@@ -23,7 +48,7 @@ void mediumTask() {
 			overrate--;
 			if (softStart >= 12) {
 				softStart--;
-				softStartDivider = SOFTSTART_LATCH*12;
+				softStartDivider = SOFTSTART_LATCH * 12;
 				gimbalState &= ~(POWER_RAMPING_COMPLETE);
 			}
 		}

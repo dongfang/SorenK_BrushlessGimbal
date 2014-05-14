@@ -3,14 +3,7 @@
 
 #include <stdint.h>
 #include "Definitions.h"
-
-struct RCChannelDef {
-	int16_t minAngle;			// min may be greater than max to reverse.
-	int16_t maxAngle;			// min may be greater than max to reverse.
-	int16_t defaultAngle;		// if no signal
-	uint8_t speed; 				// integrating mode : Integration speed. Absolute mode: max. speed.
-	//uint8_t LPF; 				// low pass filter for RC absolute mode. I don't like LPFs.
-};
+#include "Util.h"
 
 class Configuration {
 public:
@@ -61,9 +54,11 @@ public:
 	// If MAVLink seen, use that.
 	// If no RC signal, use default angle (a default rate is meaningless)
 	// RC settings
-	RCChannelDef RCPitch;
-	RCChannelDef RCRoll;
+	ControlAxisDef controlInput[2];
 	bool rcAbsolute;
+
+	uint8_t yawServoLimit;
+	int8_t yawServoDirection;
 
 	// RC channels are not configurable. Makes no sense, when it is so easy
 	// to just move the connectors around instead.

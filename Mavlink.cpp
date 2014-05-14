@@ -36,6 +36,19 @@ mavlink_message_t* mavlink_get_channel_buffer(uint8_t chan) {
 	return &receivedMessage;
 }
 
+//uint8_t mavlinkUseRelativealtitudes = 0;
+//int16_t mavlinkTargetPitch;
+int16_t mavlinkTargetBearing;
+
+// How many meters per time unit (one unit being 510 clock cycles)
+float vlat_m_unit;
+float vlon_m_unit;
+
+float lonDiff_m;
+float latDiff_m;
+
+uint32_t unitsAccountedFor = -1;
+
 /*
  * This instance is used in communication with the client (us).
  * There is another internal instance also.
@@ -44,6 +57,14 @@ static mavlink_status_t mavlinkStatus;
 
 /*
  * We send this one back to ground control.
+ *
+ {
+ int32_t pointing_a; ///< pitch(deg*100) or lat, depending on mount mode
+ int32_t pointing_b; ///< roll(deg*100) or lon depending on mount mode
+ int32_t pointing_c; ///< yaw(deg*100) or alt (in cm) depending on mount mode
+ uint8_t target_system; ///< System ID
+ uint8_t target_component; ///< Component ID
+ } mavlink_mount_status_t;
  */
 static mavlink_mount_status_t myStatus;
 
@@ -102,7 +123,7 @@ static uint8_t mavlinkGimbalMode;
  uint8_t stab_yaw; ///< (1 = yes, 0 = no)
  } mavlink_mount_configure_t;
  */
-void processConfigureMount() {
+static void processConfigureMount() {
 	// There shoud be no reason to care about any other than this field. We never stabilize to foreign IMU data anyway.
 	mavlinkGimbalMode = mavlink_msg_mount_configure_get_mount_mode(&receivedMessage);
 }
@@ -118,7 +139,7 @@ void processConfigureMount() {
  uint8_t save_position; ///< if "1" it will save current trimmed position on EEPROM (just valid for NEUTRAL and LANDING)
  } mavlink_mount_control_t;
  */
-void processControlMount() {
+static void processControlMount() {
 	// target position
 	gimbalOrientation.pitchOrLat = mavlink_msg_mount_control_get_input_a(&receivedMessage);
 	gimbalOrientation.rollOrLon = mavlink_msg_mount_control_get_input_b(&receivedMessage);
@@ -145,11 +166,28 @@ void processControlMount() {
  uint16_t hdg; ///< Compass heading in degrees * 100, 0.0..359.99 degrees. If unknown, set to: UINT16_MAX
  } mavlink_global_position_int_t;
  */
-void processGlobalPosition() {
+static void processGlobalPosition() {
 	mavlink_msg_global_position_int_decode(&receivedMessage, &globalPosition);
+	//if (mavlinkGimbalMode == MAV_MOUNT_MODE_GPS_POINT) {
+	if (globalPosition.lat == 0 && globalPosition.lon == 0)
+		return; // we don't know where we are
+	if (gimbalOrientation.pitchOrLat == 0 && gimbalOrientation.rollOrLon == 0)
+		return; // We don't know what to aim at
+	latDiff_m = (gimbalOrientation.pitchOrLat - globalPosition.lat) * 0.011112f;
+	// from cm/sec to m/units: Multiply by sec/unit
+	// n2 = v / (m/unit) = v * unit/m
+	// n =  v / (cm/sec) = v * sec/cm
+	// n2 = f n
+	// f = n2/n = unit/m / sec/cm = cm*COARSE_TIME_UNITS*sec / (sec*m) = COARSE_TIME_UNITS/100
+	vlat_m_unit = globalPosition.vx * (COARSE_TIME_UNITS / 100);
+	float latAsRadians = (float) globalPosition.lat / (1E7 * 180.0 / M_PI);
+	float lonScale = cosf(latAsRadians); // should now be on a -PI/2..PI/2 scale.
+	lonDiff_m = (gimbalOrientation.rollOrLon - globalPosition.lon) * lonScale * 0.011112f;
+	vlon_m_unit = globalPosition.vy * (COARSE_TIME_UNITS / 100);
+	unitsAccountedFor = coarseTime();
 }
 
-bool mavlinkInput() {
+bool mavlink_parse() {
 	bool valid = false;
 	while (serial0.available()) {
 		uint8_t parseResult = mavlink_parse_char(CHAN, serial0.get(), &receivedMessage, &mavlinkStatus);
@@ -163,6 +201,7 @@ bool mavlinkInput() {
 			} else if (msgid == MAVLINK_MSG_ID_MOUNT_STATUS) {
 				// What, we are really supposed just to send these not receive them.
 			} else if (msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT) {
+				processGlobalPosition();
 			}
 		}
 	}
@@ -170,34 +209,61 @@ bool mavlinkInput() {
 	return valid;
 }
 
-int16_t mavlinkTargetPitch;
-int16_t mavlinkTargetBearing ;
+/*
+ * We are looking at a range of about 31.34 each 90 degrees, or 286.875 centi-degrees/step
+ */
 
-void calculateAim() {
-	if (mavlinkGimbalMode == MAV_MOUNT_MODE_GPS_POINT) {
-		if (globalPosition.lat == 0 && globalPosition.lon == 0)
-			return; // we don't know where we are
-		if (gimbalOrientation.pitchOrLat == 0 && gimbalOrientation.rollOrLon == 0) return; // We don't know what to aim at
-		float latDiff_m = (gimbalOrientation.pitchOrLat - globalPosition.lat) * 0.011112f;
-		float lonScale = cosf((float)globalPosition.lat / (10E7 * 180 / M_PI)); // should now be on a -PI/2..PI/2 scale.
-		float lonDiff_m = (gimbalOrientation.pitchOrLat - globalPosition.lat) * lonScale * 0.011112f;
-		int16_t targetBearing = Rajan_FastArcTan2(latDiff_m, lonDiff_m) * 18000/M_PI;
-		float dist_m = sqrtf(latDiff_m * latDiff_m * + lonDiff_m * lonDiff_m);
+#ifdef USE_YAWSERVO
 
-		// It is on an [0..35999] interval, we want.. well anything is fine.
-		// suggest [-17999..18000]
-		int16_t airframeBearing = globalPosition.hdg > 18000 ? globalPosition.hdg-36000 : globalPosition.hdg;
-		// relative.
-		mavlinkTargetBearing = targetBearing - airframeBearing;
+extern void setServoOut(uint8_t pulse);
 
-		float dAlt;
-		if (config.mavlinkUseRelativealtitudes)
-			dAlt= gimbalOrientation.yawOrAlt - globalPosition.relative_alt/1000.0f;
-		else
-			dAlt = gimbalOrientation.yawOrAlt - globalPosition.alt/1000.0f;
-		float pitch = Rajan_FastArcTan2(dist_m, dAlt);
-		mavlinkTargetPitch = pitch * 32768 / M_PI;
+void setYawServo() {
+	static int16_t prevAngle;
+	int16_t angle = mavlinkTargetBearing;
+	int16_t yawServoLimit = config.yawServoLimit * 100;
+	if (angle > yawServoLimit) {
+		angle = yawServoLimit;
+		// Avoid full end to end turns when flying away from target: If we were left before and now full right, stay as before.
+		if (prevAngle < 0)
+			angle = -angle;
+	} else if (angle < -yawServoLimit) {
+		angle = -yawServoLimit;
+		// Avoid full end to end turns when flying away from target: If we were right before and now full left, stay as before.
+		if (prevAngle > 0)
+			angle = -angle;
 	}
+	prevAngle = angle;
+	setServoOut((config.yawServoDirection * angle + 47.06 * 286.875) / 286.875);
 }
+#endif
 
+void mavlink_track() {
+	uint32_t timeUnits = coarseTime();
+	uint32_t unitsToDo = timeUnits - unitsAccountedFor;
+	unitsAccountedFor = timeUnits;
+	lonDiff_m -= unitsToDo * vlon_m_unit;
+	latDiff_m -= unitsToDo * vlat_m_unit;
+	float targetBearing_rad = Rajan_FastArcTan2(lonDiff_m, latDiff_m);
+
+	int16_t targetBearing = targetBearing_rad * (18000.0 / M_PI);
+	float dist_m = sqrtf(latDiff_m * latDiff_m + lonDiff_m * lonDiff_m);
+// Transform to a -180..180 range
+	int32_t temp = (uint32_t) targetBearing - globalPosition.hdg;
+	if (temp < 0)
+		mavlinkTargetBearing = temp + 36000;
+	else if (temp >= 36000)
+		mavlinkTargetBearing = temp - 36000;
+	else
+		mavlinkTargetBearing = temp;
+
+	float dAlt;
+	if (config.mavlinkUseRelativealtitudes)
+		dAlt = (gimbalOrientation.yawOrAlt - globalPosition.relative_alt) / 1000.0f;
+	else
+		dAlt = (gimbalOrientation.yawOrAlt - globalPosition.alt) / 1000.0f;
+	float pitch = Rajan_FastArcTan2(dAlt, dist_m);
+
+	targetSources[TARGET_SOURCE_MAVLINK][ROLL] = 0;
+	targetSources[TARGET_SOURCE_MAVLINK][PITCH] = pitch * (32768.0 / M_PI);
+}
 #endif

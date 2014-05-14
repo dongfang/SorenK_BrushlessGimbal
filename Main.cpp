@@ -52,8 +52,6 @@ uint8_t mcusr_mirror  __attribute__ ((section (".noinit")));
 bool watchdogResetWasIntended __attribute__ ((section (".noinit")));
 bool doubleFault __attribute__ ((section (".noinit")));
 
-uint8_t syncCounter;
-
 uint8_t motorPhases[2][3];
 volatile uint8_t softStart;
 
