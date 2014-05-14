@@ -20,7 +20,7 @@
 extern volatile uint8_t i2c_errors_count;
 extern volatile uint8_t i2c_async_status;
 extern uint8_t i2c_buffer[]; //should really be volatile but too much trouble. I trust the compiler.
-extern uint8_t i2c_interrupt_hits[8];
+extern uint8_t i2c_interrupt_hits[];
 
 void i2c_init(void);
 void i2c_shutdown(void);

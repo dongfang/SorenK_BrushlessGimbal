@@ -16,8 +16,8 @@ volatile uint8_t gimbalState;
 volatile bool newPWMData;
 volatile bool mediumTaskHasRun;
 
-extern void fastTask();
-extern void mediumTask();
+void fastTask();
+void mediumTask();
 
 #define FAST_PERIOD (F_CPU/510/FASTLOOP_FREQ)
 #define MEDIUM_SUBPERIOD ((F_CPU/510/MEDIUMLOOP_FREQ) / FAST_PERIOD)
@@ -34,8 +34,10 @@ ISR (TIMER1_OVF_vect) {
   static uint8_t mediumDivider = MEDIUM_SUBPERIOD;
   sei();
   fastDivider--;	// decrements at F_CPU/256 so after time T it is T*F_CPU/256
-  if (!(++timer1Extension))
+  if (!(++timer1Extension)) {			// Overflows at 122.55 Hz
 	  timer1ExtensionExtension++;
+	  //wdt_reset();
+  }
   if (newPWMData) {
     // As a further experiment, try put this at exit time of mainLoop (unsynced PWM out).
     PWM_A_MOTOR0 = motorPhases[0][0];
@@ -47,7 +49,7 @@ ISR (TIMER1_OVF_vect) {
     newPWMData = false;
   }
 
-  if ((gimbalState & BACKGROUND_TASKS_RUN) && !fastDivider) {
+  if (!fastDivider) {
 	  if (fastState == IDLE) {
 		  cli();
 		  fastState = RUNNING;

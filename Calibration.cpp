@@ -33,14 +33,14 @@ void calibrateSensor(uint8_t which) {
 	// TODO if softstart works VERY well we can add a divider.
 	// Or we can use freeze instead.
 	printf_P(PSTR("Sensor calibration: do not move\r\n"));
-	gimbalState = BACKGROUND_TASKS_RUN;
+	gimbalState = 0;
 	//while (!(gimbalState & POWER_RAMPING_COMPLETE))
 	//	;
 	// now it should have been powered off and we can disable the tasks
 	// We really should set all PWMs-out to zero and let the interrupt handler output that.
 	// Right now as a hack we let the fast loop dot, by waiting long enough.
 	_delay_ms(1);
-	gimbalState = 0;
+	// gimbalState = 0;
 	mpu.recalibrateSensor(&complainAboutSensorMotion, which);
 	printf_P(PSTR("done.\r\n"));
 	updateGimbalState();
@@ -74,7 +74,7 @@ void runAutosetup() {
 
 	switch (state) {
 	case 0:
-		gimbalState = BACKGROUND_TASKS_RUN; // No output and no power.
+		gimbalState = 0; // No output and no power.
 		mpu.initSensorOrientation(0, false, 0);
 		mpu.resetAccCalibration();
 		printf_P(PSTR("Please place gimbal about horizontal and press SPACE\r\n"));
@@ -92,8 +92,8 @@ void runAutosetup() {
 		_delay_ms(10);
 		resultingMajorAxis = 0;
 		for (i = 0; i < 3; i++) {
-			if (abs16(imu.acc[i]) > largestAcc) {
-				largestAcc = abs16(imu.acc[i]);
+			if (abs16(mpu.acc[i]) > largestAcc) {
+				largestAcc = abs16(mpu.acc[i]);
 				resultingMajorAxis = 2 - i;
 			}
 		}
@@ -104,7 +104,7 @@ void runAutosetup() {
 		break;
 	case 3:
 		_delay_ms(10);
-		if (imu.acc[Z] < 0) {
+		if (mpu.acc[Z] < 0) {
 			resultingZReversal = true;
 			printf_P(PSTR("Reversed Z\r\n"));
 		} else resultingZReversal = false;
@@ -116,14 +116,14 @@ void runAutosetup() {
 		recalcMotorPower(75, 75);
 		printf_P(OBSERVE_PROMPT);
 		serial0.clear();
-		gimbalState = BACKGROUND_TASKS_RUN | MOTORS_POWERED | SETUP_RESET | SETUP_TASK_RUNS;
+		gimbalState = MOTORS_POWERED | SETUP_RESET | SETUP_TASK_RUNS;
 		state++;
 		break;
 	case 5:
 		if (gimbalState & POWER_RAMPING_COMPLETE) {
 			ch = getchar();
 			if (ch == ' ') {
-				gimbalState = BACKGROUND_TASKS_RUN | MOTORS_POWERED | SETUP_TASK_RUNS;
+				gimbalState = MOTORS_POWERED | SETUP_TASK_RUNS;
 				state++;
 			}
 		}
@@ -132,8 +132,8 @@ void runAutosetup() {
 		if (!(gimbalState & SETUP_TASK_RUNS)) {
 			state++;
 		} else {
-			rollGyroSeen = (imu.gyro[ROLL] + rollGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
-			pitchGyroSeen = (imu.gyro[PITCH] + pitchGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
+			rollGyroSeen = (mpu.gyro[ROLL] + rollGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
+			pitchGyroSeen = (mpu.gyro[PITCH] + pitchGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
 		}
 		break;
 	case 7:
@@ -176,14 +176,14 @@ void runAutosetup() {
 	case 9:
 		printf_P(OBSERVE_PROMPT);
 		pitchGyroSeen = rollGyroSeen = 0;
-		gimbalState = BACKGROUND_TASKS_RUN | MOTORS_POWERED | SETUP_RESET | SETUP_TASK_RUNS | SETUP_AXIS;
+		gimbalState = MOTORS_POWERED | SETUP_RESET | SETUP_TASK_RUNS | SETUP_AXIS;
 		state++;
 		break;
 	case 10:
 		if ((gimbalState & POWER_RAMPING_COMPLETE)) {
 			ch = getchar();
 			if (ch >= 0) {
-				gimbalState = BACKGROUND_TASKS_RUN | MOTORS_POWERED | SETUP_TASK_RUNS | SETUP_AXIS;
+				gimbalState = MOTORS_POWERED | SETUP_TASK_RUNS | SETUP_AXIS;
 				state++;
 			}
 		}
@@ -192,8 +192,8 @@ void runAutosetup() {
 		if (!(gimbalState & SETUP_TASK_RUNS)) {
 			state++;
 		} else {
-			rollGyroSeen = (imu.gyro[ROLL] + rollGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
-			pitchGyroSeen = (imu.gyro[PITCH] + pitchGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
+			rollGyroSeen = (mpu.gyro[ROLL] + rollGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
+			pitchGyroSeen = (mpu.gyro[PITCH] + pitchGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
 			// printf_P(PSTR("%d\r\n"), pitchGyroSeen);
 		}
 		break;

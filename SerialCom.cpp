@@ -226,7 +226,8 @@ void unrecognized(const char *command) {
 #define DEBUG_DGYRO 6
 #define DEBUG_I2C 7
 #define DEBUG_RC 8
-#define DEBUG_END 9
+#define DEBUG_ORATE 9
+#define DEBUG_END 10
 
 static const char DEBUG_OFF_ARG[] PROGMEM = "off";
 static const char DEBUG_ACCVALUES_ARG[] PROGMEM = "acc";
@@ -237,9 +238,10 @@ static const char DEBUG_PID_ARG[] PROGMEM = "pid";
 static const char DEBUG_DGYRO_ARG[] PROGMEM = "dgyro";
 static const char DEBUG_I2C_ARG[] PROGMEM = "i2c";
 static const char DEBUG_RC_ARG[] PROGMEM = "rc";
+static const char DEBUG_OVERRATE_ARG[] PROGMEM = "orate";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = { DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG,
-		DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG, DEBUG_RC_ARG };
+		DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG, DEBUG_RC_ARG, DEBUG_OVERRATE_ARG };
 
 /*
  void toggleEcho() {
@@ -309,17 +311,17 @@ void debug() {
 		break;
 	case DEBUG_ACCVALUES:
 		cli();
-		x = imu.acc[X];
-		y = imu.acc[Y];
-		z = imu.acc[Z];
+		x = mpu.acc[X];
+		y = mpu.acc[Y];
+		z = mpu.acc[Z];
 		sei();
 		printf_P(PSTR("acc: x %d\t y %d\t z %d\r\n"), x, y, z);
 		break;
 	case DEBUG_GYROVALUES:
 		cli();
-		x = imu.gyro[X];
-		y = imu.gyro[Y];
-		z = imu.gyro[Z];
+		x = mpu.gyro[X];
+		y = mpu.gyro[Y];
+		z = mpu.gyro[Z];
 		sei();
 		printf_P(PSTR("gyro: x %d\t y %d\t z %d\r\n"), x, y, z);
 		break;
@@ -343,17 +345,13 @@ void debug() {
 		printf_P(PSTR("errors %u\r\n"), i2c_errors_count);
 		break;
 	case DEBUG_RC:
-		/*
-		printf_P(PSTR("rc: switch %d\troll %d\tsignal %S\tpitch %d\tsignal %S\r\n"), switchPos,
-				rcData[RC_DATA_ROLL].rx, (rcData[RC_DATA_ROLL].isTimedOut() ? PSTR("-") : PSTR("*")),
-				rcData[RC_DATA_PITCH].rx, (rcData[RC_DATA_PITCH].isTimedOut() ? PSTR("-") : PSTR("*")));
-				*/
-		printf_P(PSTR("rc: switch %d\troll %d\tsignal %d\tpitch %d\tsignal %d\r\n"), switchPos,
-				//rcData[RC_DATA_ROLL].setpoint, rcData[RC_DATA_ROLL].timeout,
-				rcData[RC_DATA_PITCH].m_16 - MID_RC, rcData[RC_DATA_PITCH].timeout,
-				(rcData[RC_DATA_PITCH].setpoint), rcData[RC_DATA_PITCH].timeout
-				);
+		printf_P(PSTR("rc: switch %d\troll %d\talive %S\tpitch %d\tsignal %S\r\n"), switchPos,
+				rcData[RC_DATA_ROLL].setpoint, (rcData[RC_DATA_ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
+				rcData[RC_DATA_PITCH].setpoint, (rcData[RC_DATA_PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
 
+		break;
+	case DEBUG_ORATE:
+		printf_P(PSTR("orate: overrrate %u, softstart %u\r\n"), overrate, softStart);
 		break;
 	default:
 		break;

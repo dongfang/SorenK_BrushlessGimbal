@@ -5,6 +5,9 @@
 #define LED_PORT		PORTB
 #define LED_PIN			PINB
 
+// Undef this to avoid the fast and medium timing pulses on outputs.
+// #define DEBUG_SIGNALS
+
 #define DEBUG_DDR		DDRD
 #define DEBUG_PORT		PORTD
 #define DEBUG_PIN		PIND

@@ -32,18 +32,22 @@ extern int16_t rollPIDDelta;
 extern int16_t pitchPIDVal;
 extern int16_t pitchPIDDelta;
 
+// Output signals, 2x3 phases
 extern uint8_t motorPhases[2][3];
+// 0..15
 extern volatile uint8_t softStart;
 
 extern uint8_t pwmSinMotorPitch[N_SIN];
 extern uint8_t pwmSinMotorRoll[N_SIN];
 
 struct RCData_t {
-	//uint16_t microsRisingEdge;
-	//uint16_t microsFallingEdge;
+	// Number of 1/16 micros
 	uint16_t m_16;
+	// is pulse complete
 	bool pulseComplete;
+	// counter, for how many update cycles was there no new pulse
 	uint8_t timeout;
+	// the value of the channel
 	int16_t setpoint;
 	inline bool isTimedOut() { return timeout >= 200; }
 };
@@ -51,14 +55,17 @@ struct RCData_t {
 extern RCData_t rcData[RC_DATA_SIZE];
 extern int8_t switchPos;
 
-//extern int16_t pitchTransient;
-//extern int16_t rollTransient;
-
 extern volatile bool newPWMData;
 extern volatile uint8_t gimbalState;
 extern volatile bool mediumTaskHasRun;
 
 extern uint8_t interfaceState;
+
+/*
+ * How often was the max. PID output rotation rates exceeded,
+ * this is indicative of self-oscillation / runaway
+ */
+extern volatile uint8_t overrate;
 
 #endif
 

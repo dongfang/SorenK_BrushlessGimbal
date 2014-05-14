@@ -10,13 +10,15 @@ int16_t prevRollPIDVal;
 int16_t rollPIDDelta;
 int16_t pitchPIDDelta;
 
-void outputPitch(uint8_t value) {
+volatile uint8_t overrate;
+
+inline void outputPitch(uint8_t value) {
 	motorPhases[PITCH][0] = pwmSinMotorPitch[value] * softStart >> 4;
 	motorPhases[PITCH][1] = pwmSinMotorPitch[(uint8_t) (value + 85)] * softStart >> 4;
 	motorPhases[PITCH][2] = pwmSinMotorPitch[(uint8_t) (value + 170)] * softStart >> 4;
 }
 
-void outputRoll(uint8_t value) {
+inline void outputRoll(uint8_t value) {
 	motorPhases[ROLL][0] = pwmSinMotorRoll[value] * softStart >> 4;
 	motorPhases[ROLL][1] = pwmSinMotorRoll[(uint8_t) (value + 85)] * softStart >> 4;
 	motorPhases[ROLL][2] = pwmSinMotorRoll[(uint8_t) (value + 170)] * softStart >> 4;
@@ -43,19 +45,34 @@ void fastTask() {
 	rollPIDDelta = rollPIDVal - prevRollPIDVal;
 	pitchPIDDelta = pitchPIDVal - prevPitchPIDVal;
 
+	bool didOverspeed = false;
 	if (rollPIDDelta > config.rollOutputRateLimit) {
 		LEDEvent(LED_SPEED_LIMIT_MASK);
-		rollPIDVal = prevRollPIDVal + config.rollOutputRateLimit;
+		didOverspeed = true;
+		//Actually limiting brings little.
+		//rollPIDVal = prevRollPIDVal + config.rollOutputRateLimit;
 	} else if (rollPIDDelta < -config.rollOutputRateLimit) {
 		LEDEvent(LED_SPEED_LIMIT_MASK);
-		rollPIDVal = prevRollPIDVal - config.rollOutputRateLimit;
+		didOverspeed = true;
+		//Actually limiting brings little.
+		//rollPIDVal = prevRollPIDVal - config.rollOutputRateLimit;
 	}
 	if (pitchPIDDelta > config.pitchOutputRateLimit) {
 		LEDEvent(LED_SPEED_LIMIT_MASK);
-		pitchPIDVal = prevPitchPIDVal + config.pitchOutputRateLimit;
+		didOverspeed = true;
+		//Actually limiting brings little.
+		//pitchPIDVal = prevPitchPIDVal + config.pitchOutputRateLimit;
 	} else if (pitchPIDDelta < -config.pitchOutputRateLimit) {
 		LEDEvent(LED_SPEED_LIMIT_MASK);
-		pitchPIDVal = prevPitchPIDVal - config.pitchOutputRateLimit;
+		didOverspeed = true;
+		//Actually limiting brings little.
+		//pitchPIDVal = prevPitchPIDVal - config.pitchOutputRateLimit;
+	}
+
+	if (didOverspeed) {
+		if (overrate < 255) overrate++;
+	} else {
+		//if (overrate) overrate--;
 	}
 
 	prevRollPIDVal = rollPIDVal;

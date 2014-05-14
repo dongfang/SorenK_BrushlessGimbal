@@ -12,12 +12,12 @@
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // Drotek MPU breakout board
 //#define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_HIGH
 
-#define FASTLOOP_FREQ 1050
+#define FASTLOOP_FREQ 1200
 #define FASTLOOP_DT_F_S  (1.0/FASTLOOP_FREQ)   	    // loop controller sample period dT
 #define FASTLOOP_DT_I_MS (1000/FASTLOOP_FREQ)
 
 // Must be an integral fraction of FASTLOOP_FREQ
-#define MEDIUMLOOP_FREQ 525
+#define MEDIUMLOOP_FREQ 600
 #define MEDIUMLOOP_DT_F_S  (1.0/MEDIUMLOOP_FREQ)       // loop controller sample period dT
 #define MEDIUMLOOP_DT_I_MS (1000/MEDIUMLOOP_FREQ)
 
@@ -26,7 +26,7 @@
 #define RC_LATCH (MEDIUMLOOP_FREQ/RC_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
-#define SOFTSTART_FREQ 100
+#define SOFTSTART_FREQ 50
 #define SOFTSTART_LATCH (MEDIUMLOOP_FREQ/SOFTSTART_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
@@ -149,7 +149,7 @@
 // Whether PIDs are output to the PWM-out table
 #define PIDS_ARE_OUTPUT 4
 // Whether fast and medium loops should run (reason not to: They use I2C and expect being exclusive)
-#define BACKGROUND_TASKS_RUN 8
+// #define BACKGROUND_TASKS_RUN 8
 // When BACKGROUND_TASKS_RUN is cleared, setting this will cause another routine to run in the interrupt.
 #define SETUP_TASK_RUNS 16
 #define SETUP_AXIS 32
