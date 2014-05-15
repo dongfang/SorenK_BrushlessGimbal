@@ -44,7 +44,6 @@
 // The globals
 MPU6050 mpu; // Create MPU object
 IMU imu(&mpu);
-SerialCommand sCmd; // Create SerialCommand object
 PID pitchPID;
 PID rollPID;
 
@@ -155,7 +154,7 @@ void initState() {
 #endif
 
 	// Set Serial Protocol Commands
-	setSerialProtocol();
+	// setSerialProtocol();
 
 	// Read Config, fill with default settings if versions do not match or CRC fails
 	// config.readEEPROMOrDefault();

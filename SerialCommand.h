@@ -27,6 +27,11 @@
 #include <string.h>
 #include <stdint.h>
 
+struct Command {
+	const char* text;
+	void (*function)();
+};
+
 // Size of the input buffer in bytes (maximum length of one command plus arguments)
 #define SERIALCOMMAND_BUFFER 32
 // Maximum length of a command including the terminating null
@@ -37,9 +42,9 @@
 
 class SerialCommand {
   public:
-    SerialCommand();      // Constructor
-    void addCommand(const char *command, void(*function)());  // Add a command to the processing dictionary.
-    void setDefaultHandler(void (*function)(const char *));   // A handler to call when no valid command received.
+    SerialCommand(const Command* commands, uint8_t commandCount, void (*defaultHandler)(const char *));      // Constructor
+    //void addCommand(const char *command, void(*function)());  // Add a command to the processing dictionary.
+    //void setDefaultHandler(void (*function)(const char *));   // A handler to call when no valid command received.
 
     void readSerial();    // Main entry point.
     void clearBuffer();   // Clears the input buffer.
@@ -50,11 +55,14 @@ class SerialCommand {
 
   private:
     // Command/handler dictionary
+    /*
     struct SerialCommandCallback {
       char command[SERIALCOMMAND_MAXCOMMANDLENGTH + 1];
       void (*function)();
-    };                                    // Data structure to hold Command/Handler function key-value pairs
-    SerialCommandCallback *commandList;   // Actual definition for command/handler array
+    };
+    */                                    // Data structure to hold Command/Handler function key-value pairs
+    //SerialCommandCallback *commandList;   // Actual definition for command/handler array
+    const Command* commands;
     uint8_t commandCount;
 
     // Pointer to the default handler function

@@ -28,8 +28,11 @@
 /**
  * Constructor makes sure some things are set.
  */
-SerialCommand::SerialCommand() :
-		commandList(NULL), commandCount(0), defaultHandler(NULL), wasCRLF(false), // default terminator for commands, newline character
+SerialCommand::SerialCommand(const  Command* commands, uint8_t commandCount, void (*defaultHandler)(const char *)) :
+		commands(commands),
+		commandCount(commandCount),
+		defaultHandler(NULL),
+		wasCRLF(false), // default terminator for commands, newline character
 		last(NULL) {
 	strcpy(delim, " "); // strtok_r needs a null-terminated string
 	clearBuffer();
@@ -40,21 +43,21 @@ SerialCommand::SerialCommand() :
  * This is used for matching a found token in the buffer, and gives the pointer
  * to the handler function to deal with it.
  * dongfang TODO: Make static.
- */
 void SerialCommand::addCommand(const char *command, void (*function)()) {
 	commandList = (SerialCommandCallback *) realloc(commandList, (commandCount + 1) * sizeof(SerialCommandCallback));
 	strncpy(commandList[commandCount].command, command, SERIALCOMMAND_MAXCOMMANDLENGTH);
 	commandList[commandCount].function = function;
 	commandCount++;
 }
+ */
 
 /**
  * This sets up a handler to be called in the event that the receveived command string
  * isn't in the list of commands.
- */
 void SerialCommand::setDefaultHandler(void (*function)(const char *)) {
 	defaultHandler = function;
 }
+ */
 
 /**
  * This checks the Serial stream for characters, and assembles them into a buffer.
@@ -70,13 +73,16 @@ void SerialCommand::readSerial() {
 			char *command = strtok_r(buffer, delim, &last); // Search for command at start of buffer
 			if (command != NULL) {
 				bool matched = false;
+				// Compare the found command against the list of known commands for a match
+				for (int j = 0; command[j] != '\0'; j++) // as no strnicmp exists ...
+					command[j] = (char) tolower(command[j]);
 				for (int i = 0; i < commandCount; i++) {
-					// Compare the found command against the list of known commands for a match
-					for (int j = 0; command[j] != '\0'; j++) // as no strnicmp exists ...
-						command[j] = (char) tolower(command[j]);
-					if (strncmp(command, commandList[i].command, SERIALCOMMAND_MAXCOMMANDLENGTH) == 0) {
+					PGM_P *blarh = (PGM_P*)pgm_read_word(commands[i].text);
+					PGM_P fims = (PGM_P)pgm_read_word(blarh);
+					printf_P(PSTR("Trying %s against %S\r\n"), command, fims);
+					if (strncmp_P(command, fims, SERIALCOMMAND_MAXCOMMANDLENGTH) == 0) {
 						// Execute the stored handler function for the command
-						(*commandList[i].function)();
+						(*commands[i].function)();
 						matched = true;
 						break;
 					}

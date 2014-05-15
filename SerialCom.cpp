@@ -434,6 +434,57 @@ void goMavlink() {
 
 extern void startAutosetup();
 
+
+static const char CMD_SD_ARG[] PROGMEM = "sd";
+static const char CMD_WE_ARG[] PROGMEM = "we";
+static const char CMD_RE_ARG[] PROGMEM = "re";
+static const char CMD_SETUP_ARG[] PROGMEM = "setup";
+static const char CMD_PAR_ARG[] PROGMEM = "par";
+static const char CMD_CAL_ARG[] PROGMEM = "cal";
+static const char CMD_LEVEL_ARG[] PROGMEM = "level";
+static const char CMD_OSC_ARG[] PROGMEM = "osc";
+static const char CMD_TRANS_ARG[] PROGMEM = "trans";
+static const char CMD_HELP_ARG[] PROGMEM = "help";
+#ifdef DO_PERFORMANCE
+static const char CMD_PERF_ARG[] PROGMEM = "perf";
+#endif
+static const char CMD_DEBUG_ARG[] PROGMEM = "debug";
+static const char CMD_FREEZE_ARG[] PROGMEM = "freeeze";
+static const char CMD_RUN_ARG[] PROGMEM = "run";
+static const char CMD_STOP_ARG[] PROGMEM = "stop";
+static const char CMD_RETRACT_ARG[] PROGMEM = "retract";
+static const char CMD_EXTEND_ARG[] PROGMEM = "extend";
+
+static const char CMD_MAVLINK_ARG[] PROGMEM = "mavlink";
+static const char CMD_RESET_ARG[] PROGMEM = "reset";
+static const char CMD_PCAL_ARG[] PROGMEM = "pcal";
+
+static const Command commands[] PROGMEM = {
+		{CMD_SD_ARG, setDefaultParametersAndUpdate},
+		{CMD_WE_ARG, writeEEPROM},
+		{CMD_RE_ARG, readEEPROM},
+		{CMD_SETUP_ARG, startAutosetup},
+		{CMD_PAR_ARG, parameterMod},
+		{CMD_CAL_ARG, calibrateGyro},
+		{CMD_LEVEL_ARG, calibrateAcc},
+		{CMD_OSC_ARG, setOscillation},
+		{CMD_TRANS_ARG, setTransients},
+		{CMD_HELP_ARG, printHelpUsage},
+#ifdef DO_PERFORMANCE
+		{CMD_PERF_ARG, reportPerformance},
+#endif
+		{CMD_DEBUG_ARG, debugControl},
+		{CMD_FREEZE_ARG, freeze},
+		{CMD_RUN_ARG, run},
+		{CMD_STOP_ARG, stop},
+		{CMD_RETRACT_ARG, retract},
+		{CMD_EXTEND_ARG, extend},
+		{CMD_MAVLINK_ARG, goMavlink},
+		{CMD_RESET_ARG, reset},
+		{CMD_PCAL_ARG, showSensorCal}
+};
+
+/*
 void setSerialProtocol() {
 	// Setup callbacks for SerialCommand commands
 	sCmd.addCommand("sd", setDefaultParametersAndUpdate);
@@ -468,3 +519,6 @@ void setSerialProtocol() {
 	sCmd.addCommand("pcal", showSensorCal);
 	sCmd.setDefaultHandler(unrecognized); // Handler for command that isn't matched  (says "What?")
 }
+*/
+
+SerialCommand sCmd(commands, sizeof(commands)/sizeof(Command), unrecognized); // Create SerialCommand object

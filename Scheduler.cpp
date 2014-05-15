@@ -56,6 +56,64 @@ ISR (TIMER1_OVF_vect) {
 	static uint16_t servoPauseDivider;
 	sei();
 
+	fastDivider--; // decrements at F_CPU/256 so after time T it is T*F_CPU/256
+
+	if (newPWMData) {
+		// As a further experiment, try put this at exit time of mainLoop (unsynced PWM out).
+		PWM_A_MOTOR0 = motorPhases[0][0];
+		PWM_B_MOTOR0 = motorPhases[0][1];
+		PWM_C_MOTOR0 = motorPhases[0][2];
+		PWM_A_MOTOR1 = motorPhases[1][0];
+		PWM_B_MOTOR1 = motorPhases[1][1];
+		PWM_C_MOTOR1 = motorPhases[1][2];
+		newPWMData = false;
+	}
+
+	if (!fastDivider) {
+		if (fastState == IDLE) {
+			//cli();
+			fastState = RUNNING;
+#ifdef DEBUG_SIGNALS
+			DEBUG_PORT |= 1<<DEBUG_BIT1;
+#endif
+			fastDivider = FAST_PERIOD;
+			//sei();
+			fastTask();
+			fastState = IDLE;
+			// TODO: Maybe move to fast-loop itself.
+#ifdef DEBUG_SIGNALS
+			DEBUG_PORT &= ~(1<<DEBUG_BIT1);
+#endif
+			mediumDivider--;
+			if (!mediumDivider) {
+				if (mediumState == IDLE) {
+					cli();
+#ifdef DEBUG_SIGNALS
+					DEBUG_PORT |= 1<<DEBUG_BIT2;
+#endif
+					mediumState = RUNNING;
+					mediumDivider = MEDIUM_SUBPERIOD;
+					sei();
+					mediumTask();
+					mediumTaskHasRun = true; // To assist the slow-task stuff to sync
+					mediumState = IDLE;
+#ifdef DEBUG_SIGNALS
+					DEBUG_PORT &= ~(1<<DEBUG_BIT2);
+#endif
+				} else {
+					// Medium task collision has occured.
+					LEDEvent(LED_SCHEDULER_OVERLOAD_MASK);
+					// try to save it.
+					mediumDivider = 1;
+				}
+			}
+		} else {
+			// Fast task collision has occured.
+			LEDEvent(LED_SCHEDULER_OVERLOAD_MASK);
+			// try to save it.
+			fastDivider = 1;
+		}
+	}
 #if defined(SUPPORT_YAW_SERVO) || defined(SUPPORT_RETRACT)
 		if (servoPauseDivider) {
 			--servoPauseDivider;
@@ -94,65 +152,8 @@ ISR (TIMER1_OVF_vect) {
 			}
 		}
 #endif
-	fastDivider--; // decrements at F_CPU/256 so after time T it is T*F_CPU/256
+
 	if (!(++timer1Extension)) { // Overflows at 122.55 Hz
 		timer1ExtensionExtension++;
-		//wdt_reset();
-	}
-	if (newPWMData) {
-		// As a further experiment, try put this at exit time of mainLoop (unsynced PWM out).
-		PWM_A_MOTOR0 = motorPhases[0][0];
-		PWM_B_MOTOR0 = motorPhases[0][1];
-		PWM_C_MOTOR0 = motorPhases[0][2];
-		PWM_A_MOTOR1 = motorPhases[1][0];
-		PWM_B_MOTOR1 = motorPhases[1][1];
-		PWM_C_MOTOR1 = motorPhases[1][2];
-		newPWMData = false;
-	}
-
-	if (!fastDivider) {
-		if (fastState == IDLE) {
-			cli();
-			fastState = RUNNING;
-#ifdef DEBUG_SIGNALS
-			DEBUG_PORT |= 1<<DEBUG_BIT1;
-#endif
-			fastDivider = FAST_PERIOD;
-			sei();
-			fastTask();
-			fastState = IDLE;
-			// TODO: Maybe move to fast-loop itself.
-#ifdef DEBUG_SIGNALS
-			DEBUG_PORT &= ~(1<<DEBUG_BIT1);
-#endif
-			mediumDivider--;
-			if (!mediumDivider) {
-				if (mediumState == IDLE) {
-					cli();
-#ifdef DEBUG_SIGNALS
-					DEBUG_PORT |= 1<<DEBUG_BIT2;
-#endif
-					mediumState = RUNNING;
-					mediumDivider = MEDIUM_SUBPERIOD;
-					sei();
-					mediumTask();
-					mediumTaskHasRun = true; // To assist the slow-task stuff to sync
-					mediumState = IDLE;
-#ifdef DEBUG_SIGNALS
-					DEBUG_PORT &= ~(1<<DEBUG_BIT2);
-#endif
-				} else {
-					// Medium task collision has occured.
-					LEDEvent(LED_SCHEDULER_OVERLOAD_MASK);
-					// try to save it.
-					mediumDivider = 1;
-				}
-			}
-		} else {
-			// Fast task collision has occured.
-			LEDEvent(LED_SCHEDULER_OVERLOAD_MASK);
-			// try to save it.
-			fastDivider = 1;
 		}
-	}
 }
