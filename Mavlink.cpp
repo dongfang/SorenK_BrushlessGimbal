@@ -213,9 +213,9 @@ bool mavlink_parse() {
  * We are looking at a range of about 31.34 each 90 degrees, or 286.875 centi-degrees/step
  */
 
-#ifdef USE_YAWSERVO
+#ifdef SUPPORT_YAW_SERVO
 
-extern void setServoOut(uint8_t pulse);
+extern void setYawServoOut(uint8_t pulse);
 
 void setYawServo() {
 	static int16_t prevAngle;
@@ -233,7 +233,7 @@ void setYawServo() {
 			angle = -angle;
 	}
 	prevAngle = angle;
-	setServoOut((config.yawServoDirection * angle + 47.06 * 286.875) / 286.875);
+	setYawServoOut((config.yawServoDirection * angle + 47.06 * 286.875) / 286.875);
 }
 #endif
 

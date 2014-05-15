@@ -5,13 +5,15 @@
 #include "Mavlink.h"
 
 uint8_t interfaceState;
+uint8_t LEDFlags;
 
 // This is supposed to read the switch.
+// This pretty outdated by now.. find another way
 void updateGimbalState() {
 	// if (switchPos < 0) balahblah .. implement switch to state logic here.
 	// except when in autosetup, oops.
 	if (interfaceState != INTERFACE_STATE_AUTOSETUP)
-		gimbalState = PIDS_ARE_OUTPUT | MOTORS_POWERED;
+		gimbalState = GS_PIDS_ARE_OUTPUT | GS_MOTORS_POWERED;
 }
 
 inline bool checkMediumLoop() {
@@ -50,10 +52,10 @@ void slowLoop() {
 		 */
 		if (ticked) {
 			// Evaluate RC-Signals. Out of laziness, we ignore these if MAVLink is controlling.
-			if (interfaceState != INTERFACE_STATE_MAVLINK) {
+			// if (interfaceState != INTERFACE_STATE_MAVLINK) {
 				evaluateRCControl();
 				evaluateRCSwitch();
-			}
+			// }
 			updateGimbalState();
 		}
 
@@ -63,11 +65,13 @@ void slowLoop() {
 		else if (interfaceState == INTERFACE_STATE_AUTOSETUP)
 			runAutosetup();
 #endif
+#ifdef SUPPORT_MAVLINK
 		else if (interfaceState == INTERFACE_STATE_MAVLINK) {
 			if (mavlink_parse()) {
 				LEDEvent(LED_MAVLINK_RX);
 			}
 		}
+#endif
 
 		if (interfaceState == INTERFACE_STATE_CONSOLE && ticked && !humanDebugDivider) {
 			humanDebugDivider = HUMAN_DEBUG_LATCH;

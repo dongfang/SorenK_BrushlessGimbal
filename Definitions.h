@@ -3,6 +3,9 @@
 
 #include "Util.h"
 
+#define SUPPORT_AUTOSETUP 1
+#define SUPPORT_MAVLINK 1
+
 /*************************/
 /* Definitions           */
 /*************************/
@@ -146,25 +149,25 @@
 // medium task to ramp up or down the softstart.
 // When changing this, always clear POWER_RAMPING_COMPLETE and wait for it to come true again.
 // If medium loop does not run, this will not happen automatically.
-#define MOTORS_POWERED 1
+#define GS_MOTORS_POWERED 1
 // Set to get the synced interrupt handler to output to hardware.
 // Should be set after the pwm-out table was updated. The timer1 interrupt reads, outputs and resets.
 // #define MOTORS_NEW_DATA 2
 // Whether softstart ramping has completed
-#define POWER_RAMPING_COMPLETE 2
+#define GS_POWER_RAMPING_COMPLETE 2
 // Whether PIDs are output to the PWM-out table
-#define PIDS_ARE_OUTPUT 4
-// Whether fast and medium loops should run (reason not to: They use I2C and expect being exclusive)
-// #define BACKGROUND_TASKS_RUN 8
-// When BACKGROUND_TASKS_RUN is cleared, setting this will cause another routine to run in the interrupt.
-#define SETUP_TASK_RUNS 16
-#define SETUP_AXIS 32
-#define SETUP_RESET 64
+#define GS_PIDS_ARE_OUTPUT 4
+#define GS_GIMBAL_FROZEN 8
+#define GS_GIMBAL_RETRACTED 16
+
+#define AS_RUNNING 1
+#define AS_RESET 2
+#define AS_IS_PITCH 4
 
 #define GIMBAL_STATE_RUN 	(MOTORS_POWERED | PIDS_ARE_OUTPUT | BACKGROUND_TASKS_RUN)
 #define GIMBAL_STATE_FREEZE (MOTORS_POWERED | BACKGROUND_TASKS_RUN)
 #define GIMBAL_STATE_SENSORCAL 0
-#define GIMBAL_STATE_AUTOCAL (MOTORS_POWERED | AUTOCONF_TASK_RUNS)
+#define GIMBAL_STATE_AUTOCAL (MOTORS_POWERED | AUTOSETUP_TASK_RUNS)
 
 // Start gimbal: Set MOTORS_POWERED, PIDS_ARE_OUTPUT and BACKGROUND_TASKS_RUN.
 // Freeze gimbal: Set MOTORS_POWERED and BACKGROUND_TASKS_RUN. clear PIDS_ARE_OUTPUT
@@ -183,16 +186,14 @@
 #define INTERFACE_STATE_CONSOLE 0
 #define INTERFACE_STATE_AUTOSETUP 1
 #define INTERFACE_STATE_GUI 2
+#ifdef SUPPORT_MAVLINK
 #define INTERFACE_STATE_MAVLINK 3
+#endif
 
 // maybe about 10 degrees/s. That is 70 (or 72) e-degrees a sec, or 72*256/1000 microsteps per millisecond. About 18
 #define SETUP_MOVE_DIVIDER 20
 // 15 degrees, or about 100 e-degrees, or about (wtf?) 71 microsteps
 #define SETUP_MOVE_LIMIT 80
-
-#define SUPPORT_AUTOSETUP 1
-#define SUPPORT_MAVLINK 1
-
 
 /*
  * RC signal input

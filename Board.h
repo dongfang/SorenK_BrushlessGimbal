@@ -4,20 +4,30 @@
 #define LED_DDR			DDRB
 #define LED_PORT		PORTB
 #define LED_PIN			PINB
-// Hextronik board : 5
+// Hextronik board : 	5
 #define LED_BIT			5
-// RCTimer board: 0
-// #define LED_BIT			0
+// RCTimer board: 		0
+// #define LED_BIT		0
 
+#define SERVO_DDR		DDRD
+#define SERVO_PORT		PORTD
 
+// This conflicts with debug-out so only use one at a time.
+#define SUPPORT_YAW_SERVO
+#define YAW_SERVO_BIT	4
+
+#define SUPPORT_RETRACT
+#define RETRACT_SERVO_BIT	7
+
+#if !defined(SUPPORT_YAW_SERVO) && !defined(SUPPORT_RETRACT)
 // Undef this to avoid the fast and medium timing pulses on outputs.
-// #define DEBUG_SIGNALS
+#define DEBUG_SIGNALS
 #define DEBUG_DDR		DDRD
 #define DEBUG_PORT		PORTD
 #define DEBUG_PIN		PIND
 #define DEBUG_BIT1		4
 #define DEBUG_BIT2		7
-
+#endif
 
 // By Martinez board (V3?)
 // A0 C0
@@ -27,11 +37,6 @@
 // C3 D4
 // C4 B4
 
-#define USE_YAWSERVO
-// This conflicts with debug-out so only use one at a time.
-#define YAWSERVO_DDR	DDRD
-#define YAWSERVO_PORT	PORTD
-#define YAWSERVO_BIT	4
 
 // I2C Frequency
 #define I2C_SPEED 600000L   // slightly tune the bus.

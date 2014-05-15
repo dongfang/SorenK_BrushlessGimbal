@@ -45,6 +45,9 @@ extern int8_t switchPos;
 
 extern volatile bool newPWMData;		// Whether there is new output data to latch out
 extern volatile uint8_t gimbalState;	// Control flags for gimbal control
+#ifdef SUPPORT_AUTOSETUP
+extern volatile uint8_t autosetupState;
+#endif
 extern volatile bool mediumTaskHasRun;	// Sync main loop to medium task
 
 extern uint8_t interfaceState;			// Control flags for serial interface

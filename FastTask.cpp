@@ -79,7 +79,7 @@ void fastTask() {
 	prevPitchPIDVal = pitchPIDVal;
 
 	// motor control
-	if (gimbalState & PIDS_ARE_OUTPUT) {
+	if (gimbalState & GS_PIDS_ARE_OUTPUT) {
 		//int motorDrive = pitchPIDVal; // * config.dirMotorPitch;
 		outputRoll(rollPIDVal);
 		outputPitch(pitchPIDVal);
@@ -95,8 +95,10 @@ void fastTask() {
 		 motorPhases[ROLL][2] = pwmSinMotorRoll[(uint8_t) (posStep + 170)] * softStart >> 4;
 		 */
 		newPWMData = true;
-	} else if (gimbalState & SETUP_TASK_RUNS) {
-		if (gimbalState & SETUP_RESET) {
+	}
+#ifdef SUPPORT_AUTOSETUP
+	else if (autosetupState & AS_RUNNING) {
+		if (autosetupState & AS_RESET) {
 			setupMoveCounter = 0;
 			setupMoveDivider = SETUP_MOVE_DIVIDER;
 		}
@@ -105,15 +107,20 @@ void fastTask() {
 			if (setupMoveCounter < SETUP_MOVE_LIMIT) {
 				setupMoveCounter++;
 			} else {
-				gimbalState &= ~SETUP_TASK_RUNS;
+				autosetupState &= ~AS_RUNNING;
 			}
 		}
-		if (gimbalState & SETUP_AXIS) {
+		if (autosetupState & AS_IS_PITCH) {
 			outputPitch(setupMoveCounter);
 		} else {
 			outputRoll(setupMoveCounter);
 		}
 		newPWMData = true;
 		setupMoveDivider--;
+	}
+#endif
+	else if (gimbalState & GS_GIMBAL_FROZEN) {
+		outputPitch(config.pitchFrozenValue);
+		outputRoll(config.rollFrozenValue);
 	}
 }

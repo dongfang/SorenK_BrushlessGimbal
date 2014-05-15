@@ -12,15 +12,7 @@
 int16_t rollAngleSet;
 int16_t pitchAngleSet;
 
-uint8_t LEDFlags;
-
 extern void updateGimbalState();
-
-const char MOVED_PROMPT[] PROGMEM
-		= "What did the gimbal do?\r\n1)Pitch down\r\n2)Pitch up\r\n3)Roll left\r\n4)Roll right\r\na)Do again\r\n";
-const char REVERSE_PROMPT[] PROGMEM = "Please reverse the direction of the %S motor (plug it the other way).\r\n";
-const char OBSERVE_PROMPT[] PROGMEM = "Please see in which direction the gimbal moves after pressing SPACE\r\n";
-const char SWAP_PROMPT[] PROGMEM = "Please swap the pitch and roll motor connections.\r\n";
 
 void complainAboutSensorMotion() {
 	printf_P(PSTR("Motion detected during calibration. Starting over!\r\n"));
@@ -53,13 +45,21 @@ void startAutosetup() {
 	interfaceState = INTERFACE_STATE_AUTOSETUP;
 }
 
+#ifdef SUPPORT_AUTOSETUP
+const char MOVED_PROMPT[] PROGMEM
+		= "What did the gimbal do?\r\n1)Pitch down\r\n2)Pitch up\r\n3)Roll left\r\n4)Roll right\r\na)Do again\r\n";
+const char REVERSE_PROMPT[] PROGMEM = "Please reverse the direction of the %S motor (plug it the other way).\r\n";
+const char OBSERVE_PROMPT[] PROGMEM = "Please see in which direction the gimbal moves after pressing SPACE\r\n";
+const char SWAP_PROMPT[] PROGMEM = "Please swap the pitch and roll motor connections.\r\n";
+
+volatile uint8_t autosetupState;
+
 extern void recalcMotorPower(uint8_t rollPower, uint8_t pitchPower);
 extern void recalcMotorPower();
 
 #define GYRO_FILTER 32L
 
 void runAutosetup() {
-#ifdef SUPPORT_AUTOSETUP
 	static uint8_t resultingMajorAxis;
 	static uint8_t resultingZRotation;
 	static bool resultingZReversal;
@@ -82,7 +82,7 @@ void runAutosetup() {
 		state++;
 		break;
 	case 1:
-		if (gimbalState & POWER_RAMPING_COMPLETE) {
+		if (gimbalState & GS_POWER_RAMPING_COMPLETE) {
 			ch = getchar();
 			if (ch == ' ')
 				state++;
@@ -116,20 +116,22 @@ void runAutosetup() {
 		recalcMotorPower(75, 75);
 		printf_P(OBSERVE_PROMPT);
 		serial0.clear();
-		gimbalState = MOTORS_POWERED | SETUP_RESET | SETUP_TASK_RUNS;
+		gimbalState = GS_MOTORS_POWERED;
+		autosetupState = AS_RUNNING | AS_RESET;
 		state++;
 		break;
 	case 5:
-		if (gimbalState & POWER_RAMPING_COMPLETE) {
+		if (gimbalState & GS_POWER_RAMPING_COMPLETE) {
 			ch = getchar();
 			if (ch == ' ') {
-				gimbalState = MOTORS_POWERED | SETUP_TASK_RUNS;
+				// gimbalState = MOTORS_POWERED;
+				autosetupState = 0;
 				state++;
 			}
 		}
 		break;
 	case 6:
-		if (!(gimbalState & SETUP_TASK_RUNS)) {
+		if (!(autosetupState & AS_RUNNING)) {
 			state++;
 		} else {
 			rollGyroSeen = (mpu.gyro[ROLL] + rollGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
@@ -176,20 +178,22 @@ void runAutosetup() {
 	case 9:
 		printf_P(OBSERVE_PROMPT);
 		pitchGyroSeen = rollGyroSeen = 0;
-		gimbalState = MOTORS_POWERED | SETUP_RESET | SETUP_TASK_RUNS | SETUP_AXIS;
+		gimbalState = GS_MOTORS_POWERED;
+		autosetupState = AS_RUNNING | AS_RESET | AS_IS_PITCH;
 		state++;
 		break;
 	case 10:
-		if ((gimbalState & POWER_RAMPING_COMPLETE)) {
+		if ((gimbalState & GS_POWER_RAMPING_COMPLETE)) {
 			ch = getchar();
 			if (ch >= 0) {
-				gimbalState = MOTORS_POWERED | SETUP_TASK_RUNS | SETUP_AXIS;
+				gimbalState = GS_MOTORS_POWERED;
+				autosetupState =  AS_RUNNING | AS_IS_PITCH;
 				state++;
 			}
 		}
 		break;
 	case 11:
-		if (!(gimbalState & SETUP_TASK_RUNS)) {
+		if (!(gimbalState & AS_RUNNING)) {
 			state++;
 		} else {
 			rollGyroSeen = (mpu.gyro[ROLL] + rollGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
@@ -229,8 +233,9 @@ void runAutosetup() {
 		break;
 	case 14:
 		recalcMotorPower(); // back to default
+		// we just assume nobody ever could dream of (or be able to) starting this from any other interface than console.
 		interfaceState = INTERFACE_STATE_CONSOLE;
 		break;
 	}
-#endif
 }
+#endif

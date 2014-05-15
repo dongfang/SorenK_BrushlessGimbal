@@ -185,39 +185,44 @@ void printHelpUsage() {
 	printf_P(PSTR("we    Writes active config to eeprom\r\n"));
 	printf_P(PSTR("re    Restores values from eeprom to active config\r\n"));
 	printf_P(PSTR("par   <parName> <parValue>   General parameter read/set command\r\n"));
-	printf_P(PSTR("        example usage:\r\n"));
-	printf_P(PSTR("        par                     ... list all config parameters\r\n"));
-	printf_P(PSTR("        par pitchKi             ... list pitchKi\r\n"));
-	printf_P(PSTR("        par pitchKi 12000       ... set pitchKi to 12000\r\n"));
+	printf_P(PSTR("        	example usage:\r\n"));
+	printf_P(PSTR("       	par                     ... list all config parameters\r\n"));
+	printf_P(PSTR("        	par pitchKi             ... list pitchKi\r\n"));
+	printf_P(PSTR("        	par pitchKi 12000       ... set pitchKi to 12000\r\n"));
 #ifdef SUPPORT_AUTOSETUP
 	printf_P(PSTR("setup Autosetup (of sensor orientation and motor directions)\r\n"));
 #endif
 	printf_P(PSTR("\r\n"));
 	printf_P(PSTR("Tuning:\r\n"));
-	printf_P(PSTR("cal   Recalibrates the gyro\r\n"));
-	printf_P(PSTR("level Sets level (place gimbal firmly level and run)\r\n"));
-	printf_P(PSTR("osc <n> Starts oscillation with speed n (0 to stop)\r\n"));
+	printf_P(PSTR("cal   	Recalibrates the gyro\r\n"));
+	printf_P(PSTR("level 	Sets level (place gimbal firmly level and run)\r\n"));
+	printf_P(PSTR("osc <n> 	Starts oscillation with speed n (0 to stop)\r\n"));
 	printf_P(PSTR("trans <rol|pitch|both|off> n Starts transients with amplitude ntest\r\n"));
 	printf_P(PSTR("\r\n"));
 	printf_P(PSTR("Run-state:\r\n"));
-	printf_P(PSTR("run	  Resume running normally\r\n"));
-	printf_P(PSTR("stop	  Freeze gimbal\r\n"));
-	printf_P(PSTR("off	  Cut output power\r\n"));
-	printf_P(PSTR("reset  Restart system\r\n"));
-	printf_P(PSTR("ml	  Switch to MAVLink control\r\n"));
+	printf_P(PSTR("run	  	Resume running normally\r\n"));
+	printf_P(PSTR("stop	  	Freeze gimbal\r\n"));
+	printf_P(PSTR("off	  	Cut output power\r\n"));
+#ifdef SUPPORT_RETRACT
+	printf_P(PSTR("retract 	Retract gimbal\r\n"));
+	printf_P(PSTR("extend	Extend gimbal\r\n"));
+#endif
+	printf_P(PSTR("reset  	Restart system\r\n"));
+	printf_P(PSTR("mavlink  Switch to MAVLink control\r\n"));
 	printf_P(PSTR("\r\n"));
 	printf_P(PSTR("Diags:\r\n"));
 	printf_P(PSTR("debug <category> Prints troubleshooting info\r\n"));
-	printf_P(PSTR("        debug usage:\r\n"));
-	printf_P(PSTR("        debug off               ... turns off debug\r\n"));
-	printf_P(PSTR("        debug acc               ... prints accelerometer values\r\n"));
-	printf_P(PSTR("        debug gyro              ... prints gyro values\r\n"));
-	printf_P(PSTR("        debug att               ... prints attitude\r\n"));
-	printf_P(PSTR("        debug pid               ... prints PID outputs\r\n"));
+	printf_P(PSTR("        	debug usage:\r\n"));
+	printf_P(PSTR("        	debug off               ... turns off debug\r\n"));
+	printf_P(PSTR("        	debug acc               ... prints accelerometer values\r\n"));
+	printf_P(PSTR("        	debug gyro              ... prints gyro values\r\n"));
+	printf_P(PSTR("        	debug att               ... prints attitude\r\n"));
+	printf_P(PSTR("        	debug pid               ... prints PID outputs\r\n"));
+	printf_P(PSTR("pcal	 	Show calibration offsets\r\n"));
 #ifdef DO_PERFORMANCE
-	printf_P(PSTR("perf	 Prints performace info\r\n"));
+	printf_P(PSTR("perf	 	Print performace info\r\n"));
 #endif
-	printf_P(PSTR("help   print this output\r\n"));
+	printf_P(PSTR("help   	print this output\r\n"));
 	printf_P(PSTR("Commands and parameter names are case-insensitive.\r\n"));
 }
 
@@ -354,8 +359,9 @@ void debug() {
 		break;
 	case DEBUG_RC:
 		printf_P(PSTR("rc: switch %d\troll %d\talive %S\tpitch %d\tsignal %S\r\n"), switchPos,
-				rcData[ROLL].setpoint, (rcData[ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
-				rcData[PITCH].setpoint, (rcData[PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
+				targetSources[TARGET_SOURCE_RC][ROLL],
+				(rcData[ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
+				targetSources[TARGET_SOURCE_RC][PITCH], (rcData[PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
 
 		break;
 	case DEBUG_ORATE:
@@ -387,10 +393,45 @@ void calibrateAcc() {
 }
 
 void showSensorCal() {
-	printf_P(PSTR("Gyro roll\t%d, pitch\t%d, yaw\t%d\r\n"), mpu.sensorOffset[0], mpu.sensorOffset[1],
+	printf_P(PSTR("Gyro roll\t%d, pitch\t%d, yaw\t%d\r\n"),
+			mpu.sensorOffset[4],
+			mpu.sensorOffset[5],
+			mpu.sensorOffset[6]);
+	printf_P(PSTR("Acc X\t%d, Y\t%d, Z\t%d\r\n"),
+			mpu.sensorOffset[0],
+			mpu.sensorOffset[1],
 			mpu.sensorOffset[2]);
-	printf_P(PSTR("Acc X\t%d, Y\t%d, Z\t%d\r\n"), mpu.sensorOffset[3], mpu.sensorOffset[4], mpu.sensorOffset[5]);
 }
+
+void run() {
+	gimbalState = GS_MOTORS_POWERED | GS_PIDS_ARE_OUTPUT;
+}
+
+void stop() {
+	gimbalState = 0;
+}
+
+#ifdef SUPPORT_RETRACT
+void retract() {
+	gimbalState |= GS_GIMBAL_FROZEN;
+	_delay_ms(1000);
+	gimbalState |= GS_GIMBAL_RETRACTED;
+}
+void extend() {
+	gimbalState &= ~GS_GIMBAL_RETRACTED;
+	_delay_ms(1000);
+}
+#endif
+
+void freeze() {
+	gimbalState = GS_MOTORS_POWERED | GS_GIMBAL_FROZEN;
+}
+
+#ifdef SUPPORT_MAVLINK
+void goMavlink() {
+	interfaceState = INTERFACE_STATE_MAVLINK;
+}
+#endif
 
 extern void startAutosetup();
 
@@ -403,8 +444,10 @@ void setSerialProtocol() {
 	sCmd.addCommand("setup", startAutosetup);
 #endif
 	sCmd.addCommand("par", parameterMod);
+
 	sCmd.addCommand("cal", calibrateGyro);
 	sCmd.addCommand("level", calibrateAcc);
+
 	sCmd.addCommand("osc", setOscillation);
 	sCmd.addCommand("trans", setTransients);
 	sCmd.addCommand("help", printHelpUsage);
@@ -412,7 +455,17 @@ void setSerialProtocol() {
 	sCmd.addCommand("perf", reportPerformance);
 #endif
 	sCmd.addCommand("debug", debugControl);
+	sCmd.addCommand("freeze", freeze);
+	sCmd.addCommand("run", run);
+	sCmd.addCommand("stop", stop);
+#ifdef SUPPORT_RETRACT
+	sCmd.addCommand("retract", retract);
+	sCmd.addCommand("extend", extend);
+#endif
+#ifdef SUPPORT_MAVLINK
+	sCmd.addCommand("mavlink", goMavlink);
+#endif
 	sCmd.addCommand("reset", reset);
-	sCmd.addCommand("cal", showSensorCal);
+	sCmd.addCommand("pcal", showSensorCal);
 	sCmd.setDefaultHandler(unrecognized); // Handler for command that isn't matched  (says "What?")
 }

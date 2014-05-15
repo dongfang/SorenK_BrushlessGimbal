@@ -48,12 +48,12 @@ void Configuration::setDefaults() {
 	controlInput[ROLL].defaultAngle = 0;
 	controlInput[ROLL].minAngle = -20;
 	controlInput[ROLL].maxAngle = 20;
-	controlInput[ROLL].speed = 10;
+	controlInput[ROLL].maxSlewRate = 15;
 
 	controlInput[PITCH].defaultAngle = 0;
 	controlInput[PITCH].minAngle = -90;
 	controlInput[PITCH].maxAngle = 0;
-	controlInput[PITCH].speed = 10;
+	controlInput[PITCH].maxSlewRate = 15;
 
 	rollOutputRateLimit = 35;
 	pitchOutputRateLimit = 35;
@@ -148,12 +148,12 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 
 { "rollMin", INT8, &config.controlInput[ROLL].minAngle, &initControlLimits },
 { "rollMax", INT8, &config.controlInput[ROLL].maxAngle, &initControlLimits },
-{ "rollSpeed", UINT8, &config.controlInput[ROLL].speed, &initControlLimits },
+{ "rollSpeed", UINT8, &config.controlInput[ROLL].maxSlewRate, &initControlLimits },
 { "rollDefault", INT8, &config.controlInput[ROLL].defaultAngle, &initControlLimits },
 
 { "pitchMin", INT8, &config.controlInput[PITCH].minAngle, &initControlLimits },
 { "pitchMax", INT8, &config.controlInput[PITCH].maxAngle, &initControlLimits },
-{ "pitchSpeed", UINT8, &config.controlInput[PITCH].speed, &initControlLimits },
+{ "pitchSpeed", UINT8, &config.controlInput[PITCH].maxSlewRate, &initControlLimits },
 { "pitchDefault", INT8, &config.controlInput[PITCH].defaultAngle, &initControlLimits },
 
 { "rcAbsolute", BOOL, &config.rcAbsolute, NULL },

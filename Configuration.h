@@ -44,6 +44,9 @@ public:
 	uint8_t rollMotorPower;
 	uint8_t pitchMotorPower;
 
+	uint8_t rollFrozenValue;
+	uint8_t pitchFrozenValue;
+
 	// There should be no need for these. One can just swap and turn the connectors.
 	//uint8_t motorNumberPitch;
 	//uint8_t motorNumberRoll;
