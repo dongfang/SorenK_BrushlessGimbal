@@ -254,7 +254,8 @@ static const char DEBUG_RC_ARG[] PROGMEM = "rc";
 static const char DEBUG_OVERRATE_ARG[] PROGMEM = "orate";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = { DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG,
-		DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG, DEBUG_RC_ARG, DEBUG_OVERRATE_ARG };
+		DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG, DEBUG_RC_ARG,
+		DEBUG_OVERRATE_ARG };
 
 /*
  void toggleEcho() {
@@ -359,8 +360,7 @@ void debug() {
 		break;
 	case DEBUG_RC:
 		printf_P(PSTR("rc: switch %d\troll %d\talive %S\tpitch %d\tsignal %S\r\n"), switchPos,
-				targetSources[TARGET_SOURCE_RC][ROLL],
-				(rcData[ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
+				targetSources[TARGET_SOURCE_RC][ROLL], (rcData[ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
 				targetSources[TARGET_SOURCE_RC][PITCH], (rcData[PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
 
 		break;
@@ -393,14 +393,9 @@ void calibrateAcc() {
 }
 
 void showSensorCal() {
-	printf_P(PSTR("Gyro roll\t%d, pitch\t%d, yaw\t%d\r\n"),
-			mpu.sensorOffset[4],
-			mpu.sensorOffset[5],
+	printf_P(PSTR("Gyro roll\t%d, pitch\t%d, yaw\t%d\r\n"), mpu.sensorOffset[4], mpu.sensorOffset[5],
 			mpu.sensorOffset[6]);
-	printf_P(PSTR("Acc X\t%d, Y\t%d, Z\t%d\r\n"),
-			mpu.sensorOffset[0],
-			mpu.sensorOffset[1],
-			mpu.sensorOffset[2]);
+	printf_P(PSTR("Acc X\t%d, Y\t%d, Z\t%d\r\n"), mpu.sensorOffset[0], mpu.sensorOffset[1], mpu.sensorOffset[2]);
 }
 
 void run() {
@@ -413,13 +408,17 @@ void stop() {
 
 #ifdef SUPPORT_RETRACT
 void retract() {
-	gimbalState |= GS_GIMBAL_FROZEN;
-	_delay_ms(1000);
-	gimbalState |= GS_GIMBAL_RETRACTED;
+	if (!(gimbalState & GS_GIMBAL_RETRACTED)) {
+		gimbalState |= GS_GIMBAL_FROZEN;
+		_delay_ms(1000);
+		gimbalState |= GS_GIMBAL_RETRACTED;
+	}
 }
 void extend() {
-	gimbalState &= ~GS_GIMBAL_RETRACTED;
-	_delay_ms(1000);
+	if (gimbalState & GS_GIMBAL_RETRACTED) {
+		gimbalState &= ~GS_GIMBAL_RETRACTED;
+		_delay_ms(1000);
+	}
 }
 #endif
 
