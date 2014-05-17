@@ -115,9 +115,13 @@ void initHW() {
 	DEBUG_DDR |= 1<<DEBUG_BIT1 | 1<<DEBUG_BIT2;
 #endif
 
-	// We don't use this, whatever it was.
-	// CH2_PINMODE
-	// CH3_PINMODE
+#ifdef SUPPORT_RETRACT
+	SERVO_DDR |= (1<<RETRACT_SERVO_BIT);
+#endif
+
+#ifdef SUPPORT_YAW_SERVO
+	SERVO_DDR |= (1<<YAW_SERVO_BIT);
+#endif
 
 	//HW
 	initSerial();
@@ -192,8 +196,6 @@ void checkwatchdog(void) {
 	//	main();
 }
 
-extern void updateGimbalState();
-
 int main() {
 	// TODO: Can this be moved down?
 	config.checkRAMImageValid();
@@ -223,8 +225,6 @@ int main() {
 
 	wdt_enable(WDT_TIMEOUT);
 	printf_P(PSTR("Go!\r\n"));
-
-	updateGimbalState();
 
 	slowLoop();
 }

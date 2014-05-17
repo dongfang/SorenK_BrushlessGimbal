@@ -20,39 +20,32 @@
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // Drotek MPU breakout board
 //#define MPU6050_DEFAULT_ADDRESS     MPU6050_ADDRESS_AD0_HIGH
 
-#define FASTLOOP_FREQ 1200
+#define FASTLOOP_FREQ 1080
 #define FASTLOOP_DT_F_S  (1.0/FASTLOOP_FREQ)   	    // loop controller sample period dT
 #define FASTLOOP_DT_I_MS (1000/FASTLOOP_FREQ)
 
 // Must be an integral fraction of FASTLOOP_FREQ
-#define MEDIUMLOOP_FREQ 600
+#define MEDIUMLOOP_FREQ 540
 #define MEDIUMLOOP_DT_F_S  (1.0/MEDIUMLOOP_FREQ)       // loop controller sample period dT
 #define MEDIUMLOOP_DT_I_MS (1000/MEDIUMLOOP_FREQ)
-
-// Must be an integral fraction of MEDIUMLOOP_FREQ
-#define RC_FREQ 250
-#define RC_LATCH (MEDIUMLOOP_FREQ/RC_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
 #define SOFTSTART_FREQ 50
 #define SOFTSTART_LATCH (MEDIUMLOOP_FREQ/SOFTSTART_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
-#define HUMAN_DEBUG_FREQ 5
+#define HUMAN_DEBUG_FREQ 3
 #define HUMAN_DEBUG_LATCH (MEDIUMLOOP_FREQ/HUMAN_DEBUG_FREQ)
+
+// Must be an integral fraction of MEDIUMLOOP_FREQ
+#define RC_FREQ 80
+#define RC_LATCH (MEDIUMLOOP_FREQ/RC_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
 // We can send about 10k chars / sec, that is 250 lines/sec.
 // However we are almost out of steam.
 #define GUI_DEBUG_FREQ 10
 #define GUI_DEBUG_LATCH (MEDIUMLOOP_FREQ/GUI_DEBUG_FREQ)
-
-// Must be an integral fraction of MEDIUMLOOP_FREQ
-#define ACCMAG_FREQ 5
-#define ACCMAG_LATCH (MEDIUMLOOP_FREQ/ACCMAG_FREQ)
-
-// Must be an integral fraction of MEDIUMLOOP_FREQ
-#define UI_DEBUG_FREQ 20
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
 #define LED_FREQ 10
@@ -89,6 +82,7 @@
 #define MAX_RC (1900*16)
 #define RC_RANGE (1000*16)
 #define RC_DEADBAND (50*16)
+#define RC_SW_DEADBAND (100*16)
 
 // PPM Decoder
 // #define RC_PPM_GUARD_TIME 4000

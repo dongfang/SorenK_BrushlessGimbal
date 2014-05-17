@@ -99,21 +99,28 @@ void initRC() {
 // Integrating
 //******************************************
 void evalRCChannelIntegrating(uint8_t ch) {
-	RCData_t* rcData = rcData + ch;
+	// RCData_t* rcData = rcData + ch;
 	LiveControlAxisDef* def = liveControlDefs + ch;
 
 	cli();
 	uint16_t rx = rcData->m_16;
 	sei();
 	int16_t live = rx - MID_RC - RC_DEADBAND;
-	if (live <= 0) { 							// below top of deadband
+	if (live <= 0) { // below top of deadband
 		live = rx - MID_RC + RC_DEADBAND;
-		if (live >= 0)							// in deadband
+		if (live >= 0) // in deadband
 			return;
 	}
 
+	int16_t result = targetSources[TARGET_SOURCE_RC][ch] + (int32_t) def->maxSlewRate * live / (RC_RANGE / 2);
+
+	if (result > def->maxAngleND)
+		result = def->maxAngleND;
+	if (result < def->minAngleND)
+		result = def->minAngleND;
+
 	// live is in the order [-500*16..500*16]
-	targetSources[TARGET_SOURCE_RC][ch] += (int32_t) def->maxSlewRate * live / (RC_RANGE/2);
+	targetSources[TARGET_SOURCE_RC][ch] = result;
 }
 
 //******************************************
@@ -133,7 +140,7 @@ void evalRCChannelAbsolute(uint8_t ch) {
 	uint16_t rx = rcData[ch].m_16;
 	sei();
 	int16_t result = rx - MID_RC;
-	result = (result + pladder * 1023L) / 1024L;
+	result = (result + (int32_t)pladder * 1023L) / 1024L;
 	pladder = result;
 
 	result += liveControlDefs[ch].midAngleND;
@@ -166,24 +173,28 @@ void evaluateRCControl() {
 void evaluateRCSwitch() {
 	RCData_t* swData = rcData + RC_DATA_SWITCH;
 	if (swData->pulseComplete) {
+		static uint16_t f16;
 		cli();
 		uint16_t rx = swData->m_16;
 		sei();
+		f16 = (f16 * 255L + rx) / 256;
 		// Do something predictable, such as setting it default-locked.
 		uint16_t lThreshold = MIN_RC / 2 + MID_RC / 2;
-		if (switchPos < 0)
-			lThreshold += RC_DEADBAND;
 		uint16_t hThreshold = MID_RC / 2 + MAX_RC / 2;
-		if (switchPos > 0)
-			hThreshold -= RC_DEADBAND;
-		if (rx <= lThreshold)
+		if (switchPos == 0) {
+			lThreshold -= RC_SW_DEADBAND;
+			hThreshold += RC_SW_DEADBAND;
+		}
+		if (f16 <= lThreshold)
 			switchPos = -1;
-		else if (rx >= hThreshold)
+		else if (f16 >= hThreshold)
 			switchPos = 1;
 		else
 			switchPos = 0;
-	} else if (swData->isTimedOut())
-		switchPos = 1;
-	else
-		swData->timeout++;
+	} else {
+		if (swData->isTimedOut())
+			switchPos = 1;
+		else
+			swData->timeout++;
+	}
 }

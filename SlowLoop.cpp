@@ -9,11 +9,25 @@ uint8_t LEDFlags;
 
 // This is supposed to read the switch.
 // This pretty outdated by now.. find another way
-void updateGimbalState() {
+void updateSwitchEffect() {
+	static int8_t prevSwitch = SW_UNKNOWN;
 	// if (switchPos < 0) balahblah .. implement switch to state logic here.
 	// except when in autosetup, oops.
-	if (interfaceState != INTERFACE_STATE_AUTOSETUP)
-		gimbalState = GS_PIDS_ARE_OUTPUT | GS_MOTORS_POWERED;
+	if (switchPos != prevSwitch) {
+		if (switchPos == SW_EXTENDED && interfaceState != INTERFACE_STATE_AUTOSETUP)
+			gimbalState = GS_PIDS_ARE_OUTPUT | GS_MOTORS_POWERED;
+		prevSwitch = switchPos;
+	}
+}
+
+extern void setRetractServoOut(uint8_t val);
+
+// Todo: Don't need to repeat this all the time really..
+void updateRetract() {
+	if (gimbalState & GS_GIMBAL_RETRACTED)
+		setRetractServoOut(config.retractedServoVal);
+	else
+		setRetractServoOut(config.extendedServoVal);
 }
 
 inline bool checkMediumLoop() {
@@ -31,6 +45,7 @@ extern void runAutosetup();
 extern void debug();
 
 void slowLoop() {
+	static uint8_t rcDivider;
 	static uint8_t humanDebugDivider;
 	static uint8_t GUIDebugDivider;
 	//static uint8_t RCDivider;
@@ -50,13 +65,15 @@ void slowLoop() {
 		 imu.updateAccMagnitude();
 		 }
 		 */
-		if (ticked) {
+		if (ticked && !rcDivider) {
 			// Evaluate RC-Signals. Out of laziness, we ignore these if MAVLink is controlling.
 			// if (interfaceState != INTERFACE_STATE_MAVLINK) {
-				evaluateRCControl();
-				evaluateRCSwitch();
+			rcDivider = RC_LATCH;
+			evaluateRCControl();
+			evaluateRCSwitch();
 			// }
-			updateGimbalState();
+			updateSwitchEffect();
+			updateRetract();
 		}
 
 		if (interfaceState == INTERFACE_STATE_CONSOLE)
@@ -112,10 +129,9 @@ void slowLoop() {
 #endif
 
 		if (ticked) {
-			// --accMagDivider;
+			--rcDivider;
 			--humanDebugDivider;
 			--GUIDebugDivider;
-			//--softstartDivider;
 			--LEDDivider;
 			--heartbeatDivider;
 			--oscDivider;

@@ -90,6 +90,9 @@ public:
 	uint8_t mavlinkComponentId;
 	bool mavlinkUseRelativealtitudes;
 
+	uint8_t retractedServoVal;
+	uint8_t extendedServoVal;
+
 	uint16_t crc16;
 
 	void setDefaults();

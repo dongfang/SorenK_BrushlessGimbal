@@ -75,6 +75,9 @@ void Configuration::setDefaults() {
 	mavlinkComponentId = 1;
 	mavlinkUseRelativealtitudes = true;
 
+	retractedServoVal = 30;
+	extendedServoVal = 60;
+
 	mpu6050Address = 0x68;
 }
 
@@ -164,6 +167,9 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "LEDMask", UINT8, &config.LEDMask, 		NULL },
 { "MPU6050Addr", UINT8, &config.mpu6050Address, &initMPU6050 },
 { "baudRate", UINT32, &config.serialBaudRate, &initSerial },
+
+{ "retractServo", UINT8, &config.retractedServoVal, NULL },
+{ "extendServo", UINT8, &config.extendedServoVal, NULL },
 
 { "systemId", UINT8, &config.mavlinkSystemId, NULL },
 { "componentId", UINT8, &config.mavlinkComponentId, NULL },

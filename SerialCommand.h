@@ -26,9 +26,10 @@
 
 #include <string.h>
 #include <stdint.h>
+#include <avr/pgmspace.h>
 
 struct Command {
-	const char* text;
+	PGM_P text;
 	void (*function)();
 };
 

@@ -77,12 +77,12 @@ void SerialCommand::readSerial() {
 				for (int j = 0; command[j] != '\0'; j++) // as no strnicmp exists ...
 					command[j] = (char) tolower(command[j]);
 				for (int i = 0; i < commandCount; i++) {
-					PGM_P *blarh = (PGM_P*)pgm_read_word(commands[i].text);
-					PGM_P fims = (PGM_P)pgm_read_word(blarh);
-					printf_P(PSTR("Trying %s against %S\r\n"), command, fims);
-					if (strncmp_P(command, fims, SERIALCOMMAND_MAXCOMMANDLENGTH) == 0) {
+					PGM_P blarh = (PGM_P)pgm_read_word(&commands[i].text);
+					// printf_P(PSTR("Trying %s against %S\r\n"), command, blarh);
+					if (strncmp_P(command, blarh, SERIALCOMMAND_MAXCOMMANDLENGTH) == 0) {
 						// Execute the stored handler function for the command
-						(*commands[i].function)();
+						void (*f)() = (void (*)())pgm_read_word(&commands[i].function);
+						f();
 						matched = true;
 						break;
 					}

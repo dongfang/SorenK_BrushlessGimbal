@@ -53,21 +53,18 @@ void mediumTask() {
 			}
 		}
 
-		else if (!(gimbalState & GS_POWER_RAMPING_COMPLETE)) {
-			if (GS_MOTORS_POWERED) {
-				if (softStart < 16)
-					softStart++;
-				else {
-					gimbalState |= GS_POWER_RAMPING_COMPLETE;
-					overrate = 0;
-				}
-			} else {
-				if (softStart)
-					softStart--;
-				else {
-					gimbalState |= GS_POWER_RAMPING_COMPLETE;
-					//LEDEvent(LED_SOFTSTART_MASK);
-				}
+		if (GS_MOTORS_POWERED) {
+			if (softStart < 16)
+				softStart++;
+			else {
+				gimbalState |= GS_POWER_RAMPING_COMPLETE;
+				overrate = 0;
+			}
+		} else {
+			if (softStart)
+				softStart--;
+			else {
+				gimbalState |= GS_POWER_RAMPING_COMPLETE;
 			}
 		}
 	}

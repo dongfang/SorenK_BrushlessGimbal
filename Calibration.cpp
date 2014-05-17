@@ -12,8 +12,6 @@
 int16_t rollAngleSet;
 int16_t pitchAngleSet;
 
-extern void updateGimbalState();
-
 void complainAboutSensorMotion() {
 	printf_P(PSTR("Motion detected during calibration. Starting over!\r\n"));
 }
@@ -25,17 +23,11 @@ void calibrateSensor(uint8_t which) {
 	// TODO if softstart works VERY well we can add a divider.
 	// Or we can use freeze instead.
 	printf_P(PSTR("Sensor calibration: do not move\r\n"));
+	uint8_t before = gimbalState & ~GS_POWER_RAMPING_COMPLETE;
 	gimbalState = 0;
-	//while (!(gimbalState & POWER_RAMPING_COMPLETE))
-	//	;
-	// now it should have been powered off and we can disable the tasks
-	// We really should set all PWMs-out to zero and let the interrupt handler output that.
-	// Right now as a hack we let the fast loop dot, by waiting long enough.
-	_delay_ms(1);
-	// gimbalState = 0;
 	mpu.recalibrateSensor(&complainAboutSensorMotion, which);
 	printf_P(PSTR("done.\r\n"));
-	updateGimbalState();
+	gimbalState = before;
 }
 
 static uint8_t state;

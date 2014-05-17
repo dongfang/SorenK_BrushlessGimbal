@@ -359,7 +359,7 @@ void debug() {
 		printf_P(PSTR("errors %u\r\n"), i2c_errors_count);
 		break;
 	case DEBUG_RC:
-		printf_P(PSTR("rc: switch %d\troll %d\talive %S\tpitch %d\tsignal %S\r\n"), switchPos,
+		printf_P(PSTR("rc: switch %d\troll %d\talive %S\tpitch %d\talive %S\r\n"), switchPos,
 				targetSources[TARGET_SOURCE_RC][ROLL], (rcData[ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
 				targetSources[TARGET_SOURCE_RC][PITCH], (rcData[PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
 

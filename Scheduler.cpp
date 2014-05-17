@@ -18,7 +18,7 @@ volatile bool newPWMData;
 volatile bool mediumTaskHasRun;
 
 #ifdef SUPPORT_YAW_SERVO
-volatile uint8_t yawServoPulseLength;
+volatile uint8_t yawServoPulseLength = 46;
 void setYawServoOut(uint8_t pulse) {
 	cli();
 	yawServoPulseLength = pulse-1;
@@ -27,7 +27,7 @@ void setYawServoOut(uint8_t pulse) {
 #endif
 
 #ifdef SUPPORT_RETRACT
-volatile uint8_t retractServoPulseLength;
+volatile uint8_t retractServoPulseLength = 46;
 void setRetractServoOut(uint8_t pulse) {
 	cli();
 	retractServoPulseLength = pulse-1;
@@ -84,8 +84,7 @@ ISR (TIMER1_OVF_vect) {
 #ifdef DEBUG_SIGNALS
 			DEBUG_PORT &= ~(1<<DEBUG_BIT1);
 #endif
-			mediumDivider--;
-			if (!mediumDivider) {
+			if (!--mediumDivider) {
 				if (mediumState == IDLE) {
 					cli();
 #ifdef DEBUG_SIGNALS
@@ -115,45 +114,39 @@ ISR (TIMER1_OVF_vect) {
 		}
 	}
 #if defined(SUPPORT_YAW_SERVO) || defined(SUPPORT_RETRACT)
+	static bool emitting;
 		if (servoPauseDivider) {
 			--servoPauseDivider;
 		} else {
-			bool ended = true;
 #if defined(SUPPORT_YAW_SERVO)
-			if (!yawServoDivider) {
-				if (!(SERVO_PORT & (1 << YAW_SERVO_BIT)) && (gimbalState & GS_MOTORS_POWERED)) {
-					SERVO_PORT |= 1 << YAW_SERVO_BIT;
-					yawServoDivider = yawServoPulseLength;
-					ended = false;
-				} else {
-					SERVO_PORT &= ~(1 << YAW_SERVO_BIT);
-				}
+			if (!emitting) {
+				SERVO_PORT |= (1 << YAW_SERVO_BIT);
+				yawServoDivider = yawServoPulseLength;
+			} else if (yawServoDivider) {
+				--yawServoDivider;
 			} else {
-				yawServoDivider--;
-				ended = false;
+				SERVO_PORT &= ~(1 << YAW_SERVO_BIT);
 			}
 #endif
 #if defined(SUPPORT_RETRACT)
-			if (!retractServoDivider) {
-				if (!(SERVO_PORT & (1 << RETRACT_SERVO_BIT))) {
-					SERVO_PORT |= 1 << RETRACT_SERVO_BIT;
-					retractServoDivider = retractServoPulseLength;
-					ended = false;
-				} else {
-					SERVO_PORT &= ~(1 << RETRACT_SERVO_BIT);
-				}
+			if (!emitting) {
+				SERVO_PORT |= (1 << RETRACT_SERVO_BIT);
+				retractServoDivider = retractServoPulseLength;
+			} else if (retractServoDivider) {
+				--retractServoDivider;
 			} else {
-				retractServoDivider--;
-				ended = false;
+				SERVO_PORT &= ~(1 << RETRACT_SERVO_BIT);
 			}
 #endif
-			if (ended) {
-				servoPauseDivider = (0.04 / FAST_PERIOD); // 40 ms
+			if (retractServoDivider || yawServoDivider) emitting = true;
+			else {
+				servoPauseDivider = 0.05 * (F_CPU/510); // 40 ms
+				emitting = false;
 			}
 		}
 #endif
 
 	if (!(++timer1Extension)) { // Overflows at 122.55 Hz
 		timer1ExtensionExtension++;
-		}
+	}
 }
