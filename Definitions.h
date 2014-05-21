@@ -30,7 +30,7 @@
 #define MEDIUMLOOP_DT_I_MS (1000/MEDIUMLOOP_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
-#define SOFTSTART_FREQ 50
+#define SOFTSTART_FREQ 10
 #define SOFTSTART_LATCH (MEDIUMLOOP_FREQ/SOFTSTART_FREQ)
 
 // Must be an integral fraction of MEDIUMLOOP_FREQ
@@ -91,13 +91,13 @@
 
 // Hardware Abstraction for Motor connectors,
 // DO NOT CHANGE UNLES YOU KNOW WHAT YOU ARE DOING !!!
-#define PWM_A_MOTOR1 OCR2A
-#define PWM_B_MOTOR1 OCR1B
-#define PWM_C_MOTOR1 OCR1A
+#define PWM_A_MOTOR1 OCR0A
+#define PWM_B_MOTOR1 OCR0B
+#define PWM_C_MOTOR1 OCR2B
 
-#define PWM_A_MOTOR0 OCR0A
-#define PWM_B_MOTOR0 OCR0B
-#define PWM_C_MOTOR0 OCR2B
+#define PWM_A_MOTOR0 OCR2A
+#define PWM_B_MOTOR0 OCR1B
+#define PWM_C_MOTOR0 OCR1A
 
 // enable stack and heapsize check (use just for debugging)
 // #define STACKHEAPCHECK_ENABLE
@@ -114,9 +114,10 @@
 #define DEBUG_DELAY 255
 
 // Just a binary switch for retract.
-#define SW_UNKNOWN 0
-#define SW_RETRACTED -1
-#define SW_EXTENDED 1
+#define SW_UNKNOWN -100
+#define SW_CENTER 0
+#define SW_UP -1
+#define SW_DOWN 1
 
 #define CONFIGNAME_MAX_LEN 17
 
@@ -153,6 +154,9 @@
 #define GS_PIDS_ARE_OUTPUT 4
 #define GS_GIMBAL_FROZEN 8
 #define GS_GIMBAL_RETRACTED 16
+#define GS_GIMBAL_MOTORTEST 128
+
+#define GS_DEBUGSTRING "PRPFR..T"
 
 #define AS_RUNNING 1
 #define AS_RESET 2

@@ -44,16 +44,16 @@ void mediumTask() {
 		softStartDivider = SOFTSTART_LATCH;
 
 		// An attempt to stop self oscillations or at least reduce damage.
-		if (overrate) {
+		if (overrate && (gimbalState & GS_MOTORS_POWERED)) {
 			overrate--;
-			if (softStart >= 12) {
-				softStart--;
-				softStartDivider = SOFTSTART_LATCH * 12;
+			//if (softStart >= 11) {
+				softStart = 16 - (overrate / 16);
+				//softStartDivider = SOFTSTART_LATCH;
 				gimbalState &= ~(GS_POWER_RAMPING_COMPLETE);
-			}
+			//}
 		}
 
-		if (GS_MOTORS_POWERED) {
+		else if (gimbalState & GS_MOTORS_POWERED) {
 			if (softStart < 16)
 				softStart++;
 			else {
@@ -62,10 +62,9 @@ void mediumTask() {
 			}
 		} else {
 			if (softStart)
-				softStart--;
-			else {
+				--softStart;
+			else
 				gimbalState |= GS_POWER_RAMPING_COMPLETE;
-			}
 		}
 	}
 

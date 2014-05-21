@@ -51,7 +51,7 @@ uint8_t mcusr_mirror  __attribute__ ((section (".noinit")));
 bool watchdogResetWasIntended __attribute__ ((section (".noinit")));
 bool doubleFault __attribute__ ((section (".noinit")));
 
-uint8_t motorPhases[2][3];
+//uint8_t motorPhases[2][3];
 volatile uint8_t softStart;
 
 uint8_t pwmSinMotorRoll[N_SIN];
@@ -115,12 +115,17 @@ void initHW() {
 	DEBUG_DDR |= 1<<DEBUG_BIT1 | 1<<DEBUG_BIT2;
 #endif
 
-#ifdef SUPPORT_RETRACT
+#if defined (SUPPORT_RETRACT) && defined (RETRACT_SERVOOUT_LOCAL)
 	SERVO_DDR |= (1<<RETRACT_SERVO_BIT);
 #endif
 
-#ifdef SUPPORT_YAW_SERVO
+#if defined (SUPPORT_YAW_SERVO) && defined (YAW_SERVOOUT_LOCAL)
 	SERVO_DDR |= (1<<YAW_SERVO_BIT);
+#endif
+
+#if defined (SUPPORT_YAW_SERVO) && defined (YAW_SERVOOUT_REMOTE) || defined (SUPPORT_RETRACT) && defined (RETRACT_SERVOOUT_REMOTE)
+	REMOTE_SERVO_DDR |= (1<<REMOTE_SERVO_CLKBIT);
+	REMOTE_SERVO_DDR |= (1<<REMOTE_SERVO_DATABIT);
 #endif
 
 	//HW

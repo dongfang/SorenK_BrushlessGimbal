@@ -64,6 +64,7 @@ dongfangMartinezBleeding.elf: $(OBJS) $(USER_OBJS)
 	avr-g++ -lm -Wl,-Map,dongfangMartinezBleeding.map,--cref -mmcu=atmega328p -o "dongfangMartinezBleeding.elf" $(OBJS) $(USER_OBJS) $(LIBS) -lm
 	@echo 'Finished building target: $@'
 	@echo ' '
+	$(MAKE) --no-print-directory post-build
 
 dongfangMartinezBleeding.lss: dongfangMartinezBleeding.elf
 	@echo 'Invoking: AVR Create Extended Listing'
@@ -88,9 +89,13 @@ clean:
 	-$(RM) $(OBJS)$(C_DEPS)$(FLASH_IMAGE)$(ELFS)$(LSS)$(S_DEPS)$(CXX_DEPS)$(S_UPPER_DEPS)$(C++_DEPS)$(ASM_DEPS)$(CC_DEPS)$(CPP_DEPS)$(C_UPPER_DEPS)$(SIZEDUMMY) dongfangMartinezBleeding.elf
 	-@echo ' '
 
+post-build:
+	-scp dongfangMartinezBleeding.hex git@usg20:
+	-@echo ' '
+
 secondary-outputs: $(LSS) $(FLASH_IMAGE) $(SIZEDUMMY)
 
 .PHONY: all clean dependents
-.SECONDARY:
+.SECONDARY: post-build
 
 -include ../makefile.targets

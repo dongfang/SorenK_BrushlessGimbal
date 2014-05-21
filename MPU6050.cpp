@@ -137,7 +137,7 @@ void MPU6050::initSensorOrientation(uint8_t majorAxis, bool reverseZ, uint8_t ro
 		// swap acc axis
 		swap_uint8(&sensorDef.acc[X].idx, &sensorDef.acc[Y].idx);
 		swap_int(&sensorDef.acc[X].dir, &sensorDef.acc[Y].dir);
-		sensorDef.acc[X].dir *= -1;
+		sensorDef.acc[Y].dir *= -1;
 	}
 }
 

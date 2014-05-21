@@ -68,7 +68,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="de.innot.avreclipse.buildArtefactType.app" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release,org.eclipse.cdt.build.core.buildArtefactType=de.innot.avreclipse.buildArtefactType.app" description="" id="de.innot.avreclipse.configuration.app.release.1067139881" name="Release" parent="de.innot.avreclipse.configuration.app.release">
+				<configuration artifactName="${ProjName}" buildArtefactType="de.innot.avreclipse.buildArtefactType.app" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release,org.eclipse.cdt.build.core.buildArtefactType=de.innot.avreclipse.buildArtefactType.app" description="" id="de.innot.avreclipse.configuration.app.release.1067139881" name="Release" parent="de.innot.avreclipse.configuration.app.release" postbuildStep="scp ${ProjName}.hex git@usg20:">
 					<folderInfo id="de.innot.avreclipse.configuration.app.release.1067139881." name="/" resourcePath="">
 						<toolChain id="de.innot.avreclipse.toolchain.winavr.app.release.1899665217" name="AVR-GCC Toolchain" superClass="de.innot.avreclipse.toolchain.winavr.app.release">
 							<option id="de.innot.avreclipse.toolchain.options.toolchain.objcopy.flash.app.release.1715395143" name="Generate HEX file for Flash memory" superClass="de.innot.avreclipse.toolchain.options.toolchain.objcopy.flash.app.release"/>
@@ -120,16 +120,17 @@
 	<storageModule moduleId="refreshScope" versionNumber="1">
 		<resource resourceType="PROJECT" workspacePath="/dongfangMartinezRewrite"/>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="de.innot.avreclipse.configuration.app.debug.1799151338;de.innot.avreclipse.configuration.app.debug.1799151338.;de.innot.avreclipse.tool.cppcompiler.app.debug.1886476285;de.innot.avreclipse.cppcompiler.input.1769146386">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="de.innot.avreclipse.core.AVRGCCManagedMakePerProjectProfileCPP"/>
+		<scannerConfigBuildInfo instanceId="de.innot.avreclipse.configuration.app.debug.1799151338;de.innot.avreclipse.configuration.app.debug.1799151338.;de.innot.avreclipse.tool.compiler.winavr.app.debug.528103666;de.innot.avreclipse.compiler.winavr.input.1463600704">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="de.innot.avreclipse.core.AVRGCCManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="de.innot.avreclipse.configuration.app.release.1067139881;de.innot.avreclipse.configuration.app.release.1067139881.;de.innot.avreclipse.tool.cppcompiler.app.release.52246302;de.innot.avreclipse.cppcompiler.input.1069777817">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="de.innot.avreclipse.core.AVRGCCManagedMakePerProjectProfileCPP"/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="de.innot.avreclipse.configuration.app.debug.1799151338;de.innot.avreclipse.configuration.app.debug.1799151338.;de.innot.avreclipse.tool.compiler.winavr.app.debug.528103666;de.innot.avreclipse.compiler.winavr.input.1463600704">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="de.innot.avreclipse.core.AVRGCCManagedMakePerProjectProfileC"/>
+		<scannerConfigBuildInfo instanceId="de.innot.avreclipse.configuration.app.debug.1799151338;de.innot.avreclipse.configuration.app.debug.1799151338.;de.innot.avreclipse.tool.cppcompiler.app.debug.1886476285;de.innot.avreclipse.cppcompiler.input.1769146386">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="de.innot.avreclipse.core.AVRGCCManagedMakePerProjectProfileCPP"/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="de.innot.avreclipse.configuration.app.release.1067139881;de.innot.avreclipse.configuration.app.release.1067139881.;de.innot.avreclipse.tool.compiler.winavr.app.release.139878576;de.innot.avreclipse.compiler.winavr.input.175345152">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="de.innot.avreclipse.core.AVRGCCManagedMakePerProjectProfileC"/>

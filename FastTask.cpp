@@ -1,5 +1,6 @@
 #include "Globals.h"
 #include <avr/wdt.h>
+#include <avr/io.h>
 
 int16_t pitchPIDVal;
 int16_t rollPIDVal;
@@ -10,18 +11,29 @@ int16_t prevRollPIDVal;
 int16_t rollPIDDelta;
 int16_t pitchPIDDelta;
 
+uint8_t rollMotorTest;
+uint8_t pitchMotorTest;
+
 volatile uint8_t overrate;
 
-inline void outputPitch(uint8_t value) {
-	motorPhases[PITCH][0] = pwmSinMotorPitch[value] * softStart >> 4;
-	motorPhases[PITCH][1] = pwmSinMotorPitch[(uint8_t) (value + 85)] * softStart >> 4;
-	motorPhases[PITCH][2] = pwmSinMotorPitch[(uint8_t) (value + 170)] * softStart >> 4;
+void outputPitch(uint8_t value) {
+	uint8_t a = pwmSinMotorPitch[value] * softStart >> 4;
+	uint8_t b = pwmSinMotorPitch[(uint8_t) (value + 85)] * softStart >> 4;
+	uint8_t c = pwmSinMotorPitch[(uint8_t) (value + 170)] * softStart >> 4;
+
+	PWM_A_MOTOR1 = a;
+	PWM_B_MOTOR1 = b;
+	PWM_C_MOTOR1 = c;
 }
 
-inline void outputRoll(uint8_t value) {
-	motorPhases[ROLL][0] = pwmSinMotorRoll[value] * softStart >> 4;
-	motorPhases[ROLL][1] = pwmSinMotorRoll[(uint8_t) (value + 85)] * softStart >> 4;
-	motorPhases[ROLL][2] = pwmSinMotorRoll[(uint8_t) (value + 170)] * softStart >> 4;
+void outputRoll(uint8_t value) {
+	uint8_t a = pwmSinMotorRoll[value] * softStart >> 4;
+	uint8_t b = pwmSinMotorRoll[(uint8_t) (value + 85)] * softStart >> 4;
+	uint8_t c = pwmSinMotorRoll[(uint8_t) (value + 170)] * softStart >> 4;
+
+	PWM_A_MOTOR0 = a;
+	PWM_B_MOTOR0 = b;
+	PWM_C_MOTOR0 = c;
 }
 
 void fastTask() {
@@ -69,11 +81,7 @@ void fastTask() {
 		//pitchPIDVal = prevPitchPIDVal - config.pitchOutputRateLimit;
 	}
 
-	if (didOverspeed) {
-		if (overrate < 255) overrate++;
-	} else {
-		//if (overrate) overrate--;
-	}
+	if (didOverspeed && overrate < 64) overrate++;
 
 	prevRollPIDVal = rollPIDVal;
 	prevPitchPIDVal = pitchPIDVal;
@@ -83,18 +91,6 @@ void fastTask() {
 		//int motorDrive = pitchPIDVal; // * config.dirMotorPitch;
 		outputRoll(rollPIDVal);
 		outputPitch(pitchPIDVal);
-		/*
-		 uint8_t posStep = pitchPIDVal;
-		 motorPhases[PITCH][0] = pwmSinMotorPitch[posStep] * softStart >> 4;
-		 motorPhases[PITCH][1] = pwmSinMotorPitch[(uint8_t) (posStep + 85)] * softStart >> 4;
-		 motorPhases[PITCH][2] = pwmSinMotorPitch[(uint8_t) (posStep + 170)] * softStart >> 4;
-
-		 posStep = rollPIDVal;
-		 motorPhases[ROLL][0] = pwmSinMotorRoll[posStep] * softStart >> 4;
-		 motorPhases[ROLL][1] = pwmSinMotorRoll[(uint8_t) (posStep + 85)] * softStart >> 4;
-		 motorPhases[ROLL][2] = pwmSinMotorRoll[(uint8_t) (posStep + 170)] * softStart >> 4;
-		 */
-		newPWMData = true;
 	}
 #ifdef SUPPORT_AUTOSETUP
 	else if (autosetupState & AS_RUNNING) {
@@ -115,12 +111,14 @@ void fastTask() {
 		} else {
 			outputRoll(setupMoveCounter);
 		}
-		newPWMData = true;
 		setupMoveDivider--;
 	}
 #endif
 	else if (gimbalState & GS_GIMBAL_FROZEN) {
 		outputPitch(config.pitchFrozenValue);
 		outputRoll(config.rollFrozenValue);
+	} else if (gimbalState & GS_GIMBAL_MOTORTEST) {
+		outputRoll(rollMotorTest++);
+		outputPitch(pitchMotorTest++);
 	}
 }

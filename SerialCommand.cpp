@@ -75,12 +75,13 @@ void SerialCommand::readSerial() {
 				bool matched = false;
 				// Compare the found command against the list of known commands for a match
 				for (int j = 0; command[j] != '\0'; j++) // as no strnicmp exists ...
-					command[j] = (char) tolower(command[j]);
+					command[j] = tolower(command[j]);
 				for (int i = 0; i < commandCount; i++) {
 					PGM_P blarh = (PGM_P)pgm_read_word(&commands[i].text);
 					// printf_P(PSTR("Trying %s against %S\r\n"), command, blarh);
 					if (strncmp_P(command, blarh, SERIALCOMMAND_MAXCOMMANDLENGTH) == 0) {
 						// Execute the stored handler function for the command
+						printf_P(PSTR("%S\r\n"), blarh);
 						void (*f)() = (void (*)())pgm_read_word(&commands[i].function);
 						f();
 						matched = true;
@@ -90,7 +91,7 @@ void SerialCommand::readSerial() {
 				if (!matched && (defaultHandler != NULL)) {
 					(*defaultHandler)(command);
 				}
-			} else printf_P(PSTR("null command\r\n"));
+			}
 			clearBuffer();
 		} else {
 			wasCRLF = false;

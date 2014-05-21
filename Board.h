@@ -12,11 +12,21 @@
 #define SERVO_DDR		DDRD
 #define SERVO_PORT		PORTD
 
+#define REMOTE_SERVO_DDR		DDRD
+#define REMOTE_SERVO_PORT		PORTD
+
+#define REMOTE_SERVO_CLKBIT		4
+#define REMOTE_SERVO_DATABIT	5
+
 // This conflicts with debug-out so only use one at a time.
 #define SUPPORT_YAW_SERVO
+// #define YAW_SERVOOUT_LOCAL
+#define YAW_SERVOOUT_REMOTE
 #define YAW_SERVO_BIT	4
 
 #define SUPPORT_RETRACT
+// #define RETRACT_SERVOOUT_LOCAL
+#define RETRACT_SERVOOUT_REMOTE
 #define RETRACT_SERVO_BIT	7
 
 #if !defined(SUPPORT_YAW_SERVO) && !defined(SUPPORT_RETRACT)

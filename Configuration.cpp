@@ -40,10 +40,8 @@ void Configuration::setDefaults() {
 	accTimeConstant = 4;
 
 	// default nothing at all.
-	//rollMotorPower = 180;
-	//pitchMotorPower = 165;
-	rollMotorPower = 75;
-	pitchMotorPower = 75;
+	rollMotorPower = 165;
+	pitchMotorPower = 150;
 
 	controlInput[ROLL].defaultAngle = 0;
 	controlInput[ROLL].minAngle = -20;
@@ -75,8 +73,8 @@ void Configuration::setDefaults() {
 	mavlinkComponentId = 1;
 	mavlinkUseRelativealtitudes = true;
 
-	retractedServoVal = 30;
-	extendedServoVal = 60;
+	retractedServoUsec = 1000;
+	extendedServoUsec = 2000;
 
 	mpu6050Address = 0x68;
 }
@@ -168,8 +166,8 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "MPU6050Addr", UINT8, &config.mpu6050Address, &initMPU6050 },
 { "baudRate", UINT32, &config.serialBaudRate, &initSerial },
 
-{ "retractServo", UINT8, &config.retractedServoVal, NULL },
-{ "extendServo", UINT8, &config.extendedServoVal, NULL },
+{ "retractServo", UINT16, &config.retractedServoUsec, NULL },
+{ "extendServo", UINT16, &config.extendedServoUsec, NULL },
 
 { "systemId", UINT8, &config.mavlinkSystemId, NULL },
 { "componentId", UINT8, &config.mavlinkComponentId, NULL },

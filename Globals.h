@@ -34,7 +34,7 @@ extern int16_t pitchPIDVal;
 extern int16_t pitchPIDDelta;
 
 
-extern uint8_t motorPhases[2][3];	// Output signals, 2x3 phases
+//extern uint8_t motorPhases[2][3];	// Output signals, 2x3 phases
 extern volatile uint8_t softStart;	// 0..15
 
 extern uint8_t pwmSinMotorPitch[N_SIN];

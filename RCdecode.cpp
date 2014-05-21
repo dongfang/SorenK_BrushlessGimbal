@@ -131,17 +131,15 @@ void evalRCChannelIntegrating(uint8_t ch) {
 // eliminate that.
 //******************************************
 void evalRCChannelAbsolute(uint8_t ch) {
-	static int16_t pladder;
-
-	// RCData_t* rcData = rcData + ch;
-	// LiveControlAxisDef* def = liveControlDefs + ch;LiveControlAxisDef* def = liveControlDefs + ch;
-
+	static uint16_t pladder;
 	cli();
 	uint16_t rx = rcData[ch].m_16;
 	sei();
-	int16_t result = rx - MID_RC;
-	result = (result + (int32_t)pladder * 1023L) / 1024L;
-	pladder = result;
+	//int16_t result = rx - MID_RC;
+	//result = (result + (int32_t)pladder * 1023L) / 1024L;
+	pladder = (((uint32_t)pladder<<10) - pladder + rx) >> 10;
+
+	int16_t result = pladder - MID_RC;
 
 	result += liveControlDefs[ch].midAngleND;
 	targetSources[TARGET_SOURCE_RC][ch] = result;
@@ -177,7 +175,9 @@ void evaluateRCSwitch() {
 		cli();
 		uint16_t rx = swData->m_16;
 		sei();
-		f16 = (f16 * 255L + rx) / 256;
+		// If you think the compiler is able to make as efficient code out of
+		// f16 = (f16*255L + rx)/256, check that again!
+		f16 = ((f16<<8L)-f16 + rx)>>8;
 		// Do something predictable, such as setting it default-locked.
 		uint16_t lThreshold = MIN_RC / 2 + MID_RC / 2;
 		uint16_t hThreshold = MID_RC / 2 + MAX_RC / 2;
@@ -193,7 +193,7 @@ void evaluateRCSwitch() {
 			switchPos = 0;
 	} else {
 		if (swData->isTimedOut())
-			switchPos = 1;
+;//			switchPos = 1;
 		else
 			swData->timeout++;
 	}

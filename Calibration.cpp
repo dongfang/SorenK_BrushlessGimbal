@@ -185,7 +185,7 @@ void runAutosetup() {
 		}
 		break;
 	case 11:
-		if (!(gimbalState & AS_RUNNING)) {
+		if (!(autosetupState & AS_RUNNING)) {
 			state++;
 		} else {
 			rollGyroSeen = (mpu.gyro[ROLL] + rollGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;

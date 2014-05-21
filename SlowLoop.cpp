@@ -13,22 +13,29 @@ void updateSwitchEffect() {
 	static int8_t prevSwitch = SW_UNKNOWN;
 	// if (switchPos < 0) balahblah .. implement switch to state logic here.
 	// except when in autosetup, oops.
-	if (switchPos != prevSwitch) {
-		if (switchPos == SW_EXTENDED && interfaceState != INTERFACE_STATE_AUTOSETUP)
+	if (prevSwitch == SW_UNKNOWN) {
+		// switch was never defined, default to running
+		gimbalState = GS_PIDS_ARE_OUTPUT | GS_MOTORS_POWERED;
+		prevSwitch = 0;
+	}
+	if (switchPos != SW_UNKNOWN && switchPos != prevSwitch) {
+		if (switchPos == SW_UP && interfaceState != INTERFACE_STATE_AUTOSETUP)
 			gimbalState = GS_PIDS_ARE_OUTPUT | GS_MOTORS_POWERED;
 		prevSwitch = switchPos;
 	}
 }
 
-extern void setRetractServoOut(uint8_t val);
+#if defined (SUPPORT_RETRACT)
+extern void setRetractServoOut(uint16_t val);
 
 // Todo: Don't need to repeat this all the time really..
 void updateRetract() {
 	if (gimbalState & GS_GIMBAL_RETRACTED)
-		setRetractServoOut(config.retractedServoVal);
+		setRetractServoOut(config.retractedServoUsec);
 	else
-		setRetractServoOut(config.extendedServoVal);
+		setRetractServoOut(config.extendedServoUsec);
 }
+#endif
 
 inline bool checkMediumLoop() {
 	uint8_t sreg = SREG;
@@ -73,7 +80,9 @@ void slowLoop() {
 			evaluateRCSwitch();
 			// }
 			updateSwitchEffect();
+#if defined (SUPPORT_RETRACT)
 			updateRetract();
+#endif
 		}
 
 		if (interfaceState == INTERFACE_STATE_CONSOLE)

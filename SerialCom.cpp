@@ -12,6 +12,8 @@
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
 
+static const char GS_DEBUGCHARS[] PROGMEM = GS_DEBUGSTRING;
+
 static uint8_t _debug;
 
 static void writeEEPROM() {
@@ -201,7 +203,8 @@ void printHelpUsage() {
 	printf_P(PSTR("\r\n"));
 	printf_P(PSTR("Run-state:\r\n"));
 	printf_P(PSTR("run	  	Resume running normally\r\n"));
-	printf_P(PSTR("stop	  	Freeze gimbal\r\n"));
+	printf_P(PSTR("stop	  	Power off gimbal\r\n"));
+	printf_P(PSTR("freeze  	Freeze gimbal\r\n"));
 	printf_P(PSTR("off	  	Cut output power\r\n"));
 #ifdef SUPPORT_RETRACT
 	printf_P(PSTR("retract 	Retract gimbal\r\n"));
@@ -219,6 +222,7 @@ void printHelpUsage() {
 	printf_P(PSTR("        	debug att               ... prints attitude\r\n"));
 	printf_P(PSTR("        	debug pid               ... prints PID outputs\r\n"));
 	printf_P(PSTR("pcal	 	Show calibration offsets\r\n"));
+	printf_P(PSTR("mtest	Motor test\r\n"));
 #ifdef DO_PERFORMANCE
 	printf_P(PSTR("perf	 	Print performace info\r\n"));
 #endif
@@ -240,7 +244,8 @@ void unrecognized(const char *command) {
 #define DEBUG_I2C 7
 #define DEBUG_RC 8
 #define DEBUG_ORATE 9
-#define DEBUG_END 10
+#define DEBUG_STATE 10
+#define DEBUG_END 11
 
 static const char DEBUG_OFF_ARG[] PROGMEM = "off";
 static const char DEBUG_ACCVALUES_ARG[] PROGMEM = "acc";
@@ -252,10 +257,11 @@ static const char DEBUG_DGYRO_ARG[] PROGMEM = "dgyro";
 static const char DEBUG_I2C_ARG[] PROGMEM = "i2c";
 static const char DEBUG_RC_ARG[] PROGMEM = "rc";
 static const char DEBUG_OVERRATE_ARG[] PROGMEM = "orate";
+static const char DEBUG_STATE_ARG[] PROGMEM = "state";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = { DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG,
 		DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG, DEBUG_RC_ARG,
-		DEBUG_OVERRATE_ARG };
+		DEBUG_OVERRATE_ARG, DEBUG_STATE_ARG };
 
 /*
  void toggleEcho() {
@@ -367,6 +373,15 @@ void debug() {
 	case DEBUG_ORATE:
 		printf_P(PSTR("orate: overrrate %u, softstart %u\r\n"), overrate, softStart);
 		break;
+	case DEBUG_STATE:
+		printf_P(PSTR("state: "));
+		for (x=0; x<8; x++) {
+			y = 1<<x;
+			char ifTrue = pgm_read_byte(((uint8_t*)&GS_DEBUGCHARS)+x);
+			if (gimbalState & y) putchar(ifTrue); else putchar(tolower(ifTrue));
+		}
+		printf_P(PSTR("\t overrate %u\tsoftstart %u\r\n"), overrate, softStart);
+		break;
 	default:
 		break;
 	}
@@ -403,7 +418,7 @@ void run() {
 }
 
 void stop() {
-	gimbalState = 0;
+	gimbalState = GS_PIDS_ARE_OUTPUT;
 }
 
 #ifdef SUPPORT_RETRACT
@@ -424,6 +439,10 @@ void extend() {
 
 void freeze() {
 	gimbalState = GS_MOTORS_POWERED | GS_GIMBAL_FROZEN;
+}
+
+void motorTest() {
+	gimbalState = GS_MOTORS_POWERED | GS_GIMBAL_MOTORTEST;
 }
 
 #ifdef SUPPORT_MAVLINK
@@ -449,15 +468,19 @@ static const char CMD_HELP_ARG[] PROGMEM = "help";
 static const char CMD_PERF_ARG[] PROGMEM = "perf";
 #endif
 static const char CMD_DEBUG_ARG[] PROGMEM = "debug";
-static const char CMD_FREEZE_ARG[] PROGMEM = "freeeze";
+static const char CMD_FREEZE_ARG[] PROGMEM = "freeze";
 static const char CMD_RUN_ARG[] PROGMEM = "run";
 static const char CMD_STOP_ARG[] PROGMEM = "stop";
+
+#ifdef SUPPORT_RETRACT
 static const char CMD_RETRACT_ARG[] PROGMEM = "retract";
 static const char CMD_EXTEND_ARG[] PROGMEM = "extend";
+#endif
 
 static const char CMD_MAVLINK_ARG[] PROGMEM = "mavlink";
 static const char CMD_RESET_ARG[] PROGMEM = "reset";
 static const char CMD_PCAL_ARG[] PROGMEM = "pcal";
+static const char CMD_MTEST_ARG[] PROGMEM = "mtest";
 
 static const Command commands[] PROGMEM = {
 		{CMD_SD_ARG, setDefaultParametersAndUpdate},
@@ -477,11 +500,14 @@ static const Command commands[] PROGMEM = {
 		{CMD_FREEZE_ARG, freeze},
 		{CMD_RUN_ARG, run},
 		{CMD_STOP_ARG, stop},
+#ifdef SUPPORT_RETRACT
 		{CMD_RETRACT_ARG, retract},
 		{CMD_EXTEND_ARG, extend},
+#endif
 		{CMD_MAVLINK_ARG, goMavlink},
 		{CMD_RESET_ARG, reset},
-		{CMD_PCAL_ARG, showSensorCal}
+		{CMD_PCAL_ARG, showSensorCal},
+		{CMD_MTEST_ARG, motorTest}
 };
 
 /*

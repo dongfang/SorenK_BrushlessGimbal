@@ -215,7 +215,7 @@ bool mavlink_parse() {
 
 #ifdef SUPPORT_YAW_SERVO
 
-extern void setYawServoOut(uint8_t pulse);
+extern void setYawServoOut(uint16_t usec);
 
 void setYawServo() {
 	static int16_t prevAngle;
@@ -233,7 +233,9 @@ void setYawServo() {
 			angle = -angle;
 	}
 	prevAngle = angle;
-	setYawServoOut((config.yawServoDirection * angle + 47.06 * 286.875) / 286.875);
+	// There are 1000 usec to 90 degrees.
+	// That is 0.1111111 usec to a centidegree
+	setYawServoOut((config.yawServoDirection * angle * 1.0f/9.0f) + 1500);
 }
 #endif
 
