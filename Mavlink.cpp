@@ -3,12 +3,23 @@
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 #include "Util.h"
+#include "Globals.h"
+
+#define DEBUG_MAVLINK 1
 
 #define MAVLINK_GET_CHANNEL_BUFFER
+#define MAVLINK_USE_CONVENIENCE_FUNCTIONS
+
 #include "mavlink/mavlink_types.h"
 
 extern "C" {
 mavlink_message_t* mavlink_get_channel_buffer(uint8_t chan);
+}
+
+mavlink_system_t mavlink_system;
+
+static inline void comm_send_ch(mavlink_channel_t chan, uint8_t c) {
+	serial0.put(c);
 }
 
 // Unfortunately I cannot find any way to get MAVLINK_MESSAGE_CRC defined before
@@ -23,9 +34,34 @@ static const uint8_t mavlink_message_crcs[256] PROGMEM = MAVLINK_MESSAGE_CRCS;
 #define MAVLINK_MESSAGE_CRC(msgid) pgm_read_byte(mavlink_message_crcs+msgid)
 
 #include "mavlink/ardupilotmega/mavlink.h"
-#include "Globals.h"
-
 #define CHAN 0
+
+struct MavlinkStoredGimbalOrientation {
+	bool valid;
+	int32_t pitchOrLat;
+	int32_t rollOrLon;
+	int32_t yawOrAlt;
+	uint16_t crc;
+
+	uint16_t calculateCRC() {
+		return crc16((uint8_t*) this, sizeof(MavlinkStoredGimbalOrientation) - 2);
+	}
+};
+
+static MavlinkStoredGimbalOrientation eeGimbalOrientation EEMEM;
+static MavlinkStoredGimbalOrientation gimbalOrientation;
+static uint8_t mavlinkGimbalMode;
+
+void mavlink_init() {
+	mavlink_system.sysid = config.mavlinkSystemId;
+	mavlink_system.compid = config.mavlinkComponentId;
+	mavlink_system.type = MAV_TYPE_ANTENNA_TRACKER; // Bah there is no gimbal type?
+
+	eeprom_read_block(&gimbalOrientation, &eeGimbalOrientation, sizeof(MavlinkStoredGimbalOrientation));
+	if (gimbalOrientation.calculateCRC() != gimbalOrientation.crc) {
+		gimbalOrientation.valid = false; // do not set true otherwise. The eeprom value should be valid, no need to overwrite it.
+	}
+}
 
 // We use the same message both in parsing and in interpretation.
 // That means we have to fish out all data needed from an incoming
@@ -66,8 +102,7 @@ static mavlink_status_t mavlinkStatus;
  uint8_t target_component; ///< Component ID
  } mavlink_mount_status_t;
  */
-static mavlink_mount_status_t myStatus;
-
+//static mavlink_mount_status_t myStatus;
 /*
  * We might as well store the whole global pos. message; we will need most of it.
  */
@@ -96,21 +131,6 @@ static mavlink_global_position_int_t globalPosition;
  MAV_MOUNT_MODE_ENUM_END=5, / *  | * /
  } MAV_MOUNT_MODE;
  */
-
-struct MavlinkStoredGimbalOrientation {
-	int32_t pitchOrLat;
-	int32_t rollOrLon;
-	int32_t yawOrAlt;
-	int16_t crc;
-
-	void calculateCRC() {
-		crc = crc16((uint8_t*) this, sizeof(MavlinkStoredGimbalOrientation) - 2);
-	}
-};
-
-static MavlinkStoredGimbalOrientation eeGimbalOrientation EEMEM;
-static MavlinkStoredGimbalOrientation gimbalOrientation;
-static uint8_t mavlinkGimbalMode;
 
 /*
  typedef struct __mavlink_mount_configure_t
@@ -141,13 +161,17 @@ static void processConfigureMount() {
  */
 static void processControlMount() {
 	// target position
-	gimbalOrientation.pitchOrLat = mavlink_msg_mount_control_get_input_a(&receivedMessage);
-	gimbalOrientation.rollOrLon = mavlink_msg_mount_control_get_input_b(&receivedMessage);
-	gimbalOrientation.yawOrAlt = mavlink_msg_mount_control_get_input_c(&receivedMessage);
-	gimbalOrientation.calculateCRC();
+	if (mavlink_msg_mount_control_get_target_system(&receivedMessage) == config.mavlinkSystemId
+			&& mavlink_msg_mount_control_get_target_component(&receivedMessage) == config.mavlinkComponentId) {
+		gimbalOrientation.pitchOrLat = mavlink_msg_mount_control_get_input_a(&receivedMessage);
+		gimbalOrientation.rollOrLon = mavlink_msg_mount_control_get_input_b(&receivedMessage);
+		gimbalOrientation.yawOrAlt = mavlink_msg_mount_control_get_input_c(&receivedMessage);
+		gimbalOrientation.valid = true;
+	}
 
 	uint8_t save = mavlink_msg_mount_control_get_save_position(&receivedMessage);
 	if (save) {
+		gimbalOrientation.crc = gimbalOrientation.calculateCRC();
 		eeprom_update_block(&gimbalOrientation, &eeGimbalOrientation, sizeof(MavlinkStoredGimbalOrientation));
 	}
 }
@@ -171,7 +195,7 @@ static void processGlobalPosition() {
 	//if (mavlinkGimbalMode == MAV_MOUNT_MODE_GPS_POINT) {
 	if (globalPosition.lat == 0 && globalPosition.lon == 0)
 		return; // we don't know where we are
-	if (gimbalOrientation.pitchOrLat == 0 && gimbalOrientation.rollOrLon == 0)
+	if (!gimbalOrientation.valid)
 		return; // We don't know what to aim at
 	latDiff_m = (gimbalOrientation.pitchOrLat - globalPosition.lat) * 0.011112f;
 	// from cm/sec to m/units: Multiply by sec/unit
@@ -196,12 +220,21 @@ bool mavlink_parse() {
 			uint8_t msgid = receivedMessage.msgid;
 			if (msgid == MAVLINK_MSG_ID_MOUNT_CONFIGURE) {
 				processConfigureMount();
+				if (DEBUG_MAVLINK)
+					printf_P(PSTR("MAVLINK_MSG_ID_MOUNT_CONFIGURE, mode %d\r\n"), mavlinkGimbalMode);
 			} else if (msgid == MAVLINK_MSG_ID_MOUNT_CONTROL) {
 				processControlMount();
+				if (DEBUG_MAVLINK)
+					printf_P(PSTR("MAVLINK_MSG_ID_MOUNT_CONTROL, orientation %ld %ld %ld\r\n"),
+							gimbalOrientation.pitchOrLat, gimbalOrientation.rollOrLon, gimbalOrientation.yawOrAlt);
 			} else if (msgid == MAVLINK_MSG_ID_MOUNT_STATUS) {
 				// What, we are really supposed just to send these not receive them.
 			} else if (msgid == MAVLINK_MSG_ID_GLOBAL_POSITION_INT) {
 				processGlobalPosition();
+				if (DEBUG_MAVLINK)
+					printf_P(PSTR("MAVLINK_MSG_ID_GLOBAL_POSITION_INT, "
+							"lat %ld, long %ld, alt %ld ralt %ld\r\n"), globalPosition.lat, globalPosition.lon,
+							globalPosition.alt, globalPosition.relative_alt);
 			}
 		}
 	}
@@ -235,7 +268,7 @@ void setYawServo() {
 	prevAngle = angle;
 	// There are 1000 usec to 90 degrees.
 	// That is 0.1111111 usec to a centidegree
-	setYawServoOut((config.yawServoDirection * angle * 1.0f/9.0f) + 1500);
+	setYawServoOut((config.yawServoDirection * angle * 1.0f / 9.0f) + 1500);
 }
 #endif
 
@@ -267,5 +300,14 @@ void mavlink_track() {
 
 	targetSources[TARGET_SOURCE_MAVLINK][ROLL] = 0;
 	targetSources[TARGET_SOURCE_MAVLINK][PITCH] = pitch * (32768.0 / M_PI);
+}
+
+extern int16_t getTarget(uint8_t axis);
+
+void mavlink_sendStatus() {
+	//mavlink_msg_mount_status_send();
+	//myStatus.pointing_a = NDToCentidegrees(getTarget(PITCH));
+	//myStatus.pointing_b = NDToCentidegrees(getTarget(ROLL));
+	//myStatus.pointing_c = mavlinkTargetBearing;
 }
 #endif

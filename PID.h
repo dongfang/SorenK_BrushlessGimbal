@@ -31,7 +31,9 @@ public:
 		this->Ki = Ki;
 		this->Kd = Kd;
 		this->ILimit = ILimit;
-		errorIntegral = 0;
+
+		// No, let's NOT introduce this violent transient here.
+		//errorIntegral = 0;
 	}
 
 	// Yes I have checked if int16's would do and the answer was no.

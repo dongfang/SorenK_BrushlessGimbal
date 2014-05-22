@@ -36,6 +36,8 @@ void outputRoll(uint8_t value) {
 	PWM_C_MOTOR0 = c;
 }
 
+#define DO_LIMIT_RATES
+
 void fastTask() {
 	static uint8_t setupMoveDivider;
 	static uint8_t setupMoveCounter;
@@ -62,23 +64,31 @@ void fastTask() {
 		LEDEvent(LED_SPEED_LIMIT_MASK);
 		didOverspeed = true;
 		//Actually limiting brings little.
-		//rollPIDVal = prevRollPIDVal + config.rollOutputRateLimit;
+#ifdef DO_LIMIT_RATES
+		rollPIDVal = prevRollPIDVal + config.rollOutputRateLimit;
+#endif
 	} else if (rollPIDDelta < -config.rollOutputRateLimit) {
 		LEDEvent(LED_SPEED_LIMIT_MASK);
 		didOverspeed = true;
 		//Actually limiting brings little.
-		//rollPIDVal = prevRollPIDVal - config.rollOutputRateLimit;
+#ifdef DO_LIMIT_RATES
+		rollPIDVal = prevRollPIDVal - config.rollOutputRateLimit;
+#endif
 	}
 	if (pitchPIDDelta > config.pitchOutputRateLimit) {
 		LEDEvent(LED_SPEED_LIMIT_MASK);
 		didOverspeed = true;
 		//Actually limiting brings little.
-		//pitchPIDVal = prevPitchPIDVal + config.pitchOutputRateLimit;
+#ifdef DO_LIMIT_RATES
+		pitchPIDVal = prevPitchPIDVal + config.pitchOutputRateLimit;
+#endif
 	} else if (pitchPIDDelta < -config.pitchOutputRateLimit) {
 		LEDEvent(LED_SPEED_LIMIT_MASK);
 		didOverspeed = true;
 		//Actually limiting brings little.
-		//pitchPIDVal = prevPitchPIDVal - config.pitchOutputRateLimit;
+#ifdef DO_LIMIT_RATES
+		pitchPIDVal = prevPitchPIDVal - config.pitchOutputRateLimit;
+#endif
 	}
 
 	if (didOverspeed && overrate < 64) overrate++;

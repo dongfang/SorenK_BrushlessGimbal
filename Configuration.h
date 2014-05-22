@@ -5,6 +5,8 @@
 #include "Definitions.h"
 #include "Util.h"
 
+extern uint8_t profile;
+
 class Configuration {
 public:
 	uint8_t vers;

@@ -25,6 +25,7 @@ static void writeEEPROM() {
 
 static void readEEPROM() {
 	wdt_enable(WDTO_1S);
+	//config.changeProfile(profile);
 	config.readEEPROMOrDefault();
 	printf_P(PSTR("Read.\r\n"));
 	wdt_enable(WDT_TIMEOUT);

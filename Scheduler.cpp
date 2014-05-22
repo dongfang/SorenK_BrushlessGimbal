@@ -82,8 +82,8 @@ ISR (TIMER1_OVF_vect) {
 #endif
 
 #if defined (SUPPORT_YAW_SERVO) && defined (YAW_SERVOOUT_REMOTE) || defined (SUPPORT_RETRACT) && defined (RETRACT_SERVOOUT_REMOTE)
-	uint8_t remoteServoOutState;
-	uint16_t remoteServoOutData;
+	static uint8_t remoteServoOutState = 0;
+	static uint16_t remoteServoOutData = 0;
 #endif
 
 	sei();
@@ -105,6 +105,37 @@ ISR (TIMER1_OVF_vect) {
 #ifdef DEBUG_SIGNALS
 			DEBUG_PORT &= ~(1 << DEBUG_BIT1);
 #endif
+
+#if defined (SUPPORT_YAW_SERVO) && defined (YAW_SERVOOUT_REMOTE) || defined (SUPPORT_RETRACT) && defined (RETRACT_SERVOOUT_REMOTE)
+	if (remoteServoOutState == 0) {
+		remoteServoOutData = yawServoUsec;
+	}
+	// Max. usec value is 12 bits large so 12 is what we need.
+	else if (remoteServoOutState == 24) {
+		remoteServoOutData = retractServoUsec;
+	}
+
+	if (remoteServoOutState >= 48) {
+		// Sync pause. Do nothing.
+		if (remoteServoOutState == 96) remoteServoOutState = -1;
+	}
+
+	else if (remoteServoOutState & 1) {
+		// clk hi
+		REMOTE_SERVO_PORT |= 1<<REMOTE_SERVO_CLKBIT;
+	} else {
+		//clk lo
+		REMOTE_SERVO_PORT &= ~(1<<REMOTE_SERVO_CLKBIT);
+		if (remoteServoOutData & 1)
+			REMOTE_SERVO_PORT |= 1<<REMOTE_SERVO_DATABIT;
+		else
+			REMOTE_SERVO_PORT &= ~(1<<REMOTE_SERVO_DATABIT);
+		remoteServoOutData >>= 1;
+	}
+
+	remoteServoOutState++;
+#endif
+
 			if (!--mediumDivider) {
 				if (mediumState == IDLE) {
 					cli();
@@ -133,34 +164,6 @@ ISR (TIMER1_OVF_vect) {
 			// try to save it.
 			fastDivider = 1;
 		}
-
-#if defined (SUPPORT_YAW_SERVO) && defined (YAW_SERVOOUT_REMOTE) || defined (SUPPORT_RETRACT) && defined (RETRACT_SERVOOUT_REMOTE)
-	if (remoteServoOutState == 0) {
-		remoteServoOutData = yawServoUsec;
-	}
-	// Max. usec value is 12 bits large so 12 is what we need.
-	else if (remoteServoOutState == 24) {
-		remoteServoOutData = retractServoUsec;
-	}
-	if (remoteServoOutState >= 48) {
-		// Sync pause. Do nothing.
-		if (remoteServoOutState == 96) remoteServoOutState = -1;
-	}
-	else if (remoteServoOutState & 1) {
-		// clk hi
-		REMOTE_SERVO_PORT |= 1<<REMOTE_SERVO_CLKBIT;
-	} else {
-		//clk lo
-		REMOTE_SERVO_PORT &= ~(1<<REMOTE_SERVO_CLKBIT);
-		if (remoteServoOutData & 1)
-			REMOTE_SERVO_PORT |= 1<<REMOTE_SERVO_DATABIT;
-			else REMOTE_SERVO_PORT &= ~(1<<REMOTE_SERVO_DATABIT);
-		remoteServoOutData >>= 1;
-	}
-
-	remoteServoOutState++;
-#endif
-
 	}
 
 #if (defined (SUPPORT_RETRACT) && defined (RETRACT_SERVOOUT_LOCAL) || defined (SUPPORT_YAW_SERVO) && defined (YAW_SERVOOUT_LOCAL))

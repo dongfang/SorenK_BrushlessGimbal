@@ -14,9 +14,10 @@
 
 #define REMOTE_SERVO_DDR		DDRD
 #define REMOTE_SERVO_PORT		PORTD
+#define REMOTE_SERVO_PIN		PIND
 
-#define REMOTE_SERVO_CLKBIT		4
-#define REMOTE_SERVO_DATABIT	5
+#define REMOTE_SERVO_CLKBIT		2
+#define REMOTE_SERVO_DATABIT	4
 
 // This conflicts with debug-out so only use one at a time.
 #define SUPPORT_YAW_SERVO

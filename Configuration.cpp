@@ -5,43 +5,75 @@
 #include <avr/wdt.h>
 #include <avr/eeprom.h>
 
-Configuration configInEEPROM EEMEM;
+#define NUM_PROFILES 4
+
+uint8_t profileInEEPROM[2] EEMEM;
+Configuration configInEEPROM[NUM_PROFILES] EEMEM;
+
 Configuration config;
 ConfigDef_t configDef;
 ConfigUnion_t configUnion;
 
 LiveControlAxisDef liveControlDefs[2];
+uint8_t profile = 0;
 
 void initControlLimits() {
 	liveControlDefs[ROLL].convertFrom(&config.controlInput[ROLL]);
 	liveControlDefs[PITCH].convertFrom(&config.controlInput[PITCH]);
 }
 
+void readProfileFromEEProm() {
+	uint8_t prof = eeprom_read_byte(&profileInEEPROM[0]);
+	uint8_t check = eeprom_read_byte(&profileInEEPROM[1]);
+	if (prof == (uint8_t)(~check)) {
+		profile = prof;
+	} else {
+		profile = 0;
+	}
+}
+
+void writeProfileToEEProm() {
+	eeprom_update_byte(&profileInEEPROM[0], profile);
+	eeprom_update_byte(&profileInEEPROM[1], ~profile);
+}
+
 void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
-	/*
-	pitchKp = 400;
-	pitchKi = 1000;
-	pitchKd = 160;
-	rollKp = 750;
-	rollKi = 1200;
-	rollKd = 400;
-	*/
-	pitchKp = 300;
+
+	/* For the cheapo gimbal from goodluckbuy, these values work well:
+	pitchKp = ???;
 	pitchKi = 600;
 	pitchKd = 150;
 	rollKp = 650;
 	rollKi = 800;
 	rollKd = 500;
 
-	ILimit = 15000;
-
-	accTimeConstant = 4;
-
-	// default nothing at all.
 	rollMotorPower = 165;
 	pitchMotorPower = 150;
+
+	axisReverseZ = true;
+	axisRotateZ  = 0;
+	majorAxis = 0;
+	 */
+	/*For the homebuilt small gimbal */
+	pitchKp = 150;
+	pitchKi = 300;
+	pitchKd = 110;
+	rollKp = 300;
+	rollKi = 350;
+	rollKd = 220;
+
+	rollMotorPower = 150;
+	pitchMotorPower = 100;
+
+	axisReverseZ = true;
+	axisRotateZ  = 3;
+	majorAxis = 0;
+
+
+	ILimit = 15000;
+	accTimeConstant = 4;
 
 	controlInput[ROLL].defaultAngle = 0;
 	controlInput[ROLL].minAngle = -20;
@@ -60,9 +92,6 @@ void Configuration::setDefaults() {
 	yawServoDirection = 1;
 
 	rcAbsolute = true;
-	axisReverseZ = true;
-	axisRotateZ  = 0;
-	majorAxis = 0;
 
 	frozenGimbalPower = 10;
 
@@ -85,12 +114,12 @@ uint16_t Configuration::CRC() {
 
 void Configuration::writeEEPROM() {
 	crc16 = CRC();
-	eeprom_write_block(this, &configInEEPROM, sizeof(Configuration));
+	eeprom_write_block(this, &configInEEPROM[profile], sizeof(Configuration));
 }
 
 void Configuration::readEEPROMOrDefault() {
 	wdt_reset();
-	eeprom_read_block(this, &configInEEPROM, sizeof(Configuration));
+	eeprom_read_block(this, &configInEEPROM[profile], sizeof(Configuration));
 	if (crc16 == CRC()) {
 		if ((vers != VERSION) || (versEEPROM != VERSION_EEPROM)) {
 			printf_P(PSTR("EEPROM version mismatch, initialize EEPROM"));

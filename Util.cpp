@@ -171,6 +171,10 @@ int8_t NDToDegrees(int16_t a) {
 	return (a * 360L) / 65536;
 }
 
+int16_t NDToCentidegrees(int16_t a) {
+	return (a * 36000L) / 65536;
+}
+
 #ifdef DO_PERFORMANCE
 static const char BMS00[] PROGMEM = "Idle   ";
 static const char BMS01[] PROGMEM = "ReadGyros";
