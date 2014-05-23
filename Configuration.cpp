@@ -96,12 +96,13 @@ void Configuration::setDefaults() {
 
 	frozenGimbalPower = 10;
 
-	LEDMask = LED_SCHEDULER_OVERLOAD_MASK;
+	LEDMask = LED_MAVLINK_RX;
 	serialBaudRate = 115200;
 
 	mavlinkSystemId = 42;
 	mavlinkComponentId = 1;
 	mavlinkUseRelativealtitudes = true;
+	autoMavlink = true;
 
 	retractedServoUsec = 1000;
 	extendedServoUsec = 2000;

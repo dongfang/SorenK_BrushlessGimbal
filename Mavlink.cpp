@@ -8,12 +8,22 @@
 #define DEBUG_MAVLINK 1
 
 #define MAVLINK_GET_CHANNEL_BUFFER
+#define MAVLINK_GET_CHANNEL_STATUS
 #define MAVLINK_USE_CONVENIENCE_FUNCTIONS
 
 #include "mavlink/mavlink_types.h"
 
+// IDs of what we believe is our controller station.
+// These could be used for verifying that control messages are really from there
+// (not done now).
+// For some strange reason, the mavlink_msg_mount_status message has target system
+// and component IDs. We use these IDs for that.
+static int myGCSSystemId;
+static int myGCSComponentId;
+
 extern "C" {
 mavlink_message_t* mavlink_get_channel_buffer(uint8_t chan);
+mavlink_status_t* mavlink_get_channel_status(uint8_t chan);
 }
 
 mavlink_system_t mavlink_system;
@@ -24,16 +34,16 @@ static inline void comm_send_ch(mavlink_channel_t chan, uint8_t c) {
 
 // Unfortunately I cannot find any way to get MAVLINK_MESSAGE_CRC defined before
 // mavlink_helpers is loaded than to redefine this.
-#define MAVLINK_STX 254
+// #define MAVLINK_STX 254
 
-#include "mavlink/ardupilotmega/ardupilotmega.h"
-
-// There is a 256 bytes table of CRC spices. We move that into PGMSPACE.
-//#define MAVLINK_MESSAGE_CRC
-static const uint8_t mavlink_message_crcs[256] PROGMEM = MAVLINK_MESSAGE_CRCS;
 #define MAVLINK_MESSAGE_CRC(msgid) pgm_read_byte(mavlink_message_crcs+msgid)
+extern const uint8_t mavlink_message_crcs[256] PROGMEM;
 
 #include "mavlink/ardupilotmega/mavlink.h"
+#include "mavlink/ardupilotmega/ardupilotmega.h"
+
+const uint8_t mavlink_message_crcs[256] PROGMEM = MAVLINK_MESSAGE_CRCS;
+
 #define CHAN MAVLINK_COMM_0
 
 struct MavlinkStoredGimbalOrientation {
@@ -68,22 +78,19 @@ void mavlink_init() {
 // message before we even begin parsing another.
 // (interrupt based parsing is a no no)
 static mavlink_message_t receivedMessage;
-static mavlink_message_t sendingMessage;
-
-mavlink_message_t* mavlink_get_channel_buffer(uint8_t chan) {
-	return &receivedMessage;
-}
-
+// static mavlink_message_t sendingMessage;
 //uint8_t mavlinkUseRelativealtitudes = 0;
 //int16_t mavlinkTargetPitch;
 int16_t mavlinkTargetBearing;
 
 // How many meters per time unit (one unit being 510 clock cycles)
-float vlat_m_unit;
-float vlon_m_unit;
+static float vlat_m_unit;
+static float vlon_m_unit;
 
-float lonDiff_m;
-float latDiff_m;
+static float lonDiff_m;
+static float latDiff_m;
+
+static int16_t prevYawAngle;
 
 uint32_t unitsAccountedFor = -1;
 
@@ -92,6 +99,15 @@ uint32_t unitsAccountedFor = -1;
  * There is another internal instance also.
  */
 static mavlink_status_t mavlinkStatus;
+
+
+mavlink_message_t* mavlink_get_channel_buffer(uint8_t chan) {
+	return &receivedMessage;
+}
+
+mavlink_status_t* mavlink_get_channel_status(uint8_t chan) {
+	return &mavlinkStatus;
+}
 
 /*
  * We send this one back to ground control.
@@ -162,6 +178,8 @@ static void processConfigureMount() {
  } mavlink_mount_control_t;
  */
 static void processControlMount() {
+	myGCSSystemId = receivedMessage.sysid;
+	myGCSComponentId = receivedMessage.compid;
 	// target position
 	if (mavlink_msg_mount_control_get_target_system(&receivedMessage) == config.mavlinkSystemId
 			&& mavlink_msg_mount_control_get_target_component(&receivedMessage) == config.mavlinkComponentId) {
@@ -218,6 +236,7 @@ bool mavlink_parse() {
 	while (serial0.available()) {
 		uint8_t parseResult = mavlink_parse_char(CHAN, serial0.get(), &receivedMessage, &mavlinkStatus);
 		if (parseResult) {
+			LEDEvent(LED_MAVLINK_RX);
 			valid = true;
 			uint8_t msgid = receivedMessage.msgid;
 			if (msgid == MAVLINK_MSG_ID_MOUNT_CONFIGURE) {
@@ -253,21 +272,20 @@ bool mavlink_parse() {
 extern void setYawServoOut(uint16_t usec);
 
 void setYawServo() {
-	static int16_t prevAngle;
 	int16_t angle = mavlinkTargetBearing;
 	int16_t yawServoLimit = config.yawServoLimit * 100;
 	if (angle > yawServoLimit) {
 		angle = yawServoLimit;
 		// Avoid full end to end turns when flying away from target: If we were left before and now full right, stay as before.
-		if (prevAngle < 0)
+		if (prevYawAngle < 0)
 			angle = -angle;
 	} else if (angle < -yawServoLimit) {
 		angle = -yawServoLimit;
 		// Avoid full end to end turns when flying away from target: If we were right before and now full left, stay as before.
-		if (prevAngle > 0)
+		if (prevYawAngle > 0)
 			angle = -angle;
 	}
-	prevAngle = angle;
+	prevYawAngle = angle;
 	// There are 1000 usec to 90 degrees.
 	// That is 0.1111111 usec to a centidegree
 	setYawServoOut((config.yawServoDirection * angle * 1.0f / 9.0f) + 1500);
@@ -293,6 +311,8 @@ void mavlink_track() {
 	else
 		mavlinkTargetBearing = temp;
 
+	setYawServo();
+
 	float dAlt;
 	if (config.mavlinkUseRelativealtitudes)
 		dAlt = (gimbalOrientation.yawOrAlt - globalPosition.relative_alt) / 1000.0f;
@@ -304,10 +324,12 @@ void mavlink_track() {
 	targetSources[TARGET_SOURCE_MAVLINK][PITCH] = pitch * (32768.0 / M_PI);
 }
 
-extern int16_t getTarget(uint8_t axis);
-
 void mavlink_sendStatus() {
-	//mavlink_msg_mount_status_send();
+	mavlink_msg_mount_status_send
+	(CHAN, myGCSSystemId, myGCSComponentId,
+			NDToCentidegrees(imu.angle_i16[PITCH]),
+			NDToCentidegrees(imu.angle_i16[ROLL]),
+			prevYawAngle);
 	//myStatus.pointing_a = NDToCentidegrees(getTarget(PITCH));
 	//myStatus.pointing_b = NDToCentidegrees(getTarget(ROLL));
 	//myStatus.pointing_c = mavlinkTargetBearing;

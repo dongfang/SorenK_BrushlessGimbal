@@ -63,6 +63,8 @@ void slowLoop() {
 	static uint8_t oscDivider;
 	static uint16_t transientsDivider;
 	static uint8_t autoMavlinkDelay;
+	static uint8_t mavlinkMountStatusSubdivider;
+	static uint8_t mavlinkTrackingDivider;
 
 	while (true) {
 		bool ticked = checkMediumLoop();
@@ -86,12 +88,15 @@ void slowLoop() {
 #endif
 		}
 
+		// These are not synced with medium task (ticked is not checked)
 		if (interfaceState == INTERFACE_STATE_CONSOLE)
 			sCmd.readSerial();
 #ifdef SUPPORT_AUTOSETUP
 		else if (interfaceState == INTERFACE_STATE_AUTOSETUP)
 			runAutosetup();
 #endif
+
+// TODO: If we find a way to make MAVLink parsing not consume input / push it back / whatever, then we can make automatic mavlink mode.
 #ifdef SUPPORT_MAVLINK
 		else if (interfaceState == INTERFACE_STATE_MAVLINK) {
 			if (mavlink_parse()) {
@@ -115,12 +120,25 @@ void slowLoop() {
 			LEDEvent(LED_HEARTBEAT_MASK);
 			if (interfaceState == INTERFACE_STATE_MAVLINK) {
 				mavlink_sendHeartbeat();
+				if (mavlinkMountStatusSubdivider == 5) {
+					mavlink_sendStatus();
+					mavlinkMountStatusSubdivider = 0;
+				} else {
+					mavlinkMountStatusSubdivider++;
+				}
 			}
 			if (config.autoMavlink) {
 				// Give user a 10 second chance to kill automavlink
 				if (autoMavlinkDelay == 10) {
 					interfaceState = INTERFACE_STATE_MAVLINK;
 				} else autoMavlinkDelay++;
+			}
+		}
+
+		if (ticked && !mavlinkTrackingDivider) {
+			mavlinkTrackingDivider = MAVLINK_TRACKING_LATCH;
+			if (interfaceState == INTERFACE_STATE_MAVLINK) {
+				mavlink_track();
 			}
 		}
 
@@ -155,6 +173,7 @@ void slowLoop() {
 			--heartbeatDivider;
 			--oscDivider;
 			--transientsDivider;
+			--mavlinkTrackingDivider;
 		}
 
 		doubleFault = false; // If we have run the mainloop successfully, we reset the double WDT fault status.

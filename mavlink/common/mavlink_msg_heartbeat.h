@@ -175,7 +175,6 @@ static inline void mavlink_msg_heartbeat_send(mavlink_channel_t chan, uint8_t ty
 	_mav_put_uint8_t(buf, 6, base_mode);
 	_mav_put_uint8_t(buf, 7, system_status);
 	_mav_put_uint8_t(buf, 8, 3);
-
 #if MAVLINK_CRC_EXTRA
     _mav_finalize_message_chan_send(chan, MAVLINK_MSG_ID_HEARTBEAT, buf, MAVLINK_MSG_ID_HEARTBEAT_LEN, MAVLINK_MSG_ID_HEARTBEAT_CRC);
 #else

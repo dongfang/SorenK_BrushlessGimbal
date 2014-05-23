@@ -62,6 +62,9 @@
 #define POUT_FREQ 4      // rate of ACC print output in Hz, 25 Hz is default
 #define LOCK_TIME_SEC 0  // gimbal fast lock time at startup
 
+#define MAVLINK_TRACKING_FREQ 4
+#define MAVLINK_TRACKING_LATCH (MAVLINK_TRACKING_FREQ/OSCILLATION_FREQ)
+
 // LP filter coefficient
 // #define LOWPASS_K_FLOAT(TAU) (MEDIUMLOOP_DT_F_S/(TAU+MEDIUMLOOP_DT_F_S))
 
