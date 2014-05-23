@@ -14,7 +14,7 @@ int16_t pitchPIDDelta;
 uint8_t rollMotorTest;
 uint8_t pitchMotorTest;
 
-volatile uint8_t overrate;
+//volatile uint8_t overrate;
 
 void outputPitch(uint8_t value) {
 	uint8_t a = pwmSinMotorPitch[value] * softStart >> 4;
@@ -36,7 +36,7 @@ void outputRoll(uint8_t value) {
 	PWM_C_MOTOR0 = c;
 }
 
-#define DO_LIMIT_RATES
+//#define DO_LIMIT_RATES
 
 void fastTask() {
 	static uint8_t setupMoveDivider;
@@ -59,6 +59,7 @@ void fastTask() {
 	rollPIDDelta = rollPIDVal - prevRollPIDVal;
 	pitchPIDDelta = pitchPIDVal - prevPitchPIDVal;
 
+	/*
 	bool didOverspeed = false;
 	if (rollPIDDelta > config.rollOutputRateLimit) {
 		LEDEvent(LED_SPEED_LIMIT_MASK);
@@ -92,6 +93,7 @@ void fastTask() {
 	}
 
 	if (didOverspeed && overrate < 64) overrate++;
+	*/
 
 	prevRollPIDVal = rollPIDVal;
 	prevPitchPIDVal = pitchPIDVal;

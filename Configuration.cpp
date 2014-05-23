@@ -41,8 +41,8 @@ void Configuration::setDefaults() {
 	vers = VERSION;
 	versEEPROM = VERSION_EEPROM;
 
-	/* For the cheapo gimbal from goodluckbuy, these values work well:
-	pitchKp = ???;
+	/* For the cheapo gimbal from goodluckbuy, these values work well: */
+	pitchKp = 600;
 	pitchKi = 600;
 	pitchKd = 150;
 	rollKp = 650;
@@ -55,13 +55,14 @@ void Configuration::setDefaults() {
 	axisReverseZ = true;
 	axisRotateZ  = 0;
 	majorAxis = 0;
-	 */
+
 	/*For the homebuilt small gimbal */
-	pitchKp = 150;
-	pitchKi = 300;
-	pitchKd = 110;
-	rollKp = 300;
-	rollKi = 350;
+	/*
+	pitchKp = 140;
+	pitchKi = 150;
+	pitchKd = 140;
+	rollKp = 180;
+	rollKi = 125;
 	rollKd = 220;
 
 	rollMotorPower = 150;
@@ -70,10 +71,10 @@ void Configuration::setDefaults() {
 	axisReverseZ = true;
 	axisRotateZ  = 3;
 	majorAxis = 0;
+*/
 
-
-	ILimit = 15000;
-	accTimeConstant = 4;
+	ILimit = 1000;
+	accTimeConstant = 3;
 
 	controlInput[ROLL].defaultAngle = 0;
 	controlInput[ROLL].minAngle = -20;
@@ -85,8 +86,8 @@ void Configuration::setDefaults() {
 	controlInput[PITCH].maxAngle = 0;
 	controlInput[PITCH].maxSlewRate = 15;
 
-	rollOutputRateLimit = 35;
-	pitchOutputRateLimit = 35;
+	// rollOutputRateLimit = 35;
+	// pitchOutputRateLimit = 35;
 
 	yawServoLimit = 90;
 	yawServoDirection = 1;
@@ -146,6 +147,7 @@ void Configuration::checkRAMImageValid() {
 extern void recalcMotorPower();
 extern void initSerial();
 extern void initMPU6050();
+extern void updateRetract();
 
 static void fixme_initIMU() {
 	imu.init();
@@ -173,8 +175,8 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "pitchPower", UINT8, &config.pitchMotorPower, static_cast <void(*)()>(&recalcMotorPower) },
 { "rollPower", UINT8, &config.rollMotorPower, static_cast <void(*)()>(&recalcMotorPower) },
 
-{ "pitchRateLimit", UINT8, &config.pitchOutputRateLimit, NULL },
-{ "rollRateLimit", UINT8, &config.rollOutputRateLimit, NULL },
+// { "pitchRateLimit", UINT8, &config.pitchOutputRateLimit, NULL },
+// { "rollRateLimit", UINT8, &config.rollOutputRateLimit, NULL },
 
 { "rollMin", INT8, &config.controlInput[ROLL].minAngle, &initControlLimits },
 { "rollMax", INT8, &config.controlInput[ROLL].maxAngle, &initControlLimits },
@@ -195,12 +197,13 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "MPU6050Addr", UINT8, &config.mpu6050Address, &initMPU6050 },
 { "baudRate", UINT32, &config.serialBaudRate, &initSerial },
 
-{ "retractServo", UINT16, &config.retractedServoUsec, NULL },
-{ "extendServo", UINT16, &config.extendedServoUsec, NULL },
+{ "retractServo", UINT16, &config.retractedServoUsec, &updateRetract },
+{ "extendServo", UINT16, &config.extendedServoUsec, &updateRetract },
 
 { "systemId", UINT8, &config.mavlinkSystemId, NULL },
 { "componentId", UINT8, &config.mavlinkComponentId, NULL },
 { "relativeAlt", BOOL, &config.mavlinkUseRelativealtitudes, NULL },
+{ "autoMavlink", BOOL, &config.autoMavlink, NULL },
 
 { "", BOOL, NULL, NULL } // terminating NULL required !!
 };

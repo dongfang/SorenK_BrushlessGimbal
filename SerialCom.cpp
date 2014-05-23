@@ -244,9 +244,8 @@ void unrecognized(const char *command) {
 #define DEBUG_DGYRO 6
 #define DEBUG_I2C 7
 #define DEBUG_RC 8
-#define DEBUG_ORATE 9
-#define DEBUG_STATE 10
-#define DEBUG_END 11
+#define DEBUG_STATE 9
+#define DEBUG_END 10
 
 static const char DEBUG_OFF_ARG[] PROGMEM = "off";
 static const char DEBUG_ACCVALUES_ARG[] PROGMEM = "acc";
@@ -257,12 +256,11 @@ static const char DEBUG_PID_ARG[] PROGMEM = "pid";
 static const char DEBUG_DGYRO_ARG[] PROGMEM = "dgyro";
 static const char DEBUG_I2C_ARG[] PROGMEM = "i2c";
 static const char DEBUG_RC_ARG[] PROGMEM = "rc";
-static const char DEBUG_OVERRATE_ARG[] PROGMEM = "orate";
 static const char DEBUG_STATE_ARG[] PROGMEM = "state";
 
 static PGM_P const DEBUG_COMMANDS[] PROGMEM = { DEBUG_OFF_ARG, DEBUG_ACCVALUES_ARG, DEBUG_GYROVALUES_ARG,
 		DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG, DEBUG_RC_ARG,
-		DEBUG_OVERRATE_ARG, DEBUG_STATE_ARG };
+		DEBUG_STATE_ARG };
 
 /*
  void toggleEcho() {
@@ -355,8 +353,9 @@ void debug() {
 		printf_P(PSTR("estg: x %d\t y %d\t, z %d\t\r\n"), x, y, z);
 		break;
 	case DEBUG_PID:
-		printf_P(PSTR("pid: roll %d\t, rolldelta %d\t pitch %d\tpitchdelta:%d\r\n"), rollPIDVal, rollPIDDelta,
-				pitchPIDVal, pitchPIDDelta);
+		printf_P(PSTR("pid: roll %d\t, rolldelta %d\t rollerror %ld\t pitch %d\tpitchdelta:%d\tpitcherror %ld\r\n"),
+				rollPIDVal, rollPIDDelta, rollPID.errorIntegral,
+				pitchPIDVal, pitchPIDDelta, pitchPID.errorIntegral);
 		break;
 	case DEBUG_DGYRO:
 		printf_P(PSTR("dgyro: cosp %d\t sinp %d\t roll %d\t pitch%d\r\n"), imu.cosPitch, imu.sinPitch, imu.rollRate,
@@ -371,9 +370,6 @@ void debug() {
 				targetSources[TARGET_SOURCE_RC][PITCH], (rcData[PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
 
 		break;
-	case DEBUG_ORATE:
-		printf_P(PSTR("orate: overrrate %u, softstart %u\r\n"), overrate, softStart);
-		break;
 	case DEBUG_STATE:
 		printf_P(PSTR("state: "));
 		for (x=0; x<8; x++) {
@@ -381,7 +377,7 @@ void debug() {
 			char ifTrue = pgm_read_byte(((uint8_t*)&GS_DEBUGCHARS)+x);
 			if (gimbalState & y) putchar(ifTrue); else putchar(tolower(ifTrue));
 		}
-		printf_P(PSTR("\t overrate %u\tsoftstart %u\r\n"), overrate, softStart);
+		printf_P(PSTR("\t softstart %u\r\n"), softStart);
 		break;
 	default:
 		break;

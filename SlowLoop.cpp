@@ -58,10 +58,11 @@ void slowLoop() {
 	//static uint8_t RCDivider;
 	//static uint8_t softstartDivider;
 	static uint8_t LEDDivider;
-	static uint8_t heartbeatDivider;
+	static uint16_t heartbeatDivider;
 	//static uint8_t accMagDivider;
 	static uint8_t oscDivider;
 	static uint16_t transientsDivider;
+	static uint8_t autoMavlinkDelay;
 
 	while (true) {
 		bool ticked = checkMediumLoop();
@@ -110,8 +111,17 @@ void slowLoop() {
 		}
 
 		if (ticked && !heartbeatDivider) {
+			heartbeatDivider = HEARTBEAT_LATCH;
 			LEDEvent(LED_HEARTBEAT_MASK);
-			heartbeatDivider = LED_LATCH*2;
+			if (interfaceState == INTERFACE_STATE_MAVLINK) {
+				mavlink_sendHeartbeat();
+			}
+			if (config.autoMavlink) {
+				// Give user a 10 second chance to kill automavlink
+				if (autoMavlinkDelay == 10) {
+					interfaceState = INTERFACE_STATE_MAVLINK;
+				} else autoMavlinkDelay++;
+			}
 		}
 
 		if (ticked && !LEDDivider) {

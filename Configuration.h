@@ -81,8 +81,8 @@ public:
 	//int16_t rollAngleOffset;
 
 	// Experiment: Seems to help against tumbling motors when losing sync.
-	uint8_t pitchOutputRateLimit;
-	uint8_t rollOutputRateLimit;
+	// uint8_t pitchOutputRateLimit;
+	// uint8_t rollOutputRateLimit;
 
 	// in 1:16 units.
 	uint8_t frozenGimbalPower;
@@ -91,6 +91,7 @@ public:
 	uint8_t mavlinkSystemId;
 	uint8_t mavlinkComponentId;
 	bool mavlinkUseRelativealtitudes;
+	bool autoMavlink;
 
 	uint16_t retractedServoUsec;
 	uint16_t extendedServoUsec;

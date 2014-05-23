@@ -49,11 +49,20 @@ public:
 			Ierror = ILimit;
 		}
 
-		errorIntegral += Ierror; // The integration
+		errorIntegral +=  Ierror; // The integration
+
+		/*
+		if (errorIntegral > ILimit) {
+			errorIntegral = ILimit;
+		}
+		else if (errorIntegral < -ILimit) {
+			errorIntegral = -ILimit;
+		}
+		*/
 
 		// The >> shift count is just an arbitrary number I came up with,
 		// to make reasonably valued Kd factors.
-		int32_t out = (int32_t) Kp * error + errorIntegral - ((int32_t) Kd * d >> (mpu.logGyroToDeg_s() - 3));
+		int32_t out = Kp * error + errorIntegral - ((int32_t) Kd * d >> (mpu.logGyroToDeg_s() - 3));
 
 		// This is not the "same" division by 4096 as in Martinez: The subsequent division by 8
 		// in MainLoop has been removed. The angles (error and target) are to a different scale.

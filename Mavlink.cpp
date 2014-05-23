@@ -34,7 +34,7 @@ static const uint8_t mavlink_message_crcs[256] PROGMEM = MAVLINK_MESSAGE_CRCS;
 #define MAVLINK_MESSAGE_CRC(msgid) pgm_read_byte(mavlink_message_crcs+msgid)
 
 #include "mavlink/ardupilotmega/mavlink.h"
-#define CHAN 0
+#define CHAN MAVLINK_COMM_0
 
 struct MavlinkStoredGimbalOrientation {
 	bool valid;
@@ -68,6 +68,8 @@ void mavlink_init() {
 // message before we even begin parsing another.
 // (interrupt based parsing is a no no)
 static mavlink_message_t receivedMessage;
+static mavlink_message_t sendingMessage;
+
 mavlink_message_t* mavlink_get_channel_buffer(uint8_t chan) {
 	return &receivedMessage;
 }
@@ -310,4 +312,32 @@ void mavlink_sendStatus() {
 	//myStatus.pointing_b = NDToCentidegrees(getTarget(ROLL));
 	//myStatus.pointing_c = mavlinkTargetBearing;
 }
+
+void mavlink_sendHeartbeat() {
+	/*
+	uint16_t length = mavlink_msg_heartbeat_pack_chan(
+			config.mavlinkSystemId,
+			config.mavlinkComponentId,
+			CHAN,
+			&sendingMessage,
+			MAV_TYPE_ANTENNA_TRACKER,
+			18,
+			MAV_MODE_FLAG_STABILIZE_ENABLED,
+			0,
+			0);
+
+	for (uint8_t i=0; i<length; i++) {
+		serial0.put(sendingMessage[i]);
+	}
+	*/
+
+	mavlink_msg_heartbeat_send(
+			CHAN,
+			MAV_TYPE_ANTENNA_TRACKER,
+			18,
+			MAV_MODE_FLAG_STABILIZE_ENABLED,
+			0,
+			0);
+}
+
 #endif

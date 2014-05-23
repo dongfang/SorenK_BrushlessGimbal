@@ -38,8 +38,8 @@
 #include "Util.h"     			  // fast Math functions required by orientationRoutines.h
 #include "RCdecode.h"             // RC Decoder to move camera by servo signal input
 #include "BLcontroller.h"         // Motor Movement Functions and Timer Config
-
 #include "I2C.h"
+#include "Mavlink.h"
 
 // The globals
 MPU6050 mpu; // Create MPU object
@@ -181,7 +181,9 @@ void initState() {
 	// This needs a working acc. sensor.
 	imu.init();
 
-//	printf_P(PSTR("Type \"help\" for help.\r\n"));
+#ifdef SUPPORT_MAVLINK
+	mavlink_init();
+#endif
 }
 
 void checkwatchdog(void) __attribute__((naked))
