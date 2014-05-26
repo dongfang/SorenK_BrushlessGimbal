@@ -21,6 +21,7 @@
 
 // This conflicts with debug-out so only use one at a time.
 #define SUPPORT_YAW_SERVO
+#define YAW_REPLACES_RC_ROLL
 // #define YAW_SERVOOUT_LOCAL
 #define YAW_SERVOOUT_REMOTE
 #define YAW_SERVO_BIT	4

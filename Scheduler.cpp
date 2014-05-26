@@ -26,7 +26,7 @@ void setYawServoOut(uint16_t usec) {
 }
 #endif
 #if defined (YAW_SERVOOUT_REMOTE)
-volatile uint16_t yawServoUsec = 1500;
+volatile uint16_t yawServoUsec = -1;
 void setYawServoOut(uint16_t usec) {
 	cli();
 	yawServoUsec = usec;
@@ -38,14 +38,14 @@ void setYawServoOut(uint16_t usec) {
 #if defined (SUPPORT_RETRACT)
 #if defined (RETRACT_SERVOOUT_LOCAL)
 volatile uint8_t retractServoPulseLength = 46;
-void setRetractServoOut(uint8_t pulse) {
+void setRetractServoOut(uint16_t usec) {
 	cli();
 	retractServoPulseLength = usec/32 - 1; // An approximation
 	sei();
 }
 #endif
 #if defined (RETRACT_SERVOOUT_REMOTE)
-volatile uint16_t retractServoUsec = 1500;
+volatile uint16_t retractServoUsec = -1;
 void setRetractServoOut(uint16_t usec) {
 	cli();
 	retractServoUsec = usec;

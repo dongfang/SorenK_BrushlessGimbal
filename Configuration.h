@@ -91,7 +91,6 @@ public:
 	uint8_t mavlinkSystemId;
 	uint8_t mavlinkComponentId;
 	bool mavlinkUseRelativealtitudes;
-	bool autoMavlink;
 
 	uint16_t retractedServoUsec;
 	uint16_t extendedServoUsec;

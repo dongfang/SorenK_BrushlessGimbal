@@ -28,6 +28,21 @@ public:
 	int peek();
 
 	/*
+	 * Save out-index of inbuffer.
+	 * Restore() may be called later to re-set the index.
+	 * There is NO safety implemented against data being overwritten in the mean time
+	 * (although that could be done without too much trouble).
+	 * This was intended to allow two different parsers to test the same slow hand-typed
+	 * input
+	 */
+	void mark();
+
+	/*
+	 * Un-consume the input buffer data to the state at mark time.
+	 */
+	void restore();
+
+	/*
 	 * Put a char.
 	 */
 	void put(uint8_t c);
@@ -57,6 +72,7 @@ protected:
 protected:
 	SerialRingBuffer _txBuf;
 	SerialRingBuffer _rxBuf;
+	uint8_t _markTail;
 };
 
 #if defined(USART0_RX_vect)

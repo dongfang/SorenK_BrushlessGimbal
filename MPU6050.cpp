@@ -2,7 +2,6 @@
 #include "Util.h"
 #include "Board.h"
 #include "Globals.h"
-#include <util/delay.h>
 #include <avr/wdt.h>
 #include <avr/eeprom.h>
 

@@ -3,6 +3,7 @@
 #include "Board.h"
 #include "RCdecode.h"
 #include "Mavlink.h"
+#include "Commands.h"
 
 uint8_t interfaceState;
 uint8_t LEDFlags;
@@ -15,27 +16,21 @@ void updateSwitchEffect() {
 	// except when in autosetup, oops.
 	if (prevSwitch == SW_UNKNOWN) {
 		// switch was never defined, default to running
-		gimbalState = GS_PIDS_ARE_OUTPUT | GS_MOTORS_POWERED;
+		// TODO - this is not desirable in normal operation. Will extend on ground.
+		run();
 		prevSwitch = 0;
 	}
 	if (switchPos != SW_UNKNOWN && switchPos != prevSwitch) {
-		if (switchPos == SW_UP && interfaceState != INTERFACE_STATE_AUTOSETUP)
-			gimbalState = GS_PIDS_ARE_OUTPUT | GS_MOTORS_POWERED;
+		if (switchPos == SW_UP && interfaceState != INTERFACE_STATE_AUTOSETUP) {
+			run(); // implies extend
+		} else if (switchPos == SW_DOWN && interfaceState != INTERFACE_STATE_AUTOSETUP) {
+			retract();
+		} else if (switchPos == SW_DOWN && interfaceState != INTERFACE_STATE_AUTOSETUP) {
+			freeze();
+		}
 		prevSwitch = switchPos;
 	}
 }
-
-#if defined (SUPPORT_RETRACT)
-extern void setRetractServoOut(uint16_t val);
-
-// Todo: Don't need to repeat this all the time really..
-void updateRetract() {
-	if (gimbalState & GS_GIMBAL_RETRACTED)
-		setRetractServoOut(config.retractedServoUsec);
-	else
-		setRetractServoOut(config.extendedServoUsec);
-}
-#endif
 
 inline bool checkMediumLoop() {
 	uint8_t sreg = SREG;
@@ -62,7 +57,6 @@ void slowLoop() {
 	//static uint8_t accMagDivider;
 	static uint8_t oscDivider;
 	static uint16_t transientsDivider;
-	static uint8_t autoMavlinkDelay;
 	static uint8_t mavlinkMountStatusSubdivider;
 	static uint8_t mavlinkTrackingDivider;
 
@@ -83,10 +77,16 @@ void slowLoop() {
 			evaluateRCSwitch();
 			// }
 			updateSwitchEffect();
-#if defined (SUPPORT_RETRACT)
-			updateRetract();
-#endif
 		}
+
+#ifdef SUPPORT_MAVLINK
+		if (mavlink_parse()) {
+			LEDEvent(LED_MAVLINK_RX);
+		}
+
+		// Apply autodetect
+		if (mavlinkDetected) goMavlink();
+#endif
 
 		// These are not synced with medium task (ticked is not checked)
 		if (interfaceState == INTERFACE_STATE_CONSOLE)
@@ -94,15 +94,6 @@ void slowLoop() {
 #ifdef SUPPORT_AUTOSETUP
 		else if (interfaceState == INTERFACE_STATE_AUTOSETUP)
 			runAutosetup();
-#endif
-
-// TODO: If we find a way to make MAVLink parsing not consume input / push it back / whatever, then we can make automatic mavlink mode.
-#ifdef SUPPORT_MAVLINK
-		else if (interfaceState == INTERFACE_STATE_MAVLINK) {
-			if (mavlink_parse()) {
-				LEDEvent(LED_MAVLINK_RX);
-			}
-		}
 #endif
 
 		if (interfaceState == INTERFACE_STATE_CONSOLE && ticked && !humanDebugDivider) {
@@ -127,18 +118,13 @@ void slowLoop() {
 					mavlinkMountStatusSubdivider++;
 				}
 			}
-			if (config.autoMavlink) {
-				// Give user a 10 second chance to kill automavlink
-				if (autoMavlinkDelay == 10) {
-					interfaceState = INTERFACE_STATE_MAVLINK;
-				} else autoMavlinkDelay++;
-			}
 		}
 
-		if (ticked && !mavlinkTrackingDivider) {
+		// Let mavlink receive a very high prio.
+		if (ticked /* && !mavlinkTrackingDivider */) {
 			mavlinkTrackingDivider = MAVLINK_TRACKING_LATCH;
 			if (interfaceState == INTERFACE_STATE_MAVLINK) {
-				mavlink_track();
+				mavlink_update();
 			}
 		}
 

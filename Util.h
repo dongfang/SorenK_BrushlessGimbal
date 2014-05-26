@@ -129,12 +129,14 @@ uint16_t time();
 
 // In units of 510/F_CPU
 uint32_t coarseTime();
+void delay_ms(uint16_t millis);
 
-//void wait_16_micros(uint8_t n);
-
+int16_t radiansToND(float rad);
 int16_t degreesToND(int8_t a);
 int8_t NDToDegrees(int16_t a);
 int16_t NDToCentidegrees(int16_t a);
+int16_t centidegreesToND(int16_t a);
+int16_t radiansToCentidegrees(float rad);
 
 uint8_t selectBits(uint8_t data, uint8_t bitStart, uint8_t length);
 void setBits(uint8_t* writtenTo, uint8_t bitStart, uint8_t length, uint8_t newBits);

@@ -128,6 +128,13 @@ uint32_t coarseTime() {
 	return t;
 }
 
+// In units of 510/F_CPU
+// about 31 per millisecond
+void delay_ms(uint16_t millis) {
+	uint32_t end = coarseTime() + 31L * millis;
+	do {} while (coarseTime() < end);
+}
+
 /*
  * 1 cycle is 16 microseconds
  */
@@ -167,12 +174,24 @@ int16_t degreesToND(int8_t a) {
 	return a * (65536L / 360);
 }
 
+int16_t radiansToND(float rad) {
+	return (int16_t)(rad * 32768L / M_PI);
+}
+
 int8_t NDToDegrees(int16_t a) {
 	return (a * 360L) / 65536;
 }
 
 int16_t NDToCentidegrees(int16_t a) {
 	return (a * 36000L) / 65536;
+}
+
+int16_t centidegreesToND(int16_t a) {
+	return (a * 65536L) / 36000L;
+}
+
+int16_t radiansToCentidegrees(float rad) {
+	return rad * 18000.0 / M_PI;
 }
 
 #ifdef DO_PERFORMANCE

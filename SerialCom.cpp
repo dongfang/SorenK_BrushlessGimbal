@@ -5,12 +5,12 @@
 #include "Configuration.h"
 #include "RCdecode.h"
 #include "I2C.h" // debug only
+#include "Commands.h"
 #include <string.h>
 #include <math.h>
 #include <avr/eeprom.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
-#include <avr/interrupt.h>
 
 static const char GS_DEBUGCHARS[] PROGMEM = GS_DEBUGSTRING;
 
@@ -262,12 +262,6 @@ static PGM_P const DEBUG_COMMANDS[] PROGMEM = { DEBUG_OFF_ARG, DEBUG_ACCVALUES_A
 		DEBUG_ESTG_ARG, DEBUG_ATTITUDE_ARG, DEBUG_PID_ARG, DEBUG_DGYRO_ARG, DEBUG_I2C_ARG, DEBUG_RC_ARG,
 		DEBUG_STATE_ARG };
 
-/*
- void toggleEcho() {
- sCmd.setEcho(!sCmd.getEcho());
- }
- */
-
 void debugControl() {
 	char * itemName = NULL;
 	if ((itemName = sCmd.next()) == NULL) {
@@ -388,68 +382,12 @@ void debug() {
 void GUIDebug() {
 }
 
-void reset() {
-	watchdogResetWasIntended = true;
-	wdt_enable(WDTO_15MS);
-	cli();
-	while (1)
-		;
-}
-
-void calibrateGyro() {
-	calibrateSensor(MPU6050::GYRO);
-}
-
-void calibrateAcc() {
-	calibrateSensor(MPU6050::ACC);
-}
 
 void showSensorCal() {
 	printf_P(PSTR("Gyro roll\t%d, pitch\t%d, yaw\t%d\r\n"), mpu.sensorOffset[4], mpu.sensorOffset[5],
 			mpu.sensorOffset[6]);
 	printf_P(PSTR("Acc X\t%d, Y\t%d, Z\t%d\r\n"), mpu.sensorOffset[0], mpu.sensorOffset[1], mpu.sensorOffset[2]);
 }
-
-void run() {
-	gimbalState = GS_MOTORS_POWERED | GS_PIDS_ARE_OUTPUT;
-}
-
-void stop() {
-	gimbalState = GS_PIDS_ARE_OUTPUT;
-}
-
-#ifdef SUPPORT_RETRACT
-void retract() {
-	if (!(gimbalState & GS_GIMBAL_RETRACTED)) {
-		gimbalState |= GS_GIMBAL_FROZEN;
-		_delay_ms(1000);
-		gimbalState |= GS_GIMBAL_RETRACTED;
-	}
-}
-void extend() {
-	if (gimbalState & GS_GIMBAL_RETRACTED) {
-		gimbalState &= ~GS_GIMBAL_RETRACTED;
-		_delay_ms(1000);
-	}
-}
-#endif
-
-void freeze() {
-	gimbalState = GS_MOTORS_POWERED | GS_GIMBAL_FROZEN;
-}
-
-void motorTest() {
-	gimbalState = GS_MOTORS_POWERED | GS_GIMBAL_MOTORTEST;
-}
-
-#ifdef SUPPORT_MAVLINK
-void goMavlink() {
-	interfaceState = INTERFACE_STATE_MAVLINK;
-}
-#endif
-
-extern void startAutosetup();
-
 
 static const char CMD_SD_ARG[] PROGMEM = "sd";
 static const char CMD_WE_ARG[] PROGMEM = "we";

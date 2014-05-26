@@ -83,13 +83,13 @@ void Configuration::setDefaults() {
 
 	controlInput[PITCH].defaultAngle = 0;
 	controlInput[PITCH].minAngle = -90;
-	controlInput[PITCH].maxAngle = 0;
+	controlInput[PITCH].maxAngle = 15;
 	controlInput[PITCH].maxSlewRate = 15;
 
 	// rollOutputRateLimit = 35;
 	// pitchOutputRateLimit = 35;
 
-	yawServoLimit = 90;
+	yawServoLimit = 85;
 	yawServoDirection = 1;
 
 	rcAbsolute = true;
@@ -101,11 +101,10 @@ void Configuration::setDefaults() {
 
 	mavlinkSystemId = 42;
 	mavlinkComponentId = 1;
-	mavlinkUseRelativealtitudes = true;
-	autoMavlink = true;
+	mavlinkUseRelativealtitudes = false;
 
-	retractedServoUsec = 1000;
-	extendedServoUsec = 2000;
+	retractedServoUsec = 2000;
+	extendedServoUsec = 950;
 
 	mpu6050Address = 0x68;
 }
@@ -183,28 +182,31 @@ const ConfigDef_t PROGMEM configListPGM[] = {
 { "rollMax", INT8, &config.controlInput[ROLL].maxAngle, &initControlLimits },
 { "rollSpeed", UINT8, &config.controlInput[ROLL].maxSlewRate, &initControlLimits },
 { "rollDefault", INT8, &config.controlInput[ROLL].defaultAngle, &initControlLimits },
+{ "rollFrozen", UINT8, &config.rollFrozenValue, NULL },
 
 { "pitchMin", INT8, &config.controlInput[PITCH].minAngle, &initControlLimits },
 { "pitchMax", INT8, &config.controlInput[PITCH].maxAngle, &initControlLimits },
 { "pitchSpeed", UINT8, &config.controlInput[PITCH].maxSlewRate, &initControlLimits },
 { "pitchDefault", INT8, &config.controlInput[PITCH].defaultAngle, &initControlLimits },
+{ "pitchFrozen", UINT8, &config.pitchFrozenValue, NULL },
 
 { "rcAbsolute", BOOL, &config.rcAbsolute, NULL },
 { "majorAxis", UINT8, &config.majorAxis, 		&fixme_initSensorOrientation },
 { "reverseZ", BOOL, &config.axisReverseZ, 	&fixme_initSensorOrientation },
 { "rotateZ", UINT8, &config.axisRotateZ, 		&fixme_initSensorOrientation },
 
-{ "LEDMask", UINT8, &config.LEDMask, 		NULL },
+{ "LEDMask", UINT8, &config.LEDMask, NULL },
 { "MPU6050Addr", UINT8, &config.mpu6050Address, &initMPU6050 },
 { "baudRate", UINT32, &config.serialBaudRate, &initSerial },
 
-{ "retractServo", UINT16, &config.retractedServoUsec, &updateRetract },
-{ "extendServo", UINT16, &config.extendedServoUsec, &updateRetract },
+{ "retractServo", UINT16, &config.retractedServoUsec, NULL },
+{ "extendServo", UINT16, &config.extendedServoUsec, NULL },
+{ "yawAngleLimit", UINT8, &config.yawServoLimit, NULL },
+{ "yawServoDir", INT8, &config.yawServoDirection, NULL },
 
 { "systemId", UINT8, &config.mavlinkSystemId, NULL },
 { "componentId", UINT8, &config.mavlinkComponentId, NULL },
 { "relativeAlt", BOOL, &config.mavlinkUseRelativealtitudes, NULL },
-{ "autoMavlink", BOOL, &config.autoMavlink, NULL },
 
 { "", BOOL, NULL, NULL } // terminating NULL required !!
 };

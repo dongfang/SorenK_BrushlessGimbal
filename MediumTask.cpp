@@ -11,10 +11,10 @@ int16_t getTarget(uint8_t axis) {
 	int16_t diff = result - lastResults[axis];
 
 	if (diff) {
-		if (diff > config.controlInput[PITCH].maxSlewRate) {
-			result = lastResults[axis] + config.controlInput[PITCH].maxSlewRate;
-		} else if (diff < -config.controlInput[PITCH].maxSlewRate) {
-			result = lastResults[axis] - config.controlInput[PITCH].maxSlewRate;
+		if (diff > config.controlInput[axis].maxSlewRate) {
+			result = lastResults[axis] + config.controlInput[axis].maxSlewRate;
+		} else if (diff < -config.controlInput[axis].maxSlewRate) {
+			result = lastResults[axis] - config.controlInput[axis].maxSlewRate;
 		}
 
 		LiveControlAxisDef* def = liveControlDefs + axis;

@@ -35,32 +35,19 @@ int Serial::peek() {
 	return result;
 }
 
-//extern void LEDEvent(uint8_t);
-/*
-void UARTSerial::receive(uint8_t c) {
-	uint8_t next = (_rxBuf.head+1) & _rxBuf.mask;
-	if (next != _rxBuf.tail) {
-		_rxBuf.data[_rxBuf.head] = c;
-		//if (_rxBuf.data[_rxBuf.head] == 32)	LEDEvent(8);
-		_rxBuf.head = next;
-	}
+void Serial::mark() {
+	_markTail = _rxBuf.tail;
 }
 
-void UARTSerial::udre() {
-	if (_txBuf.head == _txBuf.tail) {
-		*_ucsrb &= ~(1<<UDRIE0);
-	} else {
-		*_udr = _txBuf.data[_txBuf.tail];
-		_txBuf.tail = (_txBuf.tail+1) & _txBuf.mask;
-	}
+void Serial::restore() {
+	_rxBuf.tail = _markTail;
 }
-*/
 
 size_t Serial::available() {
 	// Example : Tail = 100, head = 2, mask = 127:
 	// head - tail = -98 = 0b10011110
 	// (head - tail) & mask = 0b10011110 & 0b01111111 = 0b00011110 = 30
-	return (_rxBuf.mask + 1 + _rxBuf.head -_rxBuf.tail) & _rxBuf.mask;
+	return (/*_rxBuf.mask + 1 + */ _rxBuf.head -_rxBuf.tail) & _rxBuf.mask;
 }
 
 void Serial::clear() {

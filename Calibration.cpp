@@ -6,7 +6,6 @@
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
 #include <avr/io.h>
-#include <util/delay.h>
 #include <math.h>
 
 int16_t rollAngleSet;
@@ -24,7 +23,7 @@ void calibrateSensor(uint8_t which) {
 	// Or we can use freeze instead.
 	printf_P(PSTR("Sensor calibration: do not move\r\n"));
 	uint8_t before = gimbalState & ~GS_POWER_RAMPING_COMPLETE;
-	gimbalState = 0;
+	gimbalState &= GS_GIMBAL_RETRACTED;
 	mpu.recalibrateSensor(&complainAboutSensorMotion, which);
 	printf_P(PSTR("done.\r\n"));
 	gimbalState = before;
