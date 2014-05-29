@@ -1,5 +1,5 @@
 #include "Definitions.h"
-#if SUPPORT_MAVLINK == 1
+#ifdef SUPPORT_MAVLINK
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 #include "Util.h"

@@ -1,0 +1,42 @@
+Time to present the SorenK brushless gimbal firmware!
+
+It runs on RCTimer/Martinez boards with the ATMega328p, ans supports 2 axes + optional yaw and retract servos.
+
+It is an almost total rewrite of the Martinez firmware, with these highlights:
+
+- Much higher control frequency - one 1000Hz loop and a 500Hz loop. This allows more power before self-oscillation.
+- Works with any sensor orientation
+- Uses the watchdog timer of the AVR to recover from CPU crashes after power gliches. The gimbal won't lock up  in the middle of a flight
+- Never calibrates sensors except on first power-up or upon command
+- Support for gimbal retract (on airplanes)
+- Support for yaw servo (but not brushless)
+- Autosetup (help set the sensor orientation and motor polarity right)(experimental)
+- Support for MAVLink mount commands, including POI target tracking (experimental)
+- Adjustable gimbal freeze for FPV
+
+On the down side, there is no GUI tool (but the text command interface is improved too).
+
+Compared to Martinez, there are numerous other improvements and bugfixes. Most important after the improved control loop frequency is that the D terms of the PID controllers now get the motor rotation rates, not the change rates of the attitude angles (it is not the same). RC input has been much improved too (no more jitter).
+Arduino has been ditched too and this is pure C++ code. The Arduino bootloader may still be used for flashing the firmware.
+
+
+The details:
+The firmware should be able to run on any gimbal where the Martinez firmware works. All settings are done from a terminal, at 115200 8N1 (Windows-style CRLF line endings are no longer needed, anything will do).
+Typing 
+help
+should bring a help list. The first thing you might want to do is to use
+setup
+to run the autosetup wizard. This will figure out the sensor orientation and the motor connections. Alternatively you can do it manually:
+- There is no parameter for assigning outputs to motors. Swap the connections instead.
+- There is no oarameter for reversing motor directions. Turn around the plug instead.
+- The parameter majorAxis must be zero if the MPU is face up or down, and 1 or 2 if the sensor is standing on its side or end.
+- The parameter rotateZ is 0,1,2 or 3 , to set the "front" direction to the correct one of 4 possible. Pitch should be negative with camera looks down amd roll should be positive-right.
+- The parameter reverseZ ois the same as before (if the output of "debug acc" looks like 0, 0, 16384 then it is okay).
+- The majorAxis, rotateZ and reverseZ parameters have 4*3*2 possible settings, covering all 24 ways to mount the sensor
+
+PIDs:
+PID factor values are mush smaller than Martinez (int16). As usual, the effect is:
+- I factors make the gimbal level
+- D factors help prevent oscillations
+- P factors do not to anything immediately meaningful here, but they help prevent oscillations
+You should only need to touch the I values if you think the gimbal moves to slowly back to neutral (NOTE: Abruptly knocking the gimbal out of level will cause rotation rates higher than what the gyros can measure! If you do that, the gimbal will be quite slow at recovering, but not because of too low I factors. It is the attitude angles that are off, and slowly being corrected back by accelerometers).

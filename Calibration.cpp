@@ -75,12 +75,15 @@ void runAutosetup() {
 	case 1:
 		if (gimbalState & GS_POWER_RAMPING_COMPLETE) {
 			ch = getchar();
-			if (ch == ' ')
+			if (ch == ' ') {
 				state++;
+			} else if (ch == 27) {
+				interfaceState = INTERFACE_STATE_CONSOLE;
+			}
 		}
 		break;
 	case 2:
-		_delay_ms(10);
+		delay_ms(10); // make sure a sample is taken.
 		resultingMajorAxis = 0;
 		for (i = 0; i < 3; i++) {
 			if (abs16(mpu.acc[i]) > largestAcc) {
@@ -94,17 +97,20 @@ void runAutosetup() {
 		state++;
 		break;
 	case 3:
-		_delay_ms(10);
+		delay_ms(10);  // make sure a sample is taken.
 		if (mpu.acc[Z] < 0) {
 			resultingZReversal = true;
 			printf_P(PSTR("Reversed Z\r\n"));
-		} else resultingZReversal = false;
+		} else {
+			resultingZReversal = false;
+			printf_P(PSTR("Did not reverse Z\r\n"));
+		}
 		mpu.initSensorOrientation(resultingMajorAxis, resultingZReversal, 0);
 		state++;
 		break;
 	case 4:
 		pitchGyroSeen = rollGyroSeen = 0;
-		recalcMotorPower(75, 75);
+		recalcMotorPower(125, 125);
 		printf_P(OBSERVE_PROMPT);
 		serial0.clear();
 		gimbalState = GS_MOTORS_POWERED;
@@ -115,14 +121,17 @@ void runAutosetup() {
 		if (gimbalState & GS_POWER_RAMPING_COMPLETE) {
 			ch = getchar();
 			if (ch == ' ') {
-				// gimbalState = MOTORS_POWERED;
-				autosetupState = 0;
+				autosetupState = AS_RUNNING;
 				state++;
+			} else if (ch == 27) {
+				interfaceState = INTERFACE_STATE_CONSOLE;
 			}
 		}
 		break;
 	case 6:
-		if (!(autosetupState & AS_RUNNING)) {
+		if (!(autosetupState & AS_RUNNING)) { // has finished run.
+			printf_P(PSTR("%S"), MOVED_PROMPT);
+			serial0.clear();
 			state++;
 		} else {
 			rollGyroSeen = (mpu.gyro[ROLL] + rollGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
@@ -130,21 +139,16 @@ void runAutosetup() {
 		}
 		break;
 	case 7:
-		printf_P(PSTR("%S"), MOVED_PROMPT);
-		serial0.clear();
-		state++;
-		break;
-	case 8:
 		resultingZRotation = 0;
 		ch = getchar();
 		if (ch == 'a') {
 			state = 4;
 		} else if (ch == '1' || ch == '2') {
 			printf_P(SWAP_PROMPT);
-			state = 3;
+			state = 4;
 		} else if (ch == '3') {
 			printf_P(REVERSE_PROMPT, PSTR("roll"));
-			state = 3;
+			state = 4;
 		} else if (ch == '4') {
 			if (abs16(pitchGyroSeen) > abs16(rollGyroSeen)) {
 				resultingZRotation = 1; // will make current pitch future roll.
@@ -162,29 +166,35 @@ void runAutosetup() {
 
 			mpu.initSensorOrientation(resultingMajorAxis, resultingZReversal, resultingZRotation);
 			state++;
+		} else if (ch == 27) {
+			interfaceState = INTERFACE_STATE_CONSOLE;
 		} else if (ch >= 0) {
 			printf_P(PSTR("What? %d\r\n"), ch);
 		}
 		break;
-	case 9:
+	case 8:
 		printf_P(OBSERVE_PROMPT);
 		pitchGyroSeen = rollGyroSeen = 0;
 		gimbalState = GS_MOTORS_POWERED;
 		autosetupState = AS_RUNNING | AS_RESET | AS_IS_PITCH;
 		state++;
 		break;
-	case 10:
-		if ((gimbalState & GS_POWER_RAMPING_COMPLETE)) {
+	case 9:
+		if (gimbalState & GS_POWER_RAMPING_COMPLETE) {
 			ch = getchar();
-			if (ch >= 0) {
+			if (ch == ' ') {
 				gimbalState = GS_MOTORS_POWERED;
-				autosetupState =  AS_RUNNING | AS_IS_PITCH;
+				autosetupState = AS_RUNNING | AS_IS_PITCH;
 				state++;
+			} else if (ch == 27) {
+				interfaceState = INTERFACE_STATE_CONSOLE;
 			}
 		}
 		break;
-	case 11:
+	case 10:
 		if (!(autosetupState & AS_RUNNING)) {
+			printf_P(PSTR("%S"), MOVED_PROMPT);
+			serial0.clear();
 			state++;
 		} else {
 			rollGyroSeen = (mpu.gyro[ROLL] + rollGyroSeen * (GYRO_FILTER - 1)) / GYRO_FILTER;
@@ -192,18 +202,13 @@ void runAutosetup() {
 			// printf_P(PSTR("%d\r\n"), pitchGyroSeen);
 		}
 		break;
-	case 12:
-		printf_P(PSTR("%S"), MOVED_PROMPT);
-		serial0.clear();
-		state++;
-		break;
-	case 13:
+	case 11:
 		ch = getchar();
 		if (ch == 'a') {
 			state = 8;
 		} else if (ch == '3' || ch == '4') {
 			printf_P(SWAP_PROMPT);
-			state = 3;
+			state = 4;
 		} else if (ch == '1') {
 			printf_P(REVERSE_PROMPT, PSTR("pitch"));
 			state = 8;
@@ -218,11 +223,13 @@ void runAutosetup() {
 				config.axisRotateZ = resultingZRotation;
 			}
 			state++;
+		} else if (ch == 27) {
+			interfaceState = INTERFACE_STATE_CONSOLE;
 		} else if (ch >= 0) {
 			printf_P(PSTR("What? %d\r\n"), ch);
 		}
 		break;
-	case 14:
+	case 12:
 		recalcMotorPower(); // back to default
 		// we just assume nobody ever could dream of (or be able to) starting this from any other interface than console.
 		interfaceState = INTERFACE_STATE_CONSOLE;

@@ -109,6 +109,7 @@ void fastTask() {
 		if (autosetupState & AS_RESET) {
 			setupMoveCounter = 0;
 			setupMoveDivider = SETUP_MOVE_DIVIDER;
+			autosetupState &= ~AS_RESET;
 		}
 		if (!setupMoveDivider) {
 			setupMoveDivider = SETUP_MOVE_DIVIDER;
@@ -123,6 +124,7 @@ void fastTask() {
 		} else {
 			outputRoll(setupMoveCounter);
 		}
+		//printf("%d\r\n", setupMoveCounter);
 		setupMoveDivider--;
 	}
 #endif

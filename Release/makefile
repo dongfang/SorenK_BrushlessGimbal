@@ -45,53 +45,51 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 LSS += \
-dongfangMartinezBleeding.lss \
+dongfangMartinezRewrite.lss \
 
 FLASH_IMAGE += \
-dongfangMartinezBleeding.hex \
+dongfangMartinezRewrite.hex \
 
 SIZEDUMMY += \
 sizedummy \
 
 
 # All Target
-all: dongfangMartinezBleeding.elf secondary-outputs
+all: dongfangMartinezRewrite.elf secondary-outputs
 
 # Tool invocations
-dongfangMartinezBleeding.elf: $(OBJS) $(USER_OBJS)
+dongfangMartinezRewrite.elf: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: AVR C++ Linker'
-	avr-g++ -lm -Wl,-Map,dongfangMartinezBleeding.map,--cref -mmcu=atmega328p -o "dongfangMartinezBleeding.elf" $(OBJS) $(USER_OBJS) $(LIBS) -lm
+	avr-g++ -lm -Wl,-Map,dongfangMartinezRewrite.map,--cref -mmcu=atmega328p -o "dongfangMartinezRewrite.elf" $(OBJS) $(USER_OBJS) $(LIBS) -lm
 	@echo 'Finished building target: $@'
 	@echo ' '
 	$(MAKE) --no-print-directory post-build
 
-dongfangMartinezBleeding.lss: dongfangMartinezBleeding.elf
+dongfangMartinezRewrite.lss: dongfangMartinezRewrite.elf
 	@echo 'Invoking: AVR Create Extended Listing'
-	-avr-objdump -h -S dongfangMartinezBleeding.elf  >"dongfangMartinezBleeding.lss"
+	-avr-objdump -h -S dongfangMartinezRewrite.elf  >"dongfangMartinezRewrite.lss"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-dongfangMartinezBleeding.hex: dongfangMartinezBleeding.elf
+dongfangMartinezRewrite.hex: dongfangMartinezRewrite.elf
 	@echo 'Create Flash image (ihex format)'
-	-avr-objcopy -R .eeprom -O ihex dongfangMartinezBleeding.elf  "dongfangMartinezBleeding.hex"
+	-avr-objcopy -R .eeprom -O ihex dongfangMartinezRewrite.elf  "dongfangMartinezRewrite.hex"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-sizedummy: dongfangMartinezBleeding.elf
+sizedummy: dongfangMartinezRewrite.elf
 	@echo 'Invoking: Print Size'
-	-avr-size --format=avr --mcu=atmega328p dongfangMartinezBleeding.elf
+	-avr-size --format=avr --mcu=atmega328p dongfangMartinezRewrite.elf
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(FLASH_IMAGE)$(ELFS)$(LSS)$(S_DEPS)$(CXX_DEPS)$(S_UPPER_DEPS)$(C++_DEPS)$(ASM_DEPS)$(CC_DEPS)$(CPP_DEPS)$(C_UPPER_DEPS)$(SIZEDUMMY) dongfangMartinezBleeding.elf
+	-$(RM) $(OBJS)$(C_DEPS)$(FLASH_IMAGE)$(ELFS)$(LSS)$(S_DEPS)$(CXX_DEPS)$(S_UPPER_DEPS)$(C++_DEPS)$(ASM_DEPS)$(CC_DEPS)$(CPP_DEPS)$(C_UPPER_DEPS)$(SIZEDUMMY) dongfangMartinezRewrite.elf
 	-@echo ' '
 
 post-build:
-	-scp dongfangMartinezBleeding.hex git@usg20:
-	-@echo ' '
 
 secondary-outputs: $(LSS) $(FLASH_IMAGE) $(SIZEDUMMY)
 
