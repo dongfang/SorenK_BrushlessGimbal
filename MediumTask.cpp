@@ -1,7 +1,7 @@
 #include "Globals.h"
 #include "Definitions.h"
 
-uint8_t targetSource;
+uint8_t targetSource = TARGET_SOURCE_RC;
 int16_t targetSources[TARGET_SOURCES_END][2];
 
 int16_t getTarget(uint8_t axis) {

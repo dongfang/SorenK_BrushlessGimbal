@@ -198,7 +198,7 @@ void printHelpUsage() {
 	printf_P(PSTR("\r\n"));
 	printf_P(PSTR("Tuning:\r\n"));
 	printf_P(PSTR("cal   	Recalibrates the gyro\r\n"));
-	printf_P(PSTR("level 	Sets level (place gimbal firmly level and run)\r\n"));
+	printf_P(PSTR("level 	Sets level (place gimbal firmly level first)\r\n"));
 	printf_P(PSTR("osc <n> 	Starts oscillation with speed n (0 to stop)\r\n"));
 	printf_P(PSTR("trans <rol|pitch|both|off> n Starts transients with amplitude ntest\r\n"));
 	printf_P(PSTR("\r\n"));
@@ -231,9 +231,11 @@ void printHelpUsage() {
 	printf_P(PSTR("Commands and parameter names are case-insensitive.\r\n"));
 }
 
+/*
 void unrecognized(const char *command) {
 	printf_P(PSTR("Huh? type \"help\" for help ...\r\n"));
 }
+*/
 
 #define DEBUG_OFF 0
 #define DEBUG_ACCVALUES 1
@@ -360,8 +362,8 @@ void debug() {
 		break;
 	case DEBUG_RC:
 		printf_P(PSTR("rc: switch %d\troll %d\talive %S\tpitch %d\talive %S\r\n"), switchPos,
-				targetSources[TARGET_SOURCE_RC][ROLL], (rcData[ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
-				targetSources[TARGET_SOURCE_RC][PITCH], (rcData[PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
+				NDToDegrees(targetSources[TARGET_SOURCE_RC][ROLL]), (rcData[ROLL].isTimedOut() ? PSTR("n") : PSTR("y")),
+				NDToDegrees(targetSources[TARGET_SOURCE_RC][PITCH]), (rcData[PITCH].isTimedOut() ? PSTR("n") : PSTR("y")));
 
 		break;
 	case DEBUG_STATE:
@@ -371,7 +373,7 @@ void debug() {
 			char ifTrue = pgm_read_byte(((uint8_t*)&GS_DEBUGCHARS)+x);
 			if (gimbalState & y) putchar(ifTrue); else putchar(tolower(ifTrue));
 		}
-		printf_P(PSTR("\t softstart %u\r\n"), softStart);
+		printf_P(PSTR("\t softstart %u targetSource %u\r\n"), softStart, targetSource);
 		break;
 	default:
 		break;
@@ -482,4 +484,4 @@ void setSerialProtocol() {
 }
 */
 
-SerialCommand sCmd(commands, sizeof(commands)/sizeof(Command), unrecognized); // Create SerialCommand object
+SerialCommand sCmd(commands, sizeof(commands)/sizeof(Command)); // Create SerialCommand object

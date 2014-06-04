@@ -49,8 +49,8 @@ void Configuration::setDefaults() {
 	rollKi = 800;
 	rollKd = 500;
 
-	rollMotorPower = 165;
-	pitchMotorPower = 150;
+	rollMotorPower = 80;
+	pitchMotorPower = 80;
 
 	axisReverseZ = true;
 	axisRotateZ  = 0;
@@ -74,7 +74,7 @@ void Configuration::setDefaults() {
 */
 
 	ILimit = 1000;
-	accTimeConstant = 3;
+	accTimeConstant = 40;
 
 	controlInput[ROLL].defaultAngle = 0;
 	controlInput[ROLL].minAngle = -20;
@@ -147,7 +147,7 @@ void Configuration::checkRAMImageValid() {
 extern void recalcMotorPower();
 extern void initSerial();
 extern void initMPU6050();
-extern void updateRetract();
+//extern void updateRetract();
 
 static void fixme_initIMU() {
 	imu.init();

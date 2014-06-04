@@ -28,7 +28,7 @@
 /**
  * Constructor makes sure some things are set.
  */
-SerialCommand::SerialCommand(const  Command* commands, uint8_t commandCount, void (*defaultHandler)(const char *)) :
+SerialCommand::SerialCommand(const  Command* commands, uint8_t commandCount) :
 		commands(commands),
 		commandCount(commandCount),
 		defaultHandler(NULL),
@@ -54,11 +54,12 @@ void SerialCommand::addCommand(const char *command, void (*function)()) {
 /**
  * This sets up a handler to be called in the event that the receveived command string
  * isn't in the list of commands.
+ */
+/*
 void SerialCommand::setDefaultHandler(void (*function)(const char *)) {
 	defaultHandler = function;
 }
- */
-
+*/
 /**
  * This checks the Serial stream for characters, and assembles them into a buffer.
  * When the terminator character (default '\n') is seen, it starts parsing the
@@ -76,20 +77,20 @@ void SerialCommand::readSerial() {
 				// Compare the found command against the list of known commands for a match
 				for (int j = 0; command[j] != '\0'; j++) // as no strnicmp exists ...
 					command[j] = tolower(command[j]);
-				for (int i = 0; i < commandCount; i++) {
+				for (int i = 0; !matched && i < commandCount; i++) {
 					PGM_P blarh = (PGM_P)pgm_read_word(&commands[i].text);
 					// printf_P(PSTR("Trying %s against %S\r\n"), command, blarh);
 					if (strncmp_P(command, blarh, SERIALCOMMAND_MAXCOMMANDLENGTH) == 0) {
 						// Execute the stored handler function for the command
-						printf_P(PSTR("%S\r\n"), blarh);
+						// printf_P(PSTR("%S\r\n"), blarh);
 						void (*f)() = (void (*)())pgm_read_word(&commands[i].function);
 						f();
 						matched = true;
 						break;
 					}
 				}
-				if (!matched && (defaultHandler != NULL)) {
-					(*defaultHandler)(command);
+				if (!matched) {
+					printf_P(PSTR("Huh? type \"help\" for help ...\r\n"));
 				}
 			}
 			clearBuffer();

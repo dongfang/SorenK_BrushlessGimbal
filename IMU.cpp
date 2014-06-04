@@ -21,5 +21,5 @@
 
 void IMU::init() {
 	gyroADCToRad_dt = FASTLOOP_DT_F_S * M_PI / mpu->gyroToDeg_s() / 180.0;
-	accComplFilterConstant = (float) MEDIUMLOOP_DT_F_S / (config.accTimeConstant + MEDIUMLOOP_DT_F_S);
+	accComplFilterConstant = (float)MEDIUMLOOP_DT_F_S / (config.accTimeConstant/10.0f + MEDIUMLOOP_DT_F_S);
 }

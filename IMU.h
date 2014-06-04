@@ -29,19 +29,19 @@ public:
 		static bool estGInitialized;
 		// Apply complimentary filter (Gyro drift correction)
 		for (axis = 0; axis < 3; axis++) {
-			cli();
+			//cli();
 			int16_t _acc = mpu->acc[axis];
-			float _eg = estG[axis];
-			sei();
+			//float _eg = estG[axis];
+			//sei();
 			if (estGInitialized)
-				_eg = _eg * (1.0 - accComplFilterConstant) + _acc * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
+				estG[axis] = estG[axis] * (1.0 - accComplFilterConstant) + _acc * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
 			else
-				_eg = _acc;
-			cli();
-			estG[axis] = _eg;
-			sei();
-			estGInitialized = true;
+				estG[axis] = _acc;
+			//cli();
+			//estG[axis] = _eg;
+			//sei();
 		}
+		estGInitialized = true;
 	}
 
 	inline void calculateAttitudeAngles() {
@@ -66,9 +66,6 @@ public:
 		angle_i16[ROLL] = resultRoll;
 		angle_i16[PITCH] = resultPitch;
 		sei();
-
-		//sinPitch = ((int16_t)y) >> (mpu->logAccToG()-LOG_SIN_RES);
-		//cosPitch = ((int16_t)z) >> (mpu->logAccToG()-LOG_SIN_RES);
 
 		sinPitch = (1 << LOG_SIN_RES) * y / hypo;
 		cosPitch = (1 << LOG_SIN_RES) * z / hypo;

@@ -43,7 +43,7 @@ struct Command {
 
 class SerialCommand {
   public:
-    SerialCommand(const Command* commands, uint8_t commandCount, void (*defaultHandler)(const char *));      // Constructor
+    SerialCommand(const Command* commands, uint8_t commandCount);      // Constructor
     //void addCommand(const char *command, void(*function)());  // Add a command to the processing dictionary.
     //void setDefaultHandler(void (*function)(const char *));   // A handler to call when no valid command received.
 
