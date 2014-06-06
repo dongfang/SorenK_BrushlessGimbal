@@ -164,7 +164,7 @@ bool MPU6050::loadSensorCalibration() {
 void MPU6050::recalibrateSensor(void (*complain)(), uint8_t whichMotion) {
 	uint8_t logicalAxis;
 	uint8_t wait;
-	uint16_t tolerance = whichMotion == GYRO ? 64 : 280                                                                                                                                            ;
+	uint16_t tolerance = whichMotion == GYRO ? 80 : 280                                                                                                                                            ;
 #define SENSOR_ITERATIONS 1000
 	int16_t prevSensor[3];
 	int16_t* sensorSrc = whichMotion==GYRO ? gyro : acc;
@@ -223,7 +223,8 @@ void MPU6050::recalibrateSensor(void (*complain)(), uint8_t whichMotion) {
 			sign = sensorDef.gyro[logicalAxis].dir;
 			physicalOffset = sensorDef.gyro[logicalAxis].idx + 4;
 		}
-		if (whichMotion == ACC && logicalAxis == sensorDef.acc[Z].idx) sensorOffset[physicalOffset] = 0;
+		if (whichMotion == ACC && logicalAxis == Z)
+			sensorOffset[physicalOffset] = 0;
 		else sensorOffset[physicalOffset] += sign * (sensorSums[logicalAxis] + SENSOR_ITERATIONS/2) / SENSOR_ITERATIONS;
 	}
 

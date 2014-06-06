@@ -205,7 +205,7 @@ public:
 		for (logicalAxis=0; logicalAxis<3; logicalAxis++) {
 			uint8_t physicalOffset = sensorDef.acc[logicalAxis].idx;
 			uint8_t x2 = physicalOffset<<1;
-			acc[logicalAxis] = (((int16_t)i2c_buffer[x2]) << 8) | i2c_buffer[(x2)+1];
+			acc[logicalAxis] = (i2c_buffer[x2] << 8) | i2c_buffer[x2+1];
 			acc[logicalAxis] -= sensorOffset[physicalOffset];
 			if (sensorDef.acc[logicalAxis].dir == -1)
 				acc[logicalAxis] = -acc[logicalAxis];
@@ -214,7 +214,7 @@ public:
 		for (logicalAxis=0; logicalAxis<3; logicalAxis++) {
 			uint8_t physicalOffset = (sensorDef.gyro[logicalAxis].idx) + 4; // TODO: A hack to get to the gyro data.
 			uint8_t x2 = physicalOffset<<1;
-			int16_t result = (((int16_t)i2c_buffer[x2]) << 8) | i2c_buffer[x2+1];
+			int16_t result = (i2c_buffer[x2] << 8) | i2c_buffer[x2+1];
 			result -= sensorOffset[physicalOffset];
 			if (sensorDef.gyro[logicalAxis].dir == -1)
 				result = -result;

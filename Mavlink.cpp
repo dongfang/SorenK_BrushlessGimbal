@@ -61,10 +61,18 @@ static MavlinkStoredGimbalOrientation eeMavlinkGimbalOrientation EEMEM;
 static MavlinkStoredGimbalOrientation mavlinkGimbalOrientation;
 static uint8_t mavlinkGimbalMode;
 
+void setDefaultMavlinkTarget() {
+	mavlinkGimbalOrientation.pitchOrLat = 473495000;
+	mavlinkGimbalOrientation.rollOrLon =   84915000;
+	mavlinkGimbalOrientation.yawOrAlt = 880000;
+	mavlinkGimbalOrientation.valid = true;
+}
+
 void restoreMavlinkTarget() {
 	eeprom_read_block(&mavlinkGimbalOrientation, &eeMavlinkGimbalOrientation, sizeof(MavlinkStoredGimbalOrientation));
 	if (mavlinkGimbalOrientation.calculateCRC() != mavlinkGimbalOrientation.crc) {
-		mavlinkGimbalOrientation.valid = false; // do not set true otherwise. The eeprom value should be valid, no need to overwrite it.
+		//mavlinkGimbalOrientation.valid = false; // do not set true otherwise. The eeprom value should be valid, no need to overwrite it.
+		setDefaultMavlinkTarget();
 	}
 }
 
@@ -367,7 +375,7 @@ void mavlink_trackPOI(int16_t* pitchResult) {
 		targetBearing = targetBearing - 36000;
 	*/
 
-	printf("Yaw O shit %d\r\n", airframeYaw_nd);
+	//printf("Yaw O shit %d\r\n", airframeYaw_nd);
 
 	setYawServo(targetBearing);
 

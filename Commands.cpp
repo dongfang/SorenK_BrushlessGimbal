@@ -67,7 +67,7 @@ void goMavlink() {
 	if (interfaceState != INTERFACE_STATE_MAVLINK) {
 		interfaceState = INTERFACE_STATE_MAVLINK;
 		targetSource = TARGET_SOURCE_MAVLINK;
-		mavlink_updateTarget();
+		//mavlink_updateTarget();
 	}
 }
 #endif

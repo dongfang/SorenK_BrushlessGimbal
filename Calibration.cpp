@@ -233,6 +233,7 @@ void runAutosetup() {
 		recalcMotorPower(); // back to default
 		// we just assume nobody ever could dream of (or be able to) starting this from any other interface than console.
 		interfaceState = INTERFACE_STATE_CONSOLE;
+		printf_P(PSTR("Done. Don't forget to write the new settings.\r\n"));
 		break;
 	}
 }

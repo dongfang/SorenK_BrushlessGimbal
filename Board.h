@@ -51,7 +51,7 @@
 
 
 // I2C Frequency
-#define I2C_SPEED 500000L   // slightly tune the bus.
+#define I2C_SPEED 550000L   // slightly tune the bus.
 #define INTERNAL_I2C_PULLUPS
 
 #endif

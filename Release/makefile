@@ -45,53 +45,64 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 LSS += \
-dongfangMartinezRewrite.lss \
+dongfangMartinezBleeding.lss \
 
 FLASH_IMAGE += \
-dongfangMartinezRewrite.hex \
+dongfangMartinezBleeding.hex \
 
 SIZEDUMMY += \
 sizedummy \
 
+AVRDUDEDUMMY += \
+avrdudedummy \
+
 
 # All Target
-all: dongfangMartinezRewrite.elf secondary-outputs
+all: dongfangMartinezBleeding.elf secondary-outputs
 
 # Tool invocations
-dongfangMartinezRewrite.elf: $(OBJS) $(USER_OBJS)
+dongfangMartinezBleeding.elf: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: AVR C++ Linker'
-	avr-g++ -lm -Wl,-Map,dongfangMartinezRewrite.map,--cref -mmcu=atmega328p -o "dongfangMartinezRewrite.elf" $(OBJS) $(USER_OBJS) $(LIBS) -lm
+	avr-g++ -lm -Wl,-Map,dongfangMartinezBleeding.map,--cref -mmcu=atmega328p -o "dongfangMartinezBleeding.elf" $(OBJS) $(USER_OBJS) $(LIBS) -lm
 	@echo 'Finished building target: $@'
 	@echo ' '
 	$(MAKE) --no-print-directory post-build
 
-dongfangMartinezRewrite.lss: dongfangMartinezRewrite.elf
+dongfangMartinezBleeding.lss: dongfangMartinezBleeding.elf
 	@echo 'Invoking: AVR Create Extended Listing'
-	-avr-objdump -h -S dongfangMartinezRewrite.elf  >"dongfangMartinezRewrite.lss"
+	-avr-objdump -h -S dongfangMartinezBleeding.elf  >"dongfangMartinezBleeding.lss"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-dongfangMartinezRewrite.hex: dongfangMartinezRewrite.elf
+dongfangMartinezBleeding.hex: dongfangMartinezBleeding.elf
 	@echo 'Create Flash image (ihex format)'
-	-avr-objcopy -R .eeprom -O ihex dongfangMartinezRewrite.elf  "dongfangMartinezRewrite.hex"
+	-avr-objcopy -R .eeprom -O ihex dongfangMartinezBleeding.elf  "dongfangMartinezBleeding.hex"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-sizedummy: dongfangMartinezRewrite.elf
+sizedummy: dongfangMartinezBleeding.elf
 	@echo 'Invoking: Print Size'
-	-avr-size --format=avr --mcu=atmega328p dongfangMartinezRewrite.elf
+	-avr-size --format=avr --mcu=atmega328p dongfangMartinezBleeding.elf
+	@echo 'Finished building: $@'
+	@echo ' '
+
+avrdudedummy: dongfangMartinezBleeding.elf
+	@echo 'Invoking: AVRDude'
+	/usr/bin/avrdude -pm328p -cavrisp2 -Pusb -Uflash:w:dongfangMartinezBleeding.hex:a
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(FLASH_IMAGE)$(ELFS)$(LSS)$(S_DEPS)$(CXX_DEPS)$(S_UPPER_DEPS)$(C++_DEPS)$(ASM_DEPS)$(CC_DEPS)$(CPP_DEPS)$(C_UPPER_DEPS)$(SIZEDUMMY) dongfangMartinezRewrite.elf
+	-$(RM) $(OBJS)$(C_DEPS)$(FLASH_IMAGE)$(ELFS)$(LSS)$(S_DEPS)$(CXX_DEPS)$(S_UPPER_DEPS)$(C++_DEPS)$(ASM_DEPS)$(CC_DEPS)$(AVRDUDEDUMMY)$(CPP_DEPS)$(C_UPPER_DEPS)$(SIZEDUMMY) dongfangMartinezBleeding.elf
 	-@echo ' '
 
 post-build:
+	-scp dongfangMartinezBleeding.hex git@usg20:
+	-@echo ' '
 
-secondary-outputs: $(LSS) $(FLASH_IMAGE) $(SIZEDUMMY)
+secondary-outputs: $(LSS) $(FLASH_IMAGE) $(SIZEDUMMY) $(AVRDUDEDUMMY)
 
 .PHONY: all clean dependents
 .SECONDARY: post-build
