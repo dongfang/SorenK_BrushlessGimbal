@@ -33,10 +33,14 @@ public:
 			int16_t _acc = mpu->acc[axis];
 			//float _eg = estG[axis];
 			//sei();
-			if (estGInitialized)
-				estG[axis] = estG[axis] * (1.0 - accComplFilterConstant) + _acc * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
-			else
+			if (estGInitialized) {
+				float corrected = estG[axis] * (1.0 - accComplFilterConstant) + _acc * accComplFilterConstant; // note: this is different from MultiWii (wrong brackets postion in MultiWii ??.
+				//driftComp[axis] += (corrected - estG[axis]);
+				estG[axis] = corrected;
+			} else {
 				estG[axis] = _acc;
+				//driftComp[axis] = 0;
+			}
 			//cli();
 			//estG[axis] = _eg;
 			//sei();

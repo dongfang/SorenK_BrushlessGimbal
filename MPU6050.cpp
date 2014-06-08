@@ -16,13 +16,12 @@ void MPU6050::unjam() {
 }
 
 void MPU6050::init() {
+	setSleepEnabled(false);
 	setClockSource(MPU6050_CLOCK_PLL_ZGYRO); // Set Clock to ZGyro
-
 	// This seems not to have any f'n effect at all! I read a zero back.
 	setGyroRange(MPU6050_GYRO_FS); 		// Set Gyro Sensitivity. Unfortunately the chip just ignores us.
 	setAccelRange(MPU6050_ACCEL_FS); 	//+- 2G
 	setRate(7); // 0=8kHz, 1=4kHz, 2=2.66Hz, 3=2kHz, 4=1.6kHz, 5=1.33kHz, 6=1.14Hz, 7=1kHz
-	setSleepEnabled(false);
 }
 
 /** Verify the I2C connection.
@@ -45,21 +44,24 @@ void MPU6050::setDLPFMode(uint8_t mode) {
 */
 
 void MPU6050::setClockSource(uint8_t source) {
+	uint8_t retry = 3;
 	i2c_read_regs(devAddr, MPU6050_RA_PWR_MGMT_1, 1);
 	setBits(&i2c_buffer[0], MPU6050_PWR1_CLKSEL_BIT, MPU6050_PWR1_CLKSEL_LENGTH, source);
-	i2c_writeReg(devAddr, MPU6050_RA_PWR_MGMT_1, i2c_buffer[0]);
+	while(retry-- && !i2c_writeReg(devAddr, MPU6050_RA_PWR_MGMT_1, i2c_buffer[0]));
 }
 
 void MPU6050::setGyroRange(uint8_t range) {
+	uint8_t retry = 3;
 	i2c_read_regs(devAddr, MPU6050_RA_GYRO_CONFIG, 1);
 	setBits(&i2c_buffer[0], MPU6050_GCONFIG_FS_SEL_BIT, MPU6050_GCONFIG_FS_SEL_LENGTH, range);
-	i2c_writeReg(devAddr, MPU6050_RA_GYRO_CONFIG, i2c_buffer[0]);
+	while(retry-- && !i2c_writeReg(devAddr, MPU6050_RA_GYRO_CONFIG, i2c_buffer[0]));
 }
 
 void MPU6050::setAccelRange(uint8_t range) {
+	uint8_t retry = 3;
 	i2c_read_regs(devAddr, MPU6050_RA_ACCEL_CONFIG, 1);
 	setBits(&i2c_buffer[0], MPU6050_ACONFIG_AFS_SEL_BIT, MPU6050_ACONFIG_AFS_SEL_LENGTH, range);
-	i2c_writeReg(devAddr, MPU6050_RA_ACCEL_CONFIG, i2c_buffer[0]);
+	while(retry-- && !i2c_writeReg(devAddr, MPU6050_RA_ACCEL_CONFIG, i2c_buffer[0]));
 }
 
 void MPU6050::setRate(uint8_t rate) {
@@ -71,7 +73,6 @@ void MPU6050::setSleepEnabled(bool enabled) {
 	setBits(&i2c_buffer[0], MPU6050_PWR1_SLEEP_BIT, 1, enabled ? 1 : 0);
 	i2c_writeReg(devAddr, MPU6050_RA_PWR_MGMT_1, i2c_buffer[0]);
 }
-
 
 struct SensorAxisDef {
   uint8_t idx;		// index of physical sensor

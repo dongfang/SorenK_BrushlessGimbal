@@ -26,7 +26,7 @@ void i2c_init(void);
 void i2c_shutdown(void);
 
 void i2c_read_regs(uint8_t add, uint8_t reg, uint8_t size);
-void i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val);
+bool i2c_writeReg(uint8_t add, uint8_t reg, uint8_t val);
 
 void i2c_read_regs_async(uint8_t add, uint8_t reg, uint8_t size);
 

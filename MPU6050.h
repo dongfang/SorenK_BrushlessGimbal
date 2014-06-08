@@ -90,7 +90,6 @@
 class MPU6050 {
 private:
 	uint8_t devAddr;
-//	uint8_t buffer[6];
 public:
 	static const uint8_t GYRO = 1;
 	static const uint8_t ACC = 0;
