@@ -59,42 +59,6 @@ void fastTask() {
 	rollPIDDelta = rollPIDVal - prevRollPIDVal;
 	pitchPIDDelta = pitchPIDVal - prevPitchPIDVal;
 
-	/*
-	bool didOverspeed = false;
-	if (rollPIDDelta > config.rollOutputRateLimit) {
-		LEDEvent(LED_SPEED_LIMIT_MASK);
-		didOverspeed = true;
-		//Actually limiting brings little.
-#ifdef DO_LIMIT_RATES
-		rollPIDVal = prevRollPIDVal + config.rollOutputRateLimit;
-#endif
-	} else if (rollPIDDelta < -config.rollOutputRateLimit) {
-		LEDEvent(LED_SPEED_LIMIT_MASK);
-		didOverspeed = true;
-		//Actually limiting brings little.
-#ifdef DO_LIMIT_RATES
-		rollPIDVal = prevRollPIDVal - config.rollOutputRateLimit;
-#endif
-	}
-	if (pitchPIDDelta > config.pitchOutputRateLimit) {
-		LEDEvent(LED_SPEED_LIMIT_MASK);
-		didOverspeed = true;
-		//Actually limiting brings little.
-#ifdef DO_LIMIT_RATES
-		pitchPIDVal = prevPitchPIDVal + config.pitchOutputRateLimit;
-#endif
-	} else if (pitchPIDDelta < -config.pitchOutputRateLimit) {
-		LEDEvent(LED_SPEED_LIMIT_MASK);
-		didOverspeed = true;
-		//Actually limiting brings little.
-#ifdef DO_LIMIT_RATES
-		pitchPIDVal = prevPitchPIDVal - config.pitchOutputRateLimit;
-#endif
-	}
-
-	if (didOverspeed && overrate < 64) overrate++;
-	*/
-
 	prevRollPIDVal = rollPIDVal;
 	prevPitchPIDVal = pitchPIDVal;
 
@@ -105,7 +69,11 @@ void fastTask() {
 		outputPitch(pitchPIDVal);
 	}
 #ifdef SUPPORT_AUTOSETUP
-	else if (autosetupState & AS_RUNNING) {
+	else {
+		pitchPID.reset();
+		rollPID.reset();
+
+		if (autosetupState & AS_RUNNING) {
 		if (autosetupState & AS_RESET) {
 			setupMoveCounter = 0;
 			setupMoveDivider = SETUP_MOVE_DIVIDER;
@@ -134,5 +102,6 @@ void fastTask() {
 	} else if (gimbalState & GS_GIMBAL_MOTORTEST) {
 		outputRoll(rollMotorTest++);
 		outputPitch(pitchMotorTest++);
+	}
 	}
 }

@@ -27,6 +27,7 @@ static void readEEPROM() {
 	wdt_enable(WDTO_1S);
 	//config.changeProfile(profile);
 	config.readEEPROMOrDefault();
+	updateAllParameters();
 	printf_P(PSTR("Read.\r\n"));
 	wdt_enable(WDT_TIMEOUT);
 }
@@ -416,7 +417,7 @@ static const char CMD_EXTEND_ARG[] PROGMEM = "extend";
 
 static const char CMD_MAVLINK_ARG[] PROGMEM = "mavlink";
 static const char CMD_RESET_ARG[] PROGMEM = "reset";
-static const char CMD_PCAL_ARG[] PROGMEM = "pcal";
+static const char 40090-09o[] PROGMEM = "pcal";
 static const char CMD_MTEST_ARG[] PROGMEM = "mtest";
 
 static const Command commands[] PROGMEM = {

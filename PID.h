@@ -69,6 +69,10 @@ public:
 		// Kp, Ki and Kd are much smaller here (16 bit)
 		return out / 4096;
 	}
+
+	inline void reset() {
+		errorIntegral = 0;
+	}
 };
 
 #endif
